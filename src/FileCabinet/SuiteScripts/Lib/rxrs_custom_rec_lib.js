@@ -2,6 +2,8 @@
  * @NApiVersion 2.1
  */
 define([
+  "N/https",
+  "N/url",
   "N/record",
   "N/search",
   "./rxrs_transaction_lib",
@@ -9,11 +11,15 @@ define([
   "./rxrs_item_lib",
   "./rxrs_verify_staging_lib",
 ], /**
+ * @param https
+ * @param url
  * @param{record} record
  * @param{search} search
  * @param tranlib
  * @param util
- */ (record, search, tranlib, util, itemlib, vslib) => {
+ * @param itemlib
+ * @param vslib
+ */ (https, url, record, search, tranlib, util, itemlib, vslib) => {
   const PRICINGMAP = {
     6: 4, //direct package price
     8: 3, // Suggested wholesale price
@@ -24,6 +30,8 @@ define([
     15: 5, // Consolidated Price 1 Unit Price
     14: 6, // No Price
   };
+  const RETURNABLE = 2;
+  const NONRETURNABLE = 1;
 
   /**
    * Look if there is already a custom credit memo created for the invoice
@@ -600,7 +608,8 @@ define([
           invId,
         } = cm;
 
-        if (!isEmpty(+cmLineId)) {
+        if (!isEmpty(+cmLineId) || cmLineId != " ") {
+          log.error("Cm ID EXIST IF");
           let values = {
             custrecord_cm_amount_applied: amountApplied,
             custrecord_cm_unit_price: unitPrice,
@@ -632,6 +641,7 @@ define([
             unitPrice: unitPrice,
           });
         } else {
+          log.error("CM DOES NOT EXIST ELSE");
           const cmChildRec = record.create({
             type: "customrecord_credit_memo_line_applied",
             isDynamic: true,
@@ -704,6 +714,7 @@ define([
     return (
       stValue === "" ||
       stValue == null ||
+      stValue == " " ||
       false ||
       (stValue.constructor === Array && stValue.length == 0) ||
       (stValue.constructor === Object &&
@@ -1260,7 +1271,7 @@ define([
   }
 
   /**
-   *
+   * Update Item Return Scan for view edit line suitelet
    * @param options
    */
   function updateItemReturnScan(options) {
@@ -1269,6 +1280,8 @@ define([
     const MANUALINPUT = 12;
     let updatedIRSIds = [];
     let newRec;
+    let vendorCreditLine = [];
+    let createVendorCredit = false;
     try {
       let data = JSON.parse(options.values);
       if (data.length > 1) {
@@ -1282,6 +1295,8 @@ define([
           rate,
           updateCatalog,
           nonReturnableReason,
+          notes,
+          fullyPaid,
         } = data;
         const irsRec = record.load({
           type: "customrecord_cs_item_ret_scan",
@@ -1306,9 +1321,14 @@ define([
               fieldId: "custrecord_scannonreturnreason",
               value: nonReturnableReason,
             });
+          notes &&
+            irsRec.setValue({
+              fieldId: "custrecord_notes",
+              value: notes,
+            });
         }
 
-        if (rate) {
+        if (rate && fullyPaid != true) {
           if (updateCatalog == true) {
             itemlib.updateItemPricing({
               itemId: itemId,
@@ -1351,24 +1371,66 @@ define([
             fieldId: "custrecord_scanrate",
             value: rate,
           });
+        } else {
+          createVendorCredit = true;
+          log.audit("creating bill credit");
         }
+
         newRec = updateIRSPrice(irsRec);
         let Ids = newRec.save({
           ignoreMandatoryFields: true,
         });
-        let updateRelatedTranParam = {
-          pharmaProcessing: irsRec.getValue("custrecord_cs__rqstprocesing"),
-          irsId: Ids,
-          amount: irsRec.getValue("custrecord_irc_total_amount"),
-          priceLevel: irsRec.getValue("custrecord_scanpricelevel"),
-          rate: irsRec.getValue("custrecord_scanrate"),
-        };
-        tranlib.setIRSRelatedTranLineProcessing(updateRelatedTranParam);
+
         updatedIRSIds.push(Ids);
       });
+      log.audit("vendorCreditLine", { createVendorCredit });
+      if (createVendorCredit == true) {
+        tranlib.createVendorCredit({
+          billId: options.billId,
+        });
+      }
+
       return updatedIRSIds;
     } catch (e) {
       log.error("updateItemReturnScan", e.message);
+    }
+  }
+
+  /**
+   * Calculate the amount of the for the bill credit
+   * @param options.rec - Item Return Scan Record
+   * @param options.selectedRate - New Rate from  the return scan
+   * @returns {number|*}
+   */
+  function calculateAmount(options) {
+    log.audit("calculateAmount", options);
+    let { selectedRate, rec } = options;
+    const fulPartialPackage = rec.getValue(
+      "custrecord_cs_full_partial_package",
+    );
+    const qty = rec.getValue("custrecord_cs_qty");
+    const packageSize = rec.getValue("custrecord_cs_package_size") || 0;
+    const partialCount = rec.getValue("custrecord_scanpartialcount") || 0;
+    const PACKAGESIZE = {
+      PARTIAL: 2,
+      FULL: 1,
+    };
+    log.audit("calculate Amount", {
+      fulPartialPackage,
+      selectedRate,
+      qty,
+      partialCount,
+      packageSize,
+    });
+    try {
+      if (fulPartialPackage == PACKAGESIZE.FULL) {
+        amount = +selectedRate * qty;
+      } else {
+        amount = +qty * (partialCount / packageSize) * +selectedRate;
+      }
+      return amount;
+    } catch (e) {
+      log.error("updateIRSPrice", e.message);
     }
   }
 
@@ -1393,7 +1455,10 @@ define([
       FULL: 1,
     };
     try {
-      const rate = vslib.getWACPrice(item);
+      const rate = util.getItemRate({
+        priceLevelName: "WAC",
+        itemId: item,
+      });
       let amount = 0;
       const isOverrideRate = rec.getValue("custrecord_isc_overriderate");
       const inputRate = rec.getValue("custrecord_isc_inputrate")
@@ -1424,10 +1489,10 @@ define([
         WACAmount = qty * (partialCount / packageSize) * rate;
       }
       log.debug("beforeSubmit amount", { WACAmount, amount });
-      rec.setValue({
-        fieldId: "custrecord_wac_amount",
-        value: WACAmount || 0,
-      });
+      // rec.setValue({
+      //   fieldId: "custrecord_wac_amount",
+      //   value: WACAmount || 0,
+      // });
       rec.setValue({
         fieldId: "custrecord_irc_total_amount",
         value: amount || 0,
@@ -1435,6 +1500,68 @@ define([
       return rec;
     } catch (e) {
       log.error("updateIRSPrice", e.message);
+    }
+  }
+
+  /**
+   * Update the Item Return Scan Price level to M-Configured including the related transaction of the IRS
+   * @param {string} options - List of the Internal Ids of the Item Return Scan
+   */
+  function updateIRSPricelevel(options) {
+    log.audit("updateIRSPricelevel", options);
+    let { values, billId } = options;
+    let ids = [];
+    try {
+      let ids = JSON.parse(values);
+      ids.forEach(function (id) {
+        const irsRec = record.load({
+          type: "customrecord_cs_item_ret_scan",
+          id: id,
+        });
+        irsRec.setValue({
+          fieldId: "custrecord_scanpricelevel",
+          value: 8, // M-CONFIGURED
+          forceSyncSourcing: true,
+        });
+        let updatedId = irsRec.save({
+          ignoreMandatoryFields: true,
+        });
+        ids.push(updatedId);
+      });
+      return ids;
+    } catch (e) {
+      log.error("updateIRSPricelevel", e.message);
+    }
+  }
+
+  /**
+   * Update manufAvailable Bins
+   * @param {string} options.id Manuf Internal Id
+   * @param {string} options.binId Bin Number
+   * @return the internal id of the updated manuf
+   */
+  function updateManufAvailableBins(options) {
+    try {
+      let { id, binId } = options;
+      const manufRec = record.load({
+        type: "customrecord_csegmanufacturer",
+        id: id,
+      });
+      let availableBins = manufRec.getValue("custrecord_available_bins");
+      if (availableBins.indexOf(binId) == -1) {
+        availableBins.push(binId);
+        manufRec.setValue({
+          fieldId: "custrecord_available_bins",
+          value: availableBins,
+        });
+      } else {
+        return id;
+      }
+      return manufRec.save({
+        ignoreMandatoryFields: true,
+      });
+    } catch (e) {
+      log.error("updateManufAvailableBins", e.message);
     }
   }
 
@@ -1461,5 +1588,7 @@ define([
     getItemRequestedPerCategory,
     updateItemReturnScan,
     updateIRSPrice,
+    updateIRSPricelevel,
+    updateManufAvailableBins,
   };
 });

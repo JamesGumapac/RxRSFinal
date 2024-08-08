@@ -152,7 +152,7 @@ define(["N/url"] /**
    * @since 2015.2
    */
   function saveRecord(scriptContext) {
-    opener.location.reload();
+    // opener.location.reload();
     return true;
   }
 

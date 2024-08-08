@@ -4,7 +4,7 @@
  */
 define(["../rxrs_transaction_lib", "N/ui/serverWidget"], (
   rxrs_tran_lib,
-  serverWidget
+  serverWidget,
 ) => {
   /**
    * Defines the function definition that is executed before record is loaded.
@@ -76,12 +76,25 @@ define(["../rxrs_transaction_lib", "N/ui/serverWidget"], (
   const afterSubmit = (scriptContext) => {
     try {
       const rec = scriptContext.newRecord;
+      let customStaus = {
+        fullyPaid: 5,
+        denied: 6,
+        partiallyDenied: 7,
+      };
+      let invStatus;
       log.debug("scriptContext", scriptContext.type);
       if (scriptContext.type != "edit") return;
       const status = rec.getValue("custbody_invoice_status");
       let createCM = false;
       let deniedAmount = 0;
-      if (status == 7 || status == 6 || status == 5) return;
+      if (
+        status == customStaus.partiallyDenied ||
+        status == customStaus.denied ||
+        status == customStaus.fullyPaid
+      )
+        return;
+      let itemCount = rec.getLineCount("item");
+      let deniedCount = 0;
       for (let i = 0; i < rec.getLineCount("item"); i++) {
         const linestatus = rec.getSublistValue({
           sublistId: "item",
@@ -96,9 +109,16 @@ define(["../rxrs_transaction_lib", "N/ui/serverWidget"], (
         });
         if (!isEmpty(linestatus)) {
           log.debug("linestatus", linestatus);
+          deniedCount += 1;
           deniedAmount += amount;
           createCM = true;
         }
+      }
+      log.audit("deniedCount", { deniedCount, itemCount });
+      if (deniedCount == itemCount) {
+        invStatus = customStaus.denied;
+      } else {
+        invStatus = customStaus.partiallyDenied;
       }
       const DENIEDCREDITITEMID = 924;
       if (createCM == true) {
@@ -107,7 +127,7 @@ define(["../rxrs_transaction_lib", "N/ui/serverWidget"], (
           amount: deniedAmount,
           itemId: DENIEDCREDITITEMID,
           creditType: 1,
-          invStatus: 7,
+          invStatus: invStatus,
         });
       }
     } catch (e) {

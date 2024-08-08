@@ -3,6 +3,7 @@
  * @NScriptType UserEventScript
  */
 define([
+  "N/runtime",
   "N/record",
   "N/search",
   "N/url",
@@ -12,6 +13,8 @@ define([
   "../rxrs_transaction_lib",
   "../rxrs_return_cover_letter_lib",
   "../rxrs_custom_rec_lib",
+  "../rxrs_util",
+  "../rxrs_lib_bag_label",
 ], /**
  * @param{record} record
  * @param{search} search
@@ -22,6 +25,7 @@ define([
  * @param rxrs_tranlib
  * @param rxrs_rcl_lib
  */ (
+  runtime,
   record,
   search,
   url,
@@ -31,6 +35,8 @@ define([
   rxrs_tranlib,
   rxrs_rcl_lib,
   rxrs_customRec,
+  util,
+  baglib,
 ) => {
   const PACKAGESIZE = {
     PARTIAL: 2,
@@ -41,61 +47,37 @@ define([
   const ACCRUEDPURCHASEITEM = 916;
   const beforeSubmit = (context) => {
     const rec = context.newRecord;
+    const oldRec = context.oldRecord;
     log.audit("beforeSubmit", context.type);
+    let fields = [
+      "custrecord_scanpricelevel",
+      "custrecord_scanrate",
+      "custrecord_isc_overriderate",
+      "custrecord_isc_inputrate",
+      "custrecord_cs_qty",
+      "custrecord_cs_full_partial_package",
+    ];
     try {
-      rxrs_customRec.updateIRSPrice(rec);
-      log.audit(
-        "Update Related Transaction",
-        rec.getValue("custrecord_update_related_tran"),
-      );
-
-      // const fulPartialPackage = rec.getValue(
-      //   "custrecord_cs_full_partial_package",
-      // );
-      // const item = rec.getValue("custrecord_cs_return_req_scan_item");
-      // const qty = rec.getValue("custrecord_cs_qty");
-      // const packageSize = rec.getValue("custrecord_cs_package_size") || 0;
-      // const partialCount = rec.getValue("custrecord_scanpartialcount") || 0;
-
-      //   const rate = rxrs_util.getWACPrice(item);
-      //   let amount = 0;
-      //   const isOverrideRate = rec.getValue("custrecord_isc_overriderate");
-      //   const inputRate = rec.getValue("custrecord_isc_inputrate")
-      //     ? rec.getValue("custrecord_isc_inputrate")
-      //     : 0;
-      //   const selectedRate = rec.getValue("custrecord_scanrate")
-      //     ? rec.getValue("custrecord_scanrate")
-      //     : 0;
-      //   let WACAmount = 0;
-      //   if (fulPartialPackage == PACKAGESIZE.FULL) {
-      //     WACAmount = +qty * +rate;
-      //     log.debug("values", { isOverrideRate, selectedRate, qty });
-      //     amount =
-      //       isOverrideRate == true ? +inputRate * +qty : +selectedRate * qty;
-      //   } else {
-      //     log.audit("else", {
-      //       isOverrideRate,
-      //       qty,
-      //       partialCount,
-      //       packageSize,
-      //       inputRate,
-      //     });
-      //     //[Quantity x (Partial Count/Std Pkg Size (Item Record))] * Rate
-      //     amount =
-      //       isOverrideRate == true
-      //         ? +qty * (partialCount / packageSize) * +inputRate
-      //         : +qty * (partialCount / packageSize) * +selectedRate;
-      //     WACAmount = qty * (partialCount / packageSize) * rate;
-      //   }
-      //   log.debug("beforeSubmit amount", { WACAmount, amount });
-      //   rec.setValue({
-      //     fieldId: "custrecord_wac_amount",
-      //     value: WACAmount || 0,
-      //   });
-      //   rec.setValue({
-      //     fieldId: "custrecord_irc_total_amount",
-      //     value: amount || 0,
-      //   });
+      if (
+        util.checkIfThereIsUpdate({
+          oldRec: oldRec,
+          newRec: rec,
+          FIELDS: fields,
+        }) == true
+      ) {
+        log.emergency("updating price");
+        rxrs_customRec.updateIRSPrice(rec);
+      }
+      if (
+        rec.getValue("custrecord_itemscanbin") !=
+        oldRec.getValue("custrecord_itemscanbin")
+      ) {
+        rxrs_tranlib.updateBinNumber({
+          rrId: rec.getValue("custrecord_cs_ret_req_scan_rrid"),
+          itemScanId: rec.id,
+          binId: rec.getValue("custrecord_itemscanbin"),
+        });
+      }
     } catch (e) {
       log.error("beforeSubmit", e.message);
     }
@@ -107,12 +89,22 @@ define([
 
   const afterSubmit = (context) => {
     try {
+      log.audit("runtime", runtime.executionContext);
       const DEFAULT = 12;
       const rec = context.newRecord;
       const oldRec = context.oldRecord;
+      log.audit("rec", rec, oldRec);
       const rrId = rec.getValue("custrecord_cs_ret_req_scan_rrid");
       try {
         log.audit("reloading rr rec");
+        let updateRelatedTranParam = {
+          pharmaProcessing: rec.getValue("custrecord_cs__rqstprocesing"),
+          irsId: rec.id,
+          amount: rec.getValue("custrecord_irc_total_amount"),
+          priceLevel: rec.getValue("custrecord_scanpricelevel"),
+          rate: rec.getValue("custrecord_scanrate"),
+        };
+        rxrs_tranlib.setIRSRelatedTranLineProcessing(updateRelatedTranParam);
         const entityType = rec.getValue("custrecord_rxrs_entity_type");
 
         let rrType =
@@ -151,6 +143,8 @@ define([
       });
       let params = {};
       let adjustmentPercent;
+      let billStatus;
+
       if (billId) {
         // log.debug("Update Processing");
         // params.id = billId;
@@ -162,9 +156,10 @@ define([
           columns: [
             "custbody_rxrs_returnable_fee",
             "custbody_rxrs_non_returnable_rate",
+            "status",
           ],
         });
-
+        billStatus = rsSearch.status[0].value;
         adjustmentPercent =
           percentToDecimal(rsSearch.custbody_rxrs_returnable_fee) -
           percentToDecimal(rsSearch.custbody_rxrs_non_returnable_rate);
@@ -181,6 +176,7 @@ define([
       newPharmaProcessing = rec.getValue("custrecord_cs__rqstprocesing");
       const oldMFGProcessing = oldRec.getValue("custrecord_cs__mfgprocessing");
       const newMFGProcessing = rec.getValue("custrecord_cs__mfgprocessing");
+
       /**
        *  Update PO, Bill and IR processing
        */
@@ -205,11 +201,13 @@ define([
           scriptId: "customscript_sl_cs_custom_function",
           deploymentId: "customdeploy_sl_cs_custom_function",
           returnExternalUrl: true,
-          params: mfgProcessing,
+          params: updateRelatedTranParam,
         });
-        let response = https.post({
-          url: functionSLURL,
-        });
+        if (billStatus == "open") {
+          let response = https.post({
+            url: functionSLURL,
+          });
+        }
       }
       log.emergency("Pharma Processing", {
         oldPharmaProcessing,
@@ -432,10 +430,31 @@ define([
       irsRec.save({
         ignoreMandatoryFields: true,
       });
+      // record.submitFields.promise({
+      //   type: "customrecord_kd_taglabel",
+      //   id: irsRec.getValue("custrecord_prev_bag_assignement"),
+      //   values: {
+      //     custrecord_is_inactive: true,
+      //   },
+      // });
     } catch (e) {
       log.error("afterSubmit", e.message);
     }
   };
+
+  function isEmpty(stValue) {
+    return (
+      stValue === "" ||
+      stValue == null ||
+      false ||
+      (stValue.constructor === Array && stValue.length == 0) ||
+      (stValue.constructor === Object &&
+        (function (v) {
+          for (var k in v) return false;
+          return true;
+        })(stValue))
+    );
+  }
 
   return { beforeSubmit, afterSubmit };
 });

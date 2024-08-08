@@ -699,10 +699,12 @@ define([
           mrrId: options.mrrId,
           isVerifyStaging: true,
         });
-
+        returnableScanList = returnableScanList.sort(
+          (a, b) => parseFloat(b.amount) - parseFloat(a.amount),
+        );
         let currentAmount = 0;
         returnableScanList.forEach((ret) => (currentAmount += +ret.amount));
-        log.audit("returnableScanList", { manufName, returnableScanList });
+        log.emergency("returnableScanList", { manufName, returnableScanList });
         let manufId = getManufactuerId(manufName);
         //fixed issue in the URL when there is an ampersand symbol in Manuf Name
         let manufMaximumAmount = getManufMaxSoAmount(manufId)
@@ -726,6 +728,7 @@ define([
           bags.push(i);
         }
         let bagList = [];
+        let groupedObjects = [];
         let inDate;
         if (options.inDated == true) {
           inDate = result.getValue({
@@ -734,71 +737,31 @@ define([
           });
         }
 
-        let sum = 0;
-        let b = 0;
         /**
          * Group the return item scanlist based from the manuf maximum amount
          */
-        log.error("returnableScanList", returnableScanList);
+
         try {
           if (manufMaximumAmount >= currentAmount) {
             let holder = [];
+
             returnableScanList.forEach((ret) => {
               holder.push(ret.internalId);
             });
             bagList.push(holder);
+            groupedObjects.push(holder);
           } else {
-            for (let i = 0; i < returnableScanList.length; i++) {
-              sum += +returnableScanList[i].amount;
-              if (sum <= +manufMaximumAmount) {
-                if (sum == manufMaximumAmount) {
-                  b += 1;
-                  sum = 0;
-                }
-                if (sum == 0 && manufMaximumAmount == 0) {
-                  b = 0;
-                }
-                bagList.push({
-                  bag: bags[b],
-                  scanId: returnableScanList[i].internalId,
-                });
-              } else {
-                b += 1;
-                if (b >= bags.length) {
-                  b = b - 1;
-                }
-                bagList.push({
-                  bag: bags[b],
-                  scanId: returnableScanList[i].internalId,
-                });
-                sum = 0;
-              }
-            }
-
-            const groupBy = (a, f) =>
-              a.reduce((x, c) => (x[f(c)] ??= []).push(c) && x, {});
-
-            bagList = groupBy(bagList, (b) => b.bag);
-            let mainBags = [];
-
-            for (let i = 1; i <= numberOfBags; i++) {
-              try {
-                let a = bagList[i];
-                let temp = [];
-                a.forEach((b) => temp.push(b.scanId));
-                mainBags.push(temp);
-              } catch (e) {
-                log.error("adding to bag", e.message);
-              }
-            }
-            bagList = mainBags;
+            groupedObjects = groupObjectsByAmountLimit(
+              returnableScanList,
+              manufMaximumAmount,
+            );
+            log.audit("groupObject ", groupedObjects);
           }
-          log.debug("bag", bagList);
         } catch (e) {
           log.error("GROUPING RETURN LIST", e.message);
         }
 
-        bagList.forEach((bag) => {
+        groupedObjects.forEach((bag) => {
           let verification = checkIfReturnScanIsVerified({
             recId: rrId,
             returnList: bag,
@@ -873,6 +836,34 @@ define([
     } catch (e) {
       log.error("getReturnableManufacturer", e.message);
     }
+  }
+
+  function groupObjectsByAmountLimit(objects, limit) {
+    log.error("groupObjectsByAmountLimit", objects, limit);
+    let groups = [];
+    let currentGroup = [];
+    let currentSum = 0;
+
+    for (let item of objects) {
+      // Check if adding the current item's amount exceeds the limit
+      if (currentSum + parseFloat(item.amount) > +limit) {
+        // If it exceeds, push the current group to groups and start a new group
+        groups.push(currentGroup);
+        currentGroup = [];
+        currentSum = 0;
+      }
+
+      // Add the current item to the current group
+      currentGroup.push(item.internalId);
+      currentSum += +item.amount;
+    }
+
+    // Push the last group if it's not empty
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup);
+    }
+
+    return groups;
   }
 
   /**
@@ -1308,7 +1299,9 @@ define([
             amount: amount || 0,
             qty: qty,
             inDate: result.getValue("custrecord_scanindate"),
-            bagTagLabel: `<a href ="${bagLabelURL}" target="_blank">${bagTagLabel}</a>`,
+            bagTagLabel: bagTagLabel
+              ? `<a href ="${bagLabelURL}" target="_blank">${bagTagLabel}</a>`
+              : " ",
             itemId: itemId,
             manufId: getManufactuerId(result.getValue(column[3])),
           });
@@ -1961,7 +1954,7 @@ define([
   /**
    * Create a redirect link
    * @params {string} options.type
-   * @params {number }options.id
+   * @params {number} options.id
    * @return {url} return URL
    */
   function generateRedirectLink(options) {
@@ -2300,6 +2293,7 @@ define([
           name: "custrecord_irc_total_amount",
           summary: "SUM",
           label: "Wac Amount",
+          sort: search.Sort.DESC,
         }),
       ],
     });

@@ -35,6 +35,7 @@ define([
   const UPDATEPRODUCTCATALOGFIELD = "custpage_update_product_catalog";
   const NONRETURNABLEREASONFIELD = "custpage_nonreturnable_reason";
   const NONRETURNABLE = 1;
+  const SELECTFIELD = "custpage_select";
   const RETURNABLE = 2;
   let selectedLine = null;
   const MCONFIGURED = 8;
@@ -81,6 +82,26 @@ define([
         fieldId: RATEFIELD,
         line: i,
       });
+      const notesFieldColumn = suitelet.getSublistField({
+        sublistId: SUBLIST,
+        fieldId: NOTESFIELD,
+        line: i,
+      });
+      notesFieldColumn.isDisabled = true;
+      const priceLevel = suitelet.getSublistValue({
+        sublistId: SUBLIST,
+        fieldId: "custpage_pricelevel",
+        line: i,
+      });
+      console.log("priceLevel", priceLevel);
+      if (priceLevel == "M-CONFIGURED" || mfgProcessing == "Non-Returnable") {
+        const select = suitelet.getSublistField({
+          sublistId: SUBLIST,
+          fieldId: "custpage_select",
+          line: i,
+        });
+        select.isDisabled = true;
+      }
       rateFieldColumn.isDisabled = true;
       const pharmaProcessing = suitelet.getSublistValue({
         sublistId: SUBLIST,
@@ -95,19 +116,28 @@ define([
       nonRetuurnableReason.isDisabled = true;
       let pharmaProcessingField = suitelet.getSublistField({
         sublistId: SUBLIST,
-        fieldId: "custpage_change_processing",
+        fieldId: CHANGEPHARMAPROCESSINGFIELD,
         line: i,
       });
+      let selectField = suitelet.getSublistField({
+        sublistId: SUBLIST,
+        fieldId: SELECTFIELD,
+        line: i,
+      });
+      selectField.isDisabled = true;
+      pharmaProcessingField.isDisabled = true;
       if (pharmaProcessing == "Returnable") {
         pharmaProcessing.isDisabled = false;
       } else if (mfgProcessing == "Returnable") {
-        pharmaProcessingField.isDisabled = false;
+        // pharmaProcessingField.isDisabled = false;
+        selectField.isDisabled = false;
       } else {
         continue;
       }
       console.table(mfgProcessing, pharmaProcessing);
       if (mfgProcessing == "Returnable" && pharmaProcessing == "Returnable") {
-        pharmaProcessingField.isDisabled = false;
+        //  pharmaProcessingField.isDisabled = false;
+        selectField.isDisabled = false;
       }
       console.log(mfgProcessing);
     }
@@ -177,7 +207,7 @@ define([
         let stSuiteletUrl = url.resolveScript({
           scriptId: "customscript_sl_cs_custom_function",
           deploymentId: "customdeploy_sl_cs_custom_function",
-          returnExternalUrl: false,
+          returnExternalUrl: true,
           params: params,
         });
         let response = https.post({
@@ -210,7 +240,6 @@ define([
   function fieldChanged(scriptContext) {
     console.log(scriptContext.fieldId);
     console.log(scriptContext.sublistId);
-
     let params = {};
     try {
       if (scriptContext.sublistId === SUBLIST) {
@@ -218,16 +247,12 @@ define([
           sublistId: SUBLIST,
         });
         selectedLine = line;
-        console.log("line", lineTobeUpdated.indexOf(line));
-        if (
-          lineTobeUpdated.indexOf(line) == -1 ||
-          lineTobeUpdated.length == 0
-        ) {
-          lineTobeUpdated.push(line);
-          console.table(lineTobeUpdated);
-        }
-        console.log("selected line:" + lineTobeUpdated);
 
+        const selectField = suitelet.getSublistValue({
+          sublistId: SUBLIST,
+          fieldId: SELECTFIELD,
+          line: selectedLine,
+        });
         switch (scriptContext.fieldId) {
           case CHANGEPHARMAPROCESSINGFIELD:
             const nonReturnableReasonField = suitelet.getSublistField({
@@ -251,27 +276,53 @@ define([
               fieldId: PHARMAPROCESSINGFIELD,
               line: selectedLine,
             });
+            let mfgProcessing = suitelet.getCurrentSublistValue({
+              sublistId: SUBLIST,
+              fieldId: MFGPROCESSINGFIELD,
+            });
+            const billStatus = suitelet.getValue("custpage_billstatus");
             let changePharmaProcessing = suitelet.getCurrentSublistValue({
               sublistId: SUBLIST,
               fieldId: CHANGEPHARMAPROCESSINGFIELD,
             });
-
-            console.table(changePharmaProcessing, pharmaProcessing);
             if (changePharmaProcessing == true) {
-              console.log("enabling rate");
-              RATEFIELDCOLUMN.isDisabled = false;
+              console.log("line", lineTobeUpdated.indexOf(line));
+              if (
+                lineTobeUpdated.indexOf(line) == -1 ||
+                lineTobeUpdated.length == 0
+              ) {
+                lineTobeUpdated.push(line);
+                console.table(lineTobeUpdated);
+              }
+              console.log("selected line:" + lineTobeUpdated);
             } else {
-              RATEFIELDCOLUMN.isDisabled = true;
+              const index = lineTobeUpdated.indexOf(line);
+              if (index > -1) {
+                // Only splice the array when the item is found
+                lineTobeUpdated.splice(index, 1); // Second parameter means remove one item only
+              }
+              console.table(lineTobeUpdated);
             }
-            if (
-              changePharmaProcessing == true &&
-              pharmaProcessing !== "Non-Returnable"
-            ) {
-              nonReturnableReasonField.isDisabled = false;
-              notesFields.isDisabled = false;
-            } else {
-              nonReturnableReasonField.isDisabled = true;
-              notesFields.isDisabled = true;
+            if (billStatus != "Paid In Full") {
+              console.table(changePharmaProcessing, pharmaProcessing);
+              if (changePharmaProcessing == true) {
+                console.log("enabling rate");
+                RATEFIELDCOLUMN.isDisabled = false;
+                notesFields.isDisabled = false;
+              } else {
+                RATEFIELDCOLUMN.isDisabled = true;
+                notesFields.isDisabled = true;
+              }
+              if (
+                changePharmaProcessing == true &&
+                pharmaProcessing !== "Non-Returnable"
+              ) {
+                nonReturnableReasonField.isDisabled = false;
+                // notesFields.isDisabled = false;
+              } else {
+                nonReturnableReasonField.isDisabled = true;
+                // notesFields.isDisabled = true;
+              }
             }
             break;
           case RATEFIELD:
@@ -292,6 +343,21 @@ define([
               updateProductCatalogField.isDisabled = true;
             }
             break;
+          case SELECTFIELD:
+            const changePharmaProcessingField = suitelet.getSublistField({
+              sublistId: SUBLIST,
+              fieldId: CHANGEPHARMAPROCESSINGFIELD,
+              line: line,
+            });
+            console.log(selectField);
+
+            if (selectField == true) {
+              changePharmaProcessingField.isDisabled = false;
+            } else {
+              changePharmaProcessingField.isDisabled = true;
+            }
+
+            break;
         }
       }
     } catch (e) {
@@ -301,8 +367,12 @@ define([
 
   function getLineDetailsToBeProcessed(selectedLine) {
     try {
+      const billStatus = suitelet.getValue("custpage_billstatus");
       console.log("getLineDetailsToBeProcessed: " + selectedLine);
       let params = {};
+      console.log(billStatus);
+      let fullyPaid = billStatus == "Paid In Full" ? true : false;
+      params.fullyPaid = fullyPaid;
       params.itemId = suitelet.getSublistValue({
         sublistId: SUBLIST,
         fieldId: "custpage_itemid",
@@ -318,11 +388,19 @@ define([
         fieldId: RATEFIELD,
         line: selectedLine,
       });
+      let notes = suitelet.getSublistValue({
+        sublistId: SUBLIST,
+        fieldId: NOTESFIELD,
+        line: selectedLine,
+      });
       let changePharmaProcessing = suitelet.getSublistValue({
         sublistId: SUBLIST,
         fieldId: CHANGEPHARMAPROCESSINGFIELD,
         line: selectedLine,
       });
+      if (notes) {
+        params.notes = notes;
+      }
       // console.log("changePharmaProcessing: " + changePharmaProcessing);
       if (changePharmaProcessing == true || changePharmaProcessing == "true") {
         let pharmaProcessing = suitelet.getSublistValue({
@@ -360,21 +438,22 @@ define([
         }
       }
 
-      console.table(params, selectedLine);
+      console.table(selectedLine);
       return params;
     } catch (e) {
       console.error("getLineDetailsToBeProcessed", e.message);
     }
   }
 
-  function submit() {
+  function submit(billId) {
     {
-      handleButtonClick("Please wait...");
-      setTimeout(function () {
-        let itemToBeProcess = [];
-        if (selectedLine == null || selectedLine == "null") {
-          showMessage();
-        } else {
+      alert(billId);
+      let itemToBeProcess = [];
+      if (selectedLine == null || selectedLine == "null") {
+        showMessage();
+      } else {
+        setTimeout(function () {
+          handleButtonClick("Please wait...");
           console.table(selectedLine);
           let lineData = getLineDetailsToBeProcessed(selectedLine);
           itemToBeProcess.push(lineData);
@@ -382,24 +461,72 @@ define([
           console.table(itemToBeProcess);
           let params = {
             action: "updateIRS",
+            billId: billId,
             values: JSON.stringify(itemToBeProcess),
           };
           console.table(params);
           let stSuiteletUrl = url.resolveScript({
             scriptId: "customscript_sl_cs_custom_function",
             deploymentId: "customdeploy_sl_cs_custom_function",
-            returnExternalUrl: false,
+            returnExternalUrl: true,
             params: params,
           });
           postURL({
             URL: stSuiteletUrl,
           });
-        }
-      }, 200);
+        }, 200);
+      }
     }
   }
 
-  function submitAll() {
+  function updateFromCatalog() {
+    try {
+      let selectedIRS = [];
+
+      for (let i = 0; i < suitelet.getLineCount(SUBLIST); i++) {
+        const isSelected = suitelet.getSublistValue({
+          sublistId: SUBLIST,
+          fieldId: "custpage_select",
+          line: i,
+        });
+        if (isSelected == true) {
+          const irsId = suitelet.getSublistValue({
+            sublistId: SUBLIST,
+            fieldId: "custpage_internalid",
+            line: i,
+          });
+          selectedIRS.push(irsId);
+        }
+      }
+      if (selectedIRS.length == 0) {
+        showMessage();
+      } else {
+        handleButtonClick("Please wait...");
+        setTimeout(function () {
+          //  alert(JSON.stringify(selectedIRS));
+
+          let params = {
+            action: "updatePriceLevel",
+            values: JSON.stringify(selectedIRS),
+          };
+          console.table(params);
+          let stSuiteletUrl = url.resolveScript({
+            scriptId: "customscript_sl_cs_custom_function",
+            deploymentId: "customdeploy_sl_cs_custom_function",
+            returnExternalUrl: true,
+            params: params,
+          });
+          postURL({
+            URL: stSuiteletUrl,
+          });
+        }, 200);
+      }
+    } catch (e) {
+      console.error("updateFromCatalog", e.message);
+    }
+  }
+
+  function submitAll(billId) {
     if (lineTobeUpdated.length == 0) {
       showMessage();
     } else {
@@ -409,15 +536,17 @@ define([
         lineTobeUpdated.forEach((line) => {
           itemsToProcess.push(getLineDetailsToBeProcessed(line));
         });
+
         let params = {
           action: "updateIRS",
+          billId: billId,
           values: JSON.stringify(itemsToProcess),
         };
         console.table(params);
         let stSuiteletUrl = url.resolveScript({
           scriptId: "customscript_sl_cs_custom_function",
           deploymentId: "customdeploy_sl_cs_custom_function",
-          returnExternalUrl: false,
+          returnExternalUrl: true,
           params: params,
         });
         postURL({
@@ -546,5 +675,6 @@ define([
     submitAll: submitAll,
     submit: submit,
     updateIRS: updateIRS,
+    updateFromCatalog: updateFromCatalog,
   };
 });

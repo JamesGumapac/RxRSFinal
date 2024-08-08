@@ -19,42 +19,59 @@ define([
  * @param rxrs_rcl_lib
  */ (record, search, url, https, rxrsUtil_vl, rxrs_util, rxrs_rcl_lib) => {
   const SUBSIDIARY = 2; //Rx Return Services
-  const ACCOUNT = 212; //50000 Cost of Goods Sold
+  // const ACCOUNT = 212; //50000 Cost of Goods Sold
   const LOCATION = 1; //Clearwater
   const TOPCO_PLAN = 10;
   const TOPCO_VENDOR = 1591;
+  const RETURNABLE = 2;
+  const NONRETURNABLE = 1;
+  const ACCOUNT = {
+    Accrued_Purchases: 112,
+    Accounts_Payable: 111,
+    Service_Fee: 932,
+    Cost_of_Goods_Sold: 212,
+    Undeposited_Funds: 122,
+    Unapplied_Credits: 940,
+  };
 
   /**
    * Create Inventory Adjustment for verified Item Return Scan
    * @param {number}options.rrId Internal I'd of the Return Request
    * @param {number} options.mrrId Internal I'd of the Master Return Request
+   * @param  {string}options.vendorCreditId - Vendor Credit Internal Id
+   * @param {boolean}options.forViewLineEdit - Creation of Inventory Adjustment in the View Line Edit Page After Approval of Bill
    */
   function createInventoryAdjustment(options) {
     try {
-      let { rrId, mrrId } = options;
-      log.error(
-        "isRR Verified",
-        rxrsUtil_vl.checkIfRRIsVerified({ rrId: rrId }),
-      );
-      if (rxrsUtil_vl.checkIfRRIsVerified({ rrId: rrId }) != true) return;
       log.audit("createInventoryAdjustment", options);
-      /**
-       * Set the return request to approve since all the items are verified
-       */
-      record.submitFields({
-        type: rxrs_util.getReturnRequestType(rrId),
-        id: rrId,
-        values: {
-          transtatus: rxrs_util.rrStatus.Approved,
-        },
-      });
-      let inventoryAdjRec;
-      let IAExist = checkIfTransAlreadyExist({
-        mrrId: mrrId,
-        searchType: "InvAdjst",
-      });
-      log.debug("createInventoryAdjustment IAExist", IAExist);
-      if (IAExist == null) {
+      let { rrId, mrrId, forViewLineEdit, vendorCreditId } = options;
+      let IAExist, inventoryAdjRec;
+      if (forViewLineEdit != true) {
+        log.audit(
+          "isRR Verified",
+          rxrsUtil_vl.checkIfRRIsVerified({ rrId: rrId }),
+        );
+        if (rxrsUtil_vl.checkIfRRIsVerified({ rrId: rrId }) != true) return;
+
+        /**
+         * Set the return request to approve since all the items are verified
+         */
+        record.submitFields({
+          type: rxrs_util.getReturnRequestType(rrId),
+          id: rrId,
+          values: {
+            transtatus: rxrs_util.rrStatus.Approved,
+          },
+        });
+        IAExist = checkIfTransAlreadyExist({
+          mrrId: mrrId,
+          searchType: "InvAdjst",
+        });
+
+        log.debug("createInventoryAdjustment IAExist", IAExist);
+      }
+
+      if (IAExist == null || forViewLineEdit == true) {
         inventoryAdjRec = record.create({
           type: record.Type.INVENTORY_ADJUSTMENT,
           isDynamic: true,
@@ -66,15 +83,27 @@ define([
           isDynamic: true,
         });
       }
-
+      vendorCreditId &&
+        inventoryAdjRec.setValue({
+          fieldId: "custbody_vendor_credit",
+          value: vendorCreditId,
+        });
       inventoryAdjRec.setValue({
         fieldId: "subsidiary",
         value: SUBSIDIARY,
       });
-      inventoryAdjRec.setValue({
-        fieldId: "account",
-        value: ACCOUNT,
-      });
+      if (forViewLineEdit == true) {
+        inventoryAdjRec.setValue({
+          fieldId: "account",
+          value: ACCOUNT.Accrued_Purchases,
+        });
+      } else {
+        inventoryAdjRec.setValue({
+          fieldId: "account",
+          value: ACCOUNT.Cost_of_Goods_Sold,
+        });
+      }
+
       inventoryAdjRec.setValue({
         fieldId: "adjlocation",
         value: LOCATION,
@@ -83,13 +112,62 @@ define([
         fieldId: "custbody_kd_master_return_id",
         value: mrrId,
       });
-      let IAId = addInventoryAdjustmentLine({
-        inventoryAdjRec: inventoryAdjRec,
-        rrId: rrId,
-      });
+      let params = {};
+      if (rrId) {
+        params.rrId = rrId;
+      }
+      if (forViewLineEdit) {
+        params.forViewLineEdit = forViewLineEdit;
+      }
+      if (vendorCreditId) {
+        params.vendorCreditId = vendorCreditId;
+      }
+      params.inventoryAdjRec = inventoryAdjRec;
+      let IAId = addInventoryAdjustmentLine(params);
       log.audit("IAId", IAId);
+      return IAId;
     } catch (e) {
       log.error("createInventoryAdjustment", e.message);
+    }
+  }
+
+  /**
+   *Update the bin number of the return request line if there's changes in the bin number
+   * @param options.rrId
+   * @param options.itemScanId
+   * @param options.binId
+   */
+  function updateBinNumber(options) {
+    log.audit("updateBinNumber", options);
+    let { rrId, itemScanId, binId } = options;
+    try {
+      const rec = record.load({
+        type: rxrs_util.getReturnRequestType(rrId),
+        id: rrId,
+      });
+      const itemScanIndex = rec.findSublistLineWithValue({
+        sublistId: "item",
+        fieldId: "custcol_rsrs_itemscan_link",
+        value: itemScanId,
+      });
+      log.audit("itemScanIndex", itemScanIndex);
+      if (itemScanIndex == -1) return;
+      const inventoryDetailsRecord = rec.getSublistSubrecord({
+        sublistId: "item",
+        fieldId: "inventorydetail",
+        line: itemScanIndex,
+      });
+      inventoryDetailsRecord.setSublistValue({
+        sublistId: "inventoryassignment",
+        fieldId: "binnumber",
+        line: 0,
+        value: binId,
+      });
+      return rec.save({
+        ignoreMandatoryFields: true,
+      });
+    } catch (e) {
+      log.error("updateBinNumber", e.message);
     }
   }
 
@@ -97,12 +175,27 @@ define([
    * Add Inventory Adjustment Line
    * @param {object}options.inventoryAdjRec -  Inventory Adjustment Record
    * @param {number}options.rrId - Return Request I'd
+   * @param {string}options.vendorCreditId
+   * @param {boolean}options.forViewLineEdit - Mark true for creation of the JE after the bill is fully paid
    */
   function addInventoryAdjustmentLine(options) {
+    log.audit("addInventoryAdjustmentLine", options);
     try {
-      let { inventoryAdjRec, rrId } = options;
-      let items = getIRSLine({ rrId: rrId });
+      let { inventoryAdjRec, rrId, vendorCreditId, forViewLineEdit } = options;
+      let getIRSparams = {};
+      let items;
+      if (rrId) {
+        getIRSparams.rrId = rrId;
+      }
+
+      if (forViewLineEdit == true) {
+        items = getTransactionLine({ id: vendorCreditId });
+      } else {
+        items = getIRSLine(getIRSparams);
+      }
+
       items.forEach((IRFields) => {
+        log.audit("addInventoryAdjustmentLine line", IRFields);
         inventoryAdjRec.selectNewLine({
           sublistId: "inventory",
         });
@@ -111,21 +204,24 @@ define([
           fieldId: "location",
           value: LOCATION,
         });
-        inventoryAdjRec.setCurrentSublistValue({
-          sublistId: "inventory",
-          fieldId: "item",
-          value: +IRFields.item,
-        });
-        inventoryAdjRec.setCurrentSublistValue({
-          sublistId: "inventory",
-          fieldId: "adjustqtyby",
-          value: +IRFields.quantity,
-        });
-        inventoryAdjRec.setCurrentSublistValue({
-          sublistId: "inventory",
-          fieldId: "unitcost",
-          value: +IRFields.amount,
-        });
+        +IRFields.item &&
+          inventoryAdjRec.setCurrentSublistValue({
+            sublistId: "inventory",
+            fieldId: "item",
+            value: +IRFields.item,
+          });
+        +IRFields.quantity &&
+          inventoryAdjRec.setCurrentSublistValue({
+            sublistId: "inventory",
+            fieldId: "adjustqtyby",
+            value: +IRFields.quantity,
+          });
+        +IRFields.amount &&
+          inventoryAdjRec.setCurrentSublistValue({
+            sublistId: "inventory",
+            fieldId: "unitcost",
+            value: +IRFields.amount,
+          });
 
         /**
          * Adding Inventory Details
@@ -137,24 +233,25 @@ define([
         subrec.selectNewLine({
           sublistId: "inventoryassignment",
         });
-
-        subrec.setCurrentSublistValue({
-          sublistId: "inventoryassignment",
-          fieldId: "quantity",
-          value: IRFields.quantity,
-        });
-
-        subrec.setCurrentSublistValue({
-          sublistId: "inventoryassignment",
-          fieldId: "receiptinventorynumber",
-          value: IRFields.serialLotNumber,
-        });
+        IRFields.quantity &&
+          subrec.setCurrentSublistValue({
+            sublistId: "inventoryassignment",
+            fieldId: "quantity",
+            value: IRFields.quantity,
+          });
+        IRFields.serialLotNumber &&
+          subrec.setCurrentSublistValue({
+            sublistId: "inventoryassignment",
+            fieldId: "receiptinventorynumber",
+            value: IRFields.serialLotNumber,
+          });
         let expDate = new Date(IRFields.expDate);
-        subrec.setCurrentSublistValue({
-          sublistId: "inventoryassignment",
-          fieldId: "expirationdate",
-          value: expDate,
-        });
+        expDate &&
+          subrec.setCurrentSublistValue({
+            sublistId: "inventoryassignment",
+            fieldId: "expirationdate",
+            value: expDate,
+          });
 
         subrec.commitLine({
           sublistId: "inventoryassignment",
@@ -525,6 +622,7 @@ define([
           poRec.selectNewLine({
             sublistId: "item",
           });
+          let toBinNumber = 230;
           item &&
             poRec.setCurrentSublistValue({
               sublistId: "item",
@@ -578,6 +676,7 @@ define([
                 quantity: quantity,
                 serialLotNumber: serialLotNumber,
                 expirationDate: expDate,
+                toBinNumber: toBinNumber,
               });
             }
           } catch (e) {
@@ -630,6 +729,26 @@ define([
     } catch (e) {
       log.error("createPO", e.message);
       return { error: e.message };
+    }
+  }
+
+  /**
+   * Set the transaction inventory detail bin number
+   * @param {number}options.id internal id of the transaction
+   * @param {string}options.type record type
+   * @param {string}options.binNumber - Internal Id of the bin number
+   * @return the internal id of the updated transaction
+   */
+  function setTransactionBinNumber(options) {
+    log.audit("setTransactionBinNumber", options);
+    let { id, type } = options;
+    try {
+      const rec = record.load({
+        type: type,
+        id: id,
+      });
+    } catch (e) {
+      log.error("setTransactionBinNumber", e.message);
     }
   }
 
@@ -943,17 +1062,19 @@ define([
    * @param {number}options.rrId - Return Request Id
    * @param {number}options.mrrId - Master Return Request Id
    * @param {number}options.finalyPaymentSchedule
+   * @param {number}options.pharmaProcessing
    * @param {number}options.irsId Item Return Scan Id
    * @return {array} return list of verified Item Return Scan
    */
   function getIRSLine(options) {
     log.audit("getIRSLine", getIRSLine);
-    let { rrId, finalyPaymentSchedule, mrrId, irsId } = options;
+    let { rrId, pharmaProcessing, finalyPaymentSchedule, mrrId, irsId } =
+      options;
     try {
       let poLines = [];
       const customrecord_cs_item_ret_scanSearchObj = search.create({
         type: "customrecord_cs_item_ret_scan",
-        filters: ["custrecord_cs__rqstprocesing", "anyof", [1, 2]],
+        // filters: ["custrecord_cs__rqstprocesing", "anyof", [1, 2]],
         columns: [
           search.createColumn({
             name: "custrecord_final_payment_schedule",
@@ -990,10 +1111,27 @@ define([
             label: "Amount ",
           }),
           search.createColumn({
-            name: "custrecord_scanorginallotnumber",
+            name: "custrecord_cs_lotnum",
           }),
         ],
       });
+      if (pharmaProcessing) {
+        customrecord_cs_item_ret_scanSearchObj.filters.push(
+          search.createFilter({
+            name: "custrecord_cs__rqstprocesing",
+            operator: "anyof",
+            values: pharmaProcessing,
+          }),
+        );
+      } else {
+        customrecord_cs_item_ret_scanSearchObj.filters.push(
+          search.createFilter({
+            name: "custrecord_cs__rqstprocesing",
+            operator: "anyof",
+            values: [1, 2],
+          }),
+        );
+      }
       if (rrId) {
         customrecord_cs_item_ret_scanSearchObj.filters.push(
           search.createFilter({
@@ -1044,7 +1182,7 @@ define([
           quantity: result.getValue("custrecord_cs_qty"),
           amount: amount,
           expDate: result.getText("custrecord_cs_expiration_date"),
-          serialLotNumber: result.getValue("custrecord_scanorginallotnumber"),
+          serialLotNumber: result.getValue("custrecord_cs_lotnum"),
         });
         return true;
       });
@@ -1056,11 +1194,75 @@ define([
   }
 
   /**
+   * Get the transaction line details
+   * @param options.id Internal Id of the transaction
+   * @return the line item values of the transaction
+   */
+  function getTransactionLine(options) {
+    log.audit("getTransactionLine", options);
+    let { id } = options;
+    let tranLine = [];
+    try {
+      const transactionSearchObj = search.create({
+        type: "transaction",
+        settings: [{ name: "consolidationtype", value: "ACCTTYPE" }],
+        filters: [
+          ["internalidnumber", "equalto", id],
+          "AND",
+          ["item.type", "anyof", "InvtPart"],
+          "AND",
+          ["quantity", "isnotempty", ""],
+        ],
+        columns: [
+          search.createColumn({ name: "item", label: "Item" }),
+          search.createColumn({ name: "quantity", label: "Quantity" }),
+          search.createColumn({
+            name: "binnumber",
+            join: "inventoryDetail",
+            label: "Bin Number",
+          }),
+          search.createColumn({
+            name: "inventorynumber",
+            join: "inventoryDetail",
+            label: " Number",
+          }),
+          search.createColumn({
+            name: "expirationdate",
+            join: "inventoryDetail",
+            label: "Expiration Date",
+          }),
+        ],
+      });
+
+      transactionSearchObj.run().each(function (result) {
+        tranLine.push({
+          item: result.getValue("item"),
+          quantity: +result.getValue("quantity") * -1,
+          expDate: result.getValue({
+            name: "expirationdate",
+            join: "inventoryDetail",
+          }),
+          serialLotNumber: result.getText({
+            name: "inventorynumber",
+            join: "inventoryDetail",
+          }),
+        });
+        return true;
+      });
+      log.audit("Tranline", tranLine);
+      return tranLine;
+    } catch (e) {
+      log.error("getTransactionLine", e.message);
+    }
+  }
+
+  /**
    *Set inventory Detail Subrecord
-   * @param {object}options.inventoryDetailSubrecord
-   * @param {number}options.quantity
-   * @param {string}options.serialLotNumber
-   * @param {string}options.expirationDate
+   * @param {object}options.inventoryDetailSubrecord - inventory detail sub record
+   * @param {number}options.quantity - Quantity
+   * @param {string}options.serialLotNumber - Serial lot number
+   * @param {string}options.expirationDate - Expiration date
+   * @param {string}options.toBinNumber - Internal Id of the bin number
    */
   function setInventoryDetails(options) {
     log.audit("setInventoryDetails", options);
@@ -1069,6 +1271,7 @@ define([
       quantity,
       serialLotNumber,
       expirationDate,
+      toBinNumber,
     } = options;
     try {
       inventoryDetailSubrecord.selectNewLine({
@@ -1091,6 +1294,12 @@ define([
           sublistId: "inventoryassignment",
           fieldId: "expirationdate",
           value: new Date(expirationDate),
+        });
+      toBinNumber &&
+        inventoryDetailSubrecord.setCurrentSublistValue({
+          sublistId: "inventoryassignment",
+          fieldId: "tobinnumber",
+          value: toBinNumber,
         });
       return inventoryDetailSubrecord.commitLine({
         sublistId: "inventoryassignment",
@@ -1417,6 +1626,7 @@ define([
       creditType,
       invStatus,
     } = options;
+    let Id;
     try {
       const objRecord = record.transform({
         fromType: record.Type.INVOICE,
@@ -1453,33 +1663,48 @@ define([
         fieldId: "amount",
         value: amount,
       });
+      let amountSet = objRecord.getCurrentSublistValue({
+        sublistId: "item",
+        fieldId: "amount",
+      });
+      let setITemField = objRecord.getCurrentSublistValue({
+        sublistId: "item",
+        fieldId: "item",
+      });
+      log.audit("setItemInCreditMemo", { setITemField, amountSet });
       objRecord.commitLine({
         sublistId: "item",
       });
-      if (creditAdjustmentAmount != 0) {
-        objRecord.selectLine({
-          sublistId: "item",
-          line: 1,
-        });
-        objRecord.setCurrentSublistValue({
-          sublistId: "item",
-          fieldId: "item",
-          value: creditAdjustmentItem,
-        });
-        objRecord.setCurrentSublistValue({
-          sublistId: "item",
-          fieldId: "amount",
-          value: creditAdjustmentAmount,
-        });
-        objRecord.commitLine({
-          sublistId: "item",
-        });
+
+      if (!isEmpty(creditAdjustmentAmount)) {
+        try {
+          objRecord.selectLine({
+            sublistId: "item",
+            line: 1,
+          });
+          objRecord.setCurrentSublistValue({
+            sublistId: "item",
+            fieldId: "item",
+            value: creditAdjustmentItem,
+          });
+          objRecord.setCurrentSublistValue({
+            sublistId: "item",
+            fieldId: "amount",
+            value: creditAdjustmentAmount,
+          });
+          objRecord.commitLine({
+            sublistId: "item",
+          });
+        } catch (e) {
+          log.error("Entering CreditAdjumentAccount", e.message);
+        }
       }
       cmId &&
         objRecord.setValue({
           fieldId: "custbody_credit_memos",
           value: cmId,
         });
+
       const invIndex = objRecord.findSublistLineWithValue({
         sublistId: "apply",
         fieldId: "internalid",
@@ -1528,7 +1753,7 @@ define([
         });
       }
 
-      let Id = objRecord.save({
+      Id = objRecord.save({
         ignoreMandatoryFields: true,
       });
       log.audit("CM ID Created", Id);
@@ -1774,7 +1999,7 @@ define([
         paymentRec.setCurrentSublistValue({
           sublistId: "line",
           fieldId: "account",
-          value: 122, //10300 Undeposited Funds
+          value: ACCOUNT.Undeposited_Funds,
         });
         log.debug("paymentamount", paymentAmount);
         paymentRec.setCurrentSublistValue({
@@ -1791,7 +2016,7 @@ define([
         paymentRec.setCurrentSublistValue({
           sublistId: "line",
           fieldId: "account",
-          value: 940, //Unapplied Credits
+          value: ACCOUNT.Unapplied_Credits,
         });
         paymentRec.setCurrentSublistValue({
           sublistId: "line",
@@ -2002,8 +2227,7 @@ define([
   function createServiceItemLines(newVBRec) {
     log.emergency("createServiceItemLines", newVBRec);
     const ACCRUEDPURCHASEITEM = 916;
-    const RETURNABLE = 2;
-    const NONRETURNABLE = 1;
+
     const RETURNABLESERVICEFEEITEM = 882;
 
     let returnableAmount = 0;
@@ -2731,8 +2955,6 @@ define([
       const transactionSearchObj = search.create({
         type: "transaction",
         filters: [
-          ["custbody_kodpaymentsched", "anyof", paymentId],
-          "AND",
           ["custbody_kd_master_return_id", "anyof", masterReturnId],
           "AND",
           ["mainline", "is", "T"],
@@ -2740,6 +2962,14 @@ define([
           ["type", "anyof", "VendBill"],
         ],
       });
+      paymentId &&
+        transactionSearchObj.filters.push(
+          search.createFilter({
+            name: "custbody_kodpaymentsched",
+            operator: "anyof",
+            values: paymentId,
+          }),
+        );
       const searchResultCount = transactionSearchObj.runPaged().count;
       if (searchResultCount === 0) return null;
       transactionSearchObj.run().each(function (result) {
@@ -2748,6 +2978,38 @@ define([
       return billId;
     } catch (e) {
       log.error("getBillId", e.message);
+    }
+  }
+
+  /**
+   * Get Bill Status
+   * @param masterReturnId
+   * @returns {*|null}
+   */
+  function getBillStatus(masterReturnId) {
+    log.audit("getBillStatus", masterReturnId);
+    let status;
+    try {
+      let billIds = [];
+      const transactionSearchObj = search.create({
+        type: "transaction",
+        filters: [
+          ["custbody_kd_master_return_id", "anyof", masterReturnId],
+          "AND",
+          ["mainline", "is", "T"],
+          "AND",
+          ["type", "anyof", "VendBill"],
+        ],
+        columns: ["status"],
+      });
+      const searchResultCount = transactionSearchObj.runPaged().count;
+      if (searchResultCount === 0) return null;
+      transactionSearchObj.run().each(function (result) {
+        status = result.getText("status");
+      });
+      return status;
+    } catch (e) {
+      log.error("getBillStatus", e.message);
     }
   }
 
@@ -2779,6 +3041,64 @@ define([
       return billIds;
     } catch (e) {
       log.error("getBillId", e.message);
+    }
+  }
+
+  /**
+   * Transfrom vendor bill to vendor credit if it is already paid in full
+   * @param options.billId - Bill Id
+   * @param options.lines vendor bill line
+   * @return the internal id of the created vendor bill
+   */
+  function createVendorCredit(options) {
+    let { billId } = options;
+    let jeTotalAmount = 0;
+    try {
+      const objRecord = record.transform({
+        fromType: record.Type.VENDOR_BILL,
+        fromId: billId,
+        toType: record.Type.VENDOR_CREDIT,
+        isDynamic: true,
+      });
+      for (let i = 0; i < objRecord.getLineCount("item"); i++) {
+        objRecord.selectLine({
+          sublistId: "item",
+          line: i,
+        });
+        const pharmaProcessing = objRecord.getCurrentSublistValue({
+          sublistId: "item",
+          fieldId: "custcol_kod_rqstprocesing",
+        });
+        log.audit("pharmaProcessing", pharmaProcessing);
+        if (pharmaProcessing == "2") {
+          const amount = objRecord.getCurrentSublistValue({
+            sublistId: "item",
+            fieldId: "amount",
+          });
+          log.audit("amount", amount);
+          jeTotalAmount += +amount;
+        }
+      }
+      log.audit("JE Total", jeTotalAmount);
+      let vendorCreditId = objRecord.save({
+        ignoreMandatoryFields: true,
+      });
+      if (vendorCreditId) {
+        createJournalEntry({
+          debit: jeTotalAmount,
+          masterReturnId: objRecord.getValue("custbody_kd_master_return_id"),
+          vendorId: objRecord.getValue("entity"),
+          subsidiaryId: 2,
+        });
+        createInventoryAdjustment({
+          forViewLineEdit: true,
+          vendorCreditId: vendorCreditId,
+          mrrId: objRecord.getValue("custbody_kd_master_return_id"),
+          rrId: null,
+        });
+      }
+    } catch (e) {
+      log.error("createVendorCredit", e.message);
     }
   }
 
@@ -2819,6 +3139,208 @@ define([
       removeVBLine(options);
     }
     return vbRec;
+  }
+
+  /**
+   * Remove the line for the bill credit
+   * @param {number}options.pharmaProcessing
+   * @param {object}options.rec
+   */
+  function removeBillCreditLine(options) {
+    let { pharmaProcessing, rec } = options;
+    log.audit("removeBillCreditLine", pharmaProcessing);
+
+    let totalAmount = 0;
+    let nonInventoryItemCount = 0;
+    let serviceFeeLine = 0;
+    try {
+      for (let i = 0; i < rec.getLineCount("item"); i++) {
+        let pharmaProcessingSublistVal = rec.getSublistValue({
+          sublistId: "item",
+          fieldId: "custcol_kod_rqstprocesing",
+          line: i,
+        });
+
+        let itemType = rec.getSublistValue({
+          sublistId: "item",
+          fieldId: "itemtype",
+          line: i,
+        });
+
+        log.audit("Bill Credit Line info ", {
+          i,
+          pharmaProcessingSublistVal,
+          itemType,
+        });
+        if (itemType == "NonInvtPart") {
+          nonInventoryItemCount += 1;
+          rec.removeLine({
+            sublistId: "item",
+            line: i,
+          });
+        }
+        if (
+          pharmaProcessingSublistVal == pharmaProcessing ||
+          pharmaProcessingSublistVal == ""
+        ) {
+          rec.removeLine({
+            sublistId: "item",
+            line: i,
+          });
+          log.audit("removing Line " + i);
+        } else {
+          let amount = rec.getSublistValue({
+            sublistId: "item",
+            fieldId: "amount",
+            line: i,
+          });
+          if (+amount > 0) {
+            totalAmount += amount;
+          }
+
+          log.audit("serviceFeeLine", { serviceFeeLine, amount, totalAmount });
+        }
+      }
+      let lineCount = rec.getLineCount("item");
+
+      log.audit("nonInventoryLineIndex", {
+        lineCount,
+        totalAmount,
+      });
+      const SERVICE_FEE_ADJUSTMENT_ITEM = 917;
+      let serviceFeeIndex = rec.findSublistLineWithValue({
+        sublistId: "item",
+        fieldId: "item",
+        value: SERVICE_FEE_ADJUSTMENT_ITEM,
+      });
+      let serviceFeeLineFinal;
+      if (serviceFeeIndex == -1) {
+        serviceFeeLineFinal = lineCount + 1;
+      } else {
+        serviceFeeLineFinal = serviceFeeIndex;
+      }
+      rec.setSublistValue({
+        sublistId: "item",
+        fieldId: "item",
+        line: serviceFeeLineFinal,
+        value: SERVICE_FEE_ADJUSTMENT_ITEM, //Service Fee - Adjustment Item
+      });
+      const adjustmentFee = Number(totalAmount) * 0.055;
+      rec.setSublistValue({
+        sublistId: "item",
+        fieldId: "rate",
+        line: serviceFeeLineFinal,
+        value: adjustmentFee, //Service Fee - Adjustment Item
+      });
+      rec.setSublistValue({
+        sublistId: "item",
+        fieldId: "amount",
+        line: serviceFeeLineFinal,
+        value: adjustmentFee, //Service Fee - Adjustment Item
+      });
+      log.audit("serviceFee amount", +totalAmount * 5.5);
+    } catch (e) {
+      log.error("removeBillCreditLine", {
+        error: e.message,
+      });
+      removeBillCreditLine(options);
+    }
+    return rec;
+  }
+
+  /**
+   * Create Journal Entry
+   * @param {number} options.debit - Debit Amount based on the Returnable Amount
+   * @param {string} options.masterReturnId - Master Request Id
+   * @param {number} options.vendorId - Vendor Id from the bill
+   * @param {number} options.subsidiaryId - Default Subsidiary of the Bill
+   */
+  function createJournalEntry(options) {
+    log.audit("createJournalEntry", options);
+    let { debit, vendorId, masterReturnId, subsidiaryId } = options;
+
+    try {
+      const accountsPayableAmount = +debit * 0.945;
+      const serviceFeeAmount = +debit * 0.055;
+      log.audit("Amount", { accountsPayableAmount, serviceFeeAmount });
+      const jeRec = record.create({
+        type: record.Type.JOURNAL_ENTRY,
+        isDynamic: true,
+      });
+      masterReturnId &&
+        jeRec.setValue({
+          fieldId: "custbody_kd_master_return_id",
+          value: masterReturnId,
+        });
+      jeRec.setValue({
+        fieldId: "subsidiary",
+        value: subsidiaryId,
+      });
+      jeRec.selectNewLine({
+        sublistId: "line",
+      });
+      jeRec.setCurrentSublistValue({
+        sublistId: "line",
+        fieldId: "account",
+        value: ACCOUNT.Accrued_Purchases,
+      });
+      jeRec.setCurrentSublistValue({
+        sublistId: "line",
+        fieldId: "debit",
+        value: debit,
+      });
+      jeRec.commitLine({
+        sublistId: "line",
+      });
+
+      // Setting accounts payable
+      jeRec.selectNewLine({
+        sublistId: "line",
+      });
+      jeRec.setCurrentSublistValue({
+        sublistId: "line",
+        fieldId: "account",
+        value: ACCOUNT.Accounts_Payable,
+      });
+      jeRec.setCurrentSublistValue({
+        sublistId: "line",
+        fieldId: "entity",
+        value: vendorId,
+      });
+      jeRec.setCurrentSublistValue({
+        sublistId: "line",
+        fieldId: "credit",
+        value: accountsPayableAmount,
+      });
+      jeRec.commitLine({
+        sublistId: "line",
+      });
+
+      // Setting service fee
+      jeRec.selectNewLine({
+        sublistId: "line",
+      });
+      jeRec.setCurrentSublistValue({
+        sublistId: "line",
+        fieldId: "account",
+        value: ACCOUNT.Service_Fee,
+      });
+      jeRec.setCurrentSublistValue({
+        sublistId: "line",
+        fieldId: "credit",
+        value: serviceFeeAmount,
+      });
+      jeRec.commitLine({
+        sublistId: "line",
+      });
+      let jeId = jeRec.save({
+        ignoreMandatoryFields: true,
+      });
+      log.audit("Created Journal Entry", jeId);
+      return jeId;
+    } catch (e) {
+      log.error("createJournalEntry", e.message);
+    }
   }
 
   /**
@@ -3451,6 +3973,41 @@ define([
     );
   }
 
+  /**
+   * Submit functionality in the view line item suitelet
+   * @param {string} options.billId - Bill Internal Id
+   * @aram
+   */
+
+  function submitMRRitem(options) {
+    let { billId } = options;
+    try {
+      const objRecord = record.transform({
+        fromType: record.Type.VENDOR_BILL,
+        fromId: billId,
+        toType: record.Type.VENDOR_CREDIT,
+      });
+      for (let i = 0; i < objRecord.getLineCount("item"); i++) {
+        const itemType = objRecord.getSublistValue({
+          sublistId: "item",
+          fieldId: "itemtype",
+          line: i,
+        });
+        if (itemType == "NonInvtPart") {
+          objRecord.removeLine({
+            sublistId: "line",
+            line: i,
+          });
+        }
+      }
+      objRecord.save({
+        ignoreMandatoryFields: true,
+      });
+    } catch (e) {
+      log.error("submitMRRitem", e.message);
+    }
+  }
+
   return {
     addAccruedPurchaseItem: addAccruedPurchaseItem,
     addAcrruedAmountBasedonTransaction: addAcrruedAmountBasedonTransaction,
@@ -3485,5 +4042,10 @@ define([
     updateProcessing: updateProcessing,
     updateSO222Form: updateSO222Form,
     updateTranLineCM: updateTranLineCM,
+    removeBillCreditLine: removeBillCreditLine,
+    getBillStatus: getBillStatus,
+    createVendorCredit: createVendorCredit,
+    createJounralEntry: createJournalEntry,
+    updateBinNumber: updateBinNumber,
   };
 });

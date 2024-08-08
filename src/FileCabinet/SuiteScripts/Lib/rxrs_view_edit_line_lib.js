@@ -78,12 +78,16 @@ define([
           }),
           search.createColumn({
             name: "custrecord_scanrate",
-            label: "Price Level",
+            label: "Scan Rate",
           }),
           search.createColumn({
             name: "internalid",
             join: "CUSTRECORD_CS_RETURN_REQ_SCAN_ITEM",
             label: "Internal ID",
+          }),
+          search.createColumn({
+            name: "custrecord_scanpricelevel",
+            label: "Price level",
           }),
         ],
       });
@@ -136,6 +140,7 @@ define([
               name: "custrecord_scannonreturnreason",
             }) || 8,
           note: "",
+          priceLevel: result.getText("custrecord_scanpricelevel"),
           rate:
             result.getValue({ name: "custrecord_scanrate" }) ||
             result.getValue({ name: "custrecord_isc_inputrate" }),
@@ -233,7 +238,13 @@ define([
       id: "custpage_notes",
       type: "TEXT",
       label: "NOTES",
-      updateDisplayType: "DISABLED",
+      updateDisplayType: "ENTRY",
+    },
+    {
+      id: "custpage_pricelevel",
+      type: "TEXT",
+      label: "PRICE LEVEL",
+      updateDisplayType: "INLINE",
     },
     {
       id: "custpage_rate",

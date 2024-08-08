@@ -59,6 +59,7 @@ define(["N/file", "N/record", "N/search"] /**
       iterator.shift();
       log.debug("iterator", iterator);
       for (let i = 0; i < 10; i++) {
+        //for testing
         let val = iterator[i].split("|");
         itemToProcess.push({
           updateCode: val[0],

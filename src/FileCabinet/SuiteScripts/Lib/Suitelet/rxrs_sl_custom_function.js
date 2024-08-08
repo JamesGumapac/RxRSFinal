@@ -43,6 +43,9 @@ define([
         returnableFee,
         vbId,
         planSelectionType,
+        values,
+        type,
+        id,
       } = params;
       try {
         let returnObj;
@@ -221,6 +224,44 @@ define([
             }
 
             context.response.writeLine(message);
+            break;
+          case "updatePriceLevel":
+            let responseMessage;
+            log.audit("params", values);
+            let ids = custRecLib.updateIRSPricelevel({
+              values: values,
+              billId: billId,
+            });
+            if (ids) {
+              responseMessage = `SUCCESSFULLY UPDATE ITEM RETURN SCAN ID : ${ids}`;
+            } else {
+              responseMessage = "ERROR: Please contact your administrator";
+            }
+            context.response.writeLine(responseMessage);
+            break;
+          case "reloadRecord":
+            log.audit("reloading record", { type: type, id: params.id });
+            const loadedRec = record.load({
+              id: params.id,
+              type: type,
+              isDynamic: true,
+            });
+            let updateRelatedTranParam = {
+              pharmaProcessing: loadedRec.getValue(
+                "custrecord_cs__rqstprocesing",
+              ),
+              irsId: loadedRec.id,
+              amount: loadedRec.getValue("custrecord_irc_total_amount"),
+              priceLevel: loadedRec.getValue("custrecord_scanpricelevel"),
+              rate: loadedRec.getValue("custrecord_scanrate"),
+            };
+            tranLib.setIRSRelatedTranLineProcessing(updateRelatedTranParam);
+            log.audit(
+              "reloading",
+              loadedRec.save({
+                ignoreMandatoryFields: true,
+              }),
+            );
             break;
         }
       } catch (e) {

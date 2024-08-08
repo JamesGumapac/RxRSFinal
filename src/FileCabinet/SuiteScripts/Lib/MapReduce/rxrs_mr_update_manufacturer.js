@@ -2,19 +2,10 @@
  * @NApiVersion 2.1
  * @NScriptType MapReduceScript
  */
-define([
-  "N/file",
-  "N/runtime",
-  "N/record",
-  "N/search",
-  "../rxrs_csv_import_lib.js",
-  "../rxrs_item_lib",
-  "../rxrs_custom_rec_lib",
-  "../rxrs_util",
-] /**
+define(["N/record", "N/search", "N/runtime", "../rxrs_lib_bag_label"] /**
  * @param{record} record
  * @param{search} search
- */, (file, runtime, record, search, csv_lib, item_lib, custom_rec, util) => {
+ */, (record, search, runtime, baglib) => {
   /**
    * Defines the function that is executed at the beginning of the map/reduce process and generates the input data.
    * @param {Object} inputContext
@@ -29,23 +20,48 @@ define([
    */
 
   const getInputData = (inputContext) => {
-    const functionName = "getInputData";
-
-    log.audit(functionName, "************ EXECUTION STARTED ************");
     try {
-      const params = getParameters();
-      log.audit("params", params);
+      const binNumberId = getParameter();
 
-      const fileObj = file.load({
-        id: util.getFileId(params.fileName),
+      const binRec = record.load({
+        type: "bin",
+        id: binNumberId,
       });
-      switch (params.action) {
-        case "UPSERT_PRICING":
-          return csv_lib.getPricing(fileObj);
-          break;
-        case "UPSERT_ITEM":
-          return csv_lib.getItemDetails(fileObj.getContents());
-          break;
+      let binNumberText;
+      const binNumber = binRec.getValue("binnumber");
+      log.debug("bin number", binNumber);
+      let binName = binNumber.split("-")[0];
+      log.debug("bin number", binName);
+      let fieldToUpdate = baglib.getFieldToUpdate(binName);
+      log.debug("binNummber length", binNumber.split("-").length);
+      if (binNumber.split("-").length == 3) {
+        binNumberText = binNumber.split("-")[2];
+        log.debug("binNummber text", binNumberText.length);
+        if (binNumberText.length <= 2) {
+          if (binNumberText.length == 2) {
+            let letters = baglib.getManufStartLetter({
+              startLetter: binNumberText[0],
+              endLetter: binNumberText[1],
+            });
+            log.audit("letters", letters);
+            return baglib.getManufList({
+              letterStart: letters,
+              binNumber: binNumberId,
+              binField: fieldToUpdate,
+            });
+          }
+        } else {
+          return;
+          log.debug("getting manuf based on name contains");
+          return baglib.getManufacturer({
+            name: binNumberText,
+          });
+        }
+      } else if (binNumber.split("-").length == 2) {
+        binNumberText = binNumber.split("-")[1];
+        if (typeof +binNumberText[binNumberText.length - 1] == "number") {
+          return baglib.getManufacturer({ letter: null, binNumber: null });
+        }
       }
     } catch (e) {
       log.error("getInputData", e.message);
@@ -87,50 +103,41 @@ define([
    * @since 2015.2
    */
   const reduce = (reduceContext) => {
-    const functionName = "reduce";
-    const data = JSON.parse(reduceContext.values);
+    let reduceObj = JSON.parse(reduceContext.values);
+    log.audit("reduceobj", reduceObj);
+    try {
+      const binRec = record.load({
+        type: "bin",
+        id: getParameter(),
+      });
 
-    switch (getParameters().action) {
-      case "UPSERT_PRICING":
-        try {
-          let { updateCode, NDC, priceType, date, price } = data;
-          const itemId = item_lib.getItemId(parseFloat(NDC));
-          if (itemId) {
-            if (updateCode == "A") {
-              log.audit("data", data);
-              const updatedItem = item_lib.updateItemPricing({
-                itemId: itemId,
-                rate: parseFloat(price),
-                priceLevel: 1,
-              });
-              if (updatedItem) {
-                let priceHistoryId = custom_rec.createPriceHistory({
-                  itemId: itemId,
-                  date: date,
-                  priceType: priceType,
-                  newPrice: parseFloat(price),
-                });
-                log.audit("Created Price History Id ", { priceHistoryId, NDC });
-              }
-            } else {
-              custom_rec.deletePriceHistory({
-                itemId: itemId,
-                date: date,
-                priceType: priceType,
-              });
-            }
-          }
-        } catch (e) {
-          log.error("UPSERT_PRICING", e.message);
-        }
-        break;
-      case "UPSERT_ITEM":
-        try {
-          log.audit("data", data);
-        } catch (e) {
-          log.error("UPSERT_ITEM", e.message);
-        }
-        break;
+      const binNumber = binRec.getValue("binnumber");
+      let binName = binNumber.split("-")[0];
+      log.debug("bin number", binName);
+      let fieldToUpdate = baglib.getFieldToUpdate(binName);
+
+      const manufRec = record.load({
+        type: "customrecord_csegmanufacturer",
+        id: reduceObj,
+      });
+      const scriptObj = runtime.getCurrentScript();
+
+      const binNumberId = scriptObj.getParameter({
+        name: "custscript_bin",
+      });
+      let currentBins = manufRec.getValue(fieldToUpdate);
+      currentBins.push(binNumberId.toString());
+      log.audit("currentBin", { reduceObj, currentBins, binNumberId });
+      manufRec.setValue({
+        fieldId: fieldToUpdate,
+        value: currentBins,
+      });
+
+      manufRec.save({
+        ignoreMandatoryFields: true,
+      });
+    } catch (e) {
+      log.error("reduceContext", e.message);
     }
   };
 
@@ -140,7 +147,7 @@ define([
    * @param {Object} summaryContext - Statistics about the execution of a map/reduce script
    * @param {number} summaryContext.concurrency - Maximum concurrency number when executing parallel tasks for the map/reduce
    *     script
-   * @param {Date} summaryContext.dateCreat ed - The date and time when the map/reduce script began running
+   * @param {Date} summaryContext.dateCreated - The date and time when the map/reduce script began running
    * @param {boolean} summaryContext.isRestarted - Indicates whether the current invocation of this function is the first
    *     invocation (if true, the current invocation is not the first invocation and this function has been restarted)
    * @param {Iterator} summaryContext.output - Serialized keys and values that were saved as output during the reduce stage
@@ -154,56 +161,27 @@ define([
    * @since 2015.2
    */
   const summarize = (summaryContext) => {
-    let params = getParameters();
-    util.moveFolderToDone({
-      fileId: util.getFileId(params.fileName),
-      folderId: params.doneFolderId,
+    const binRec = record.load({
+      type: "bin",
+      id: getParameter(),
     });
-    const functionName = "summarize";
-    log.audit(functionName, {
-      UsageConsumed: summaryContext.usage,
-      NumberOfQueues: summaryContext.concurrency,
-      NumberOfYields: summaryContext.yields,
+    binRec.setValue({
+      fieldId: "custrecord_manuf_assignment_date",
+      value: new Date(),
     });
-    log.audit(functionName, "************ EXECUTION COMPLETED ************");
-  };
-  /**
-   * Get Script Parameters
-   */
-  const getParameters = () => {
-    let objParams = {};
-
-    let objScript = runtime.getCurrentScript();
-    objParams = {
-      doneFolderId: objScript.getParameter({
-        name: "custscript_processed_folder_id",
-      }),
-      fileName: objScript.getParameter({
-        name: "custscript_filename",
-      }),
-      pendingFolderId: objScript.getParameter({
-        name: "custscript_folder_id",
-      }),
-      action: objScript.getParameter({
-        name: "custscript_rxrs_fileimportaction",
-      }),
-    };
-
-    return objParams;
+    binRec.setValue({
+      fieldId: "custrecord_assigned_to_manuf",
+      value: true,
+    });
+    log.audit("Updating bin last manuf assigned date", binRec.save());
   };
 
-  function isEmpty(stValue) {
-    return (
-      stValue === "" ||
-      stValue == null ||
-      false ||
-      (stValue.constructor === Array && stValue.length == 0) ||
-      (stValue.constructor === Object &&
-        (function (v) {
-          for (var k in v) return false;
-          return true;
-        })(stValue))
-    );
+  function getParameter() {
+    const scriptObj = runtime.getCurrentScript();
+
+    return scriptObj.getParameter({
+      name: "custscript_bin",
+    });
   }
 
   return { getInputData, reduce, summarize };

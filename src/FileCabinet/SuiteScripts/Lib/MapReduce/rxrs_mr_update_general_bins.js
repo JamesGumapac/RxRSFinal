@@ -2,19 +2,10 @@
  * @NApiVersion 2.1
  * @NScriptType MapReduceScript
  */
-define([
-  "N/file",
-  "N/runtime",
-  "N/record",
-  "N/search",
-  "../rxrs_csv_import_lib.js",
-  "../rxrs_item_lib",
-  "../rxrs_custom_rec_lib",
-  "../rxrs_util",
-] /**
+define(["N/record", "N/search", "../rxrs_lib_bag_label"] /**
  * @param{record} record
  * @param{search} search
- */, (file, runtime, record, search, csv_lib, item_lib, custom_rec, util) => {
+ */, (record, search, baglib) => {
   /**
    * Defines the function that is executed at the beginning of the map/reduce process and generates the input data.
    * @param {Object} inputContext
@@ -29,24 +20,8 @@ define([
    */
 
   const getInputData = (inputContext) => {
-    const functionName = "getInputData";
-
-    log.audit(functionName, "************ EXECUTION STARTED ************");
     try {
-      const params = getParameters();
-      log.audit("params", params);
-
-      const fileObj = file.load({
-        id: util.getFileId(params.fileName),
-      });
-      switch (params.action) {
-        case "UPSERT_PRICING":
-          return csv_lib.getPricing(fileObj);
-          break;
-        case "UPSERT_ITEM":
-          return csv_lib.getItemDetails(fileObj.getContents());
-          break;
-      }
+      return baglib.getGeneralBin();
     } catch (e) {
       log.error("getInputData", e.message);
     }
@@ -87,50 +62,24 @@ define([
    * @since 2015.2
    */
   const reduce = (reduceContext) => {
-    const functionName = "reduce";
-    const data = JSON.parse(reduceContext.values);
+    try {
+      const reduceObj = JSON.parse(reduceContext.values);
+      log.audit("reduceObj", reduceObj);
 
-    switch (getParameters().action) {
-      case "UPSERT_PRICING":
-        try {
-          let { updateCode, NDC, priceType, date, price } = data;
-          const itemId = item_lib.getItemId(parseFloat(NDC));
-          if (itemId) {
-            if (updateCode == "A") {
-              log.audit("data", data);
-              const updatedItem = item_lib.updateItemPricing({
-                itemId: itemId,
-                rate: parseFloat(price),
-                priceLevel: 1,
-              });
-              if (updatedItem) {
-                let priceHistoryId = custom_rec.createPriceHistory({
-                  itemId: itemId,
-                  date: date,
-                  priceType: priceType,
-                  newPrice: parseFloat(price),
-                });
-                log.audit("Created Price History Id ", { priceHistoryId, NDC });
-              }
-            } else {
-              custom_rec.deletePriceHistory({
-                itemId: itemId,
-                date: date,
-                priceType: priceType,
-              });
-            }
-          }
-        } catch (e) {
-          log.error("UPSERT_PRICING", e.message);
-        }
-        break;
-      case "UPSERT_ITEM":
-        try {
-          log.audit("data", data);
-        } catch (e) {
-          log.error("UPSERT_ITEM", e.message);
-        }
-        break;
+      const binRec = record.load({
+        type: "bin",
+        id: reduceObj.id,
+      });
+      binRec.setValue({
+        fieldId: "custrecord_general_bins",
+        value: true,
+      });
+      let binId = binRec.save({
+        ignoreMandatoryFields: true,
+      });
+      log.audit("updated general bins", binId);
+    } catch (e) {
+      log.error("Reduce", e.message);
     }
   };
 
@@ -140,7 +89,7 @@ define([
    * @param {Object} summaryContext - Statistics about the execution of a map/reduce script
    * @param {number} summaryContext.concurrency - Maximum concurrency number when executing parallel tasks for the map/reduce
    *     script
-   * @param {Date} summaryContext.dateCreat ed - The date and time when the map/reduce script began running
+   * @param {Date} summaryContext.dateCreated - The date and time when the map/reduce script began running
    * @param {boolean} summaryContext.isRestarted - Indicates whether the current invocation of this function is the first
    *     invocation (if true, the current invocation is not the first invocation and this function has been restarted)
    * @param {Iterator} summaryContext.output - Serialized keys and values that were saved as output during the reduce stage
@@ -153,58 +102,7 @@ define([
    * @param {Object} summaryContext.reduceSummary - Statistics about the reduce stage
    * @since 2015.2
    */
-  const summarize = (summaryContext) => {
-    let params = getParameters();
-    util.moveFolderToDone({
-      fileId: util.getFileId(params.fileName),
-      folderId: params.doneFolderId,
-    });
-    const functionName = "summarize";
-    log.audit(functionName, {
-      UsageConsumed: summaryContext.usage,
-      NumberOfQueues: summaryContext.concurrency,
-      NumberOfYields: summaryContext.yields,
-    });
-    log.audit(functionName, "************ EXECUTION COMPLETED ************");
-  };
-  /**
-   * Get Script Parameters
-   */
-  const getParameters = () => {
-    let objParams = {};
-
-    let objScript = runtime.getCurrentScript();
-    objParams = {
-      doneFolderId: objScript.getParameter({
-        name: "custscript_processed_folder_id",
-      }),
-      fileName: objScript.getParameter({
-        name: "custscript_filename",
-      }),
-      pendingFolderId: objScript.getParameter({
-        name: "custscript_folder_id",
-      }),
-      action: objScript.getParameter({
-        name: "custscript_rxrs_fileimportaction",
-      }),
-    };
-
-    return objParams;
-  };
-
-  function isEmpty(stValue) {
-    return (
-      stValue === "" ||
-      stValue == null ||
-      false ||
-      (stValue.constructor === Array && stValue.length == 0) ||
-      (stValue.constructor === Object &&
-        (function (v) {
-          for (var k in v) return false;
-          return true;
-        })(stValue))
-    );
-  }
+  const summarize = (summaryContext) => {};
 
   return { getInputData, reduce, summarize };
 });

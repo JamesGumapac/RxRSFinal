@@ -14,6 +14,7 @@ define([
   "N/record",
   "N/redirect",
   "../rxrs_view_edit_line_lib",
+  "../rxrs_verify_staging_lib",
 ], /**
  * @param{serverWidget} serverWidget
  * @param rxrs_rcl_util
@@ -35,6 +36,7 @@ define([
   record,
   redirect,
   veLib,
+  vsLib,
 ) => {
   /**
    * Defines the Suitelet script trigger point.
@@ -189,6 +191,7 @@ define([
          * Hide unnecessary column
          */
         if (edit == true || edit == "true") {
+          let billStatus, billId;
           let htmlFileId = rxrs_util.getFileId("SL_loading_html.html"); // HTML file for loading animation
           if (htmlFileId) {
             const dialogHtmlField = form.addField({
@@ -203,16 +206,6 @@ define([
               .getContents();
           }
           let all = "all";
-          form.addButton({
-            id: "custpage_create_update",
-            label: "Update Modified Lines",
-            functionName: `submitAll()`,
-          });
-          form.addButton({
-            id: "custpage_create_update",
-            label: "Update From Catalog",
-            functionName: `updateFromCatalog()`,
-          });
 
           let sublistFields = veLib.viewEditLineSUBLIST;
 
@@ -266,38 +259,63 @@ define([
             type: serverWidget.FieldType.INLINEHTML,
           });
           tableField.defaultValue = tableStr;
-          // let sublistFields = rxrs_vs_util.SUBLISTFIELDS.returnableManufacturer;
-          // sublistFields = rxrs_rcl_util.hideSublist({
-          //   sublistToHide: rxrs_rcl_util.SUBLIST_TO_HIDE_IN_RCL,
-          //   sublist: sublistFields,
-          //   showSelect: customize == "true",
-          // });
-          //
-          // sublistFields = rxrs_rcl_util.setSublistToEntry({
-          //   sublistToEntry: rxrs_rcl_util.SUBLIST_TO_ENTRY,
-          //   sublist: sublistFields,
-          //   showSelect: false,
-          // });
-          // let itemsReturnScan = rxrs_vs_util.getReturnableItemScan({
-          //   mrrId: mrrId,
-          //   paymentSchedId: paymentSchedId,
-          //   isVerifyStaging: true,
-          //   finalPaymentSched: finalPaymentSched,
-          //   returnableFee: returnableFee,
-          //   isMFGProcessing: true,
-          // });
-          //
-          // rxrs_vs_util.createReturnableSublist({
-          //   form: form,
-          //   rrTranId: mrrId,
-          //   rrName: tranId,
-          //   sublistFields: sublistFields,
-          //   value: itemsReturnScan,
-          //   isMainInDated: false,
-          //   inDate: true,
-          //   returnList: itemsReturnScan,
-          //   title: paymentSchedText,
-          // });
+          let billStatusField = form
+            .addField({
+              id: "custpage_billstatus",
+              label: "Value Summary",
+              type: serverWidget.FieldType.INLINEHTML,
+            })
+            .updateDisplayType({
+              displayType: "HIDDEN",
+            });
+
+          let billIdField = form.addField({
+            id: "custpage_billidlink",
+            label: "Bill Link",
+            type: serverWidget.FieldType.INLINEHTML,
+          });
+          let billIdLinkField = form
+            .addField({
+              id: "custpage_billid",
+              label: "Value Summary",
+              type: serverWidget.FieldType.INLINEHTML,
+            })
+            .updateDisplayType({
+              displayType: "HIDDEN",
+            });
+
+          if (mrrId) {
+            billId = rxrs_tran_util.getBillId({ masterReturnId: mrrId });
+            billStatus = rxrs_tran_util.getBillStatus(mrrId);
+            log.audit("billStatus", billStatus);
+            if (billId) {
+              billIdLinkField.defaultValue = billId;
+              billIdField.defaultValue = `<a href="${vsLib.generateRedirectLink(
+                {
+                  type: record.Type.VENDOR_BILL,
+                  id: billId,
+                },
+              )}" style=" text-decoration: underline;color: BLUE;"><b>Bill Id: ${billId} | Status: ${billStatus} </b></a>`;
+            }
+            billStatusField.defaultValue = billStatus;
+          }
+          let buttonName;
+          if (billStatus == "Paid In Full") {
+            buttonName = "Create Vendor Credit";
+          } else {
+            buttonName = "Update Modified Lines";
+            form.addButton({
+              id: "custpage_create_update",
+              label: "Update From Catalog",
+              functionName: `updateFromCatalog()`,
+            });
+          }
+
+          form.addButton({
+            id: "custpage_create_update",
+            label: buttonName,
+            functionName: `submitAll(${billId})`,
+          });
         } else {
           let sublistFields = rxrs_vs_util.SUBLISTFIELDS.returnableManufacturer;
           sublistFields = rxrs_rcl_util.hideSublist({

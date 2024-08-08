@@ -9,6 +9,7 @@ define([
   "N/file",
   "N/record",
   "N/redirect",
+  "../rxrs_lib_bag_label",
 ], /**
  * @param{serverWidget} serverWidget
  * @param rxrs_vs_util
@@ -16,7 +17,7 @@ define([
  * @param file
  * @param record
  * @param redirect
- */ (serverWidget, rxrs_vs_util, cache, file, record, redirect) => {
+ */ (serverWidget, rxrs_vs_util, cache, file, record, redirect, bag) => {
   /**
    * Defines the Suitelet script trigger point.
    * @param {Object} scriptContext
@@ -50,7 +51,7 @@ define([
         hideNavBar: true,
       });
       form.clientScriptFileId = rxrs_vs_util.getFileId(
-        "rxrs_cs_verify_staging.js"
+        "rxrs_cs_verify_staging.js",
       );
 
       form = createHeaderFields({ form, params });
@@ -79,18 +80,21 @@ define([
 
     log.emergency("returnList", returnList);
     let paramInDate = options.params.inDate;
+    let manufId;
     let paramIsHazardous = options.params.isHazardous;
     let paramSelectionType = options.params.selectionType;
     let paramManufacturer = options.params.manufacturer
       ? options.params.manufacturer
       : "";
     let rrType = options.params.rrType;
+    let binCategory = options.params.binCategory;
+    let manualBin = options.params.manualBin;
     try {
       paramManufacturer = paramManufacturer.includes("_")
         ? paramManufacturer.replaceAll("_", "&")
         : paramManufacturer;
       if (paramManufacturer) {
-        let manufId = rxrs_vs_util.getManufactuerId(paramManufacturer);
+        manufId = rxrs_vs_util.getManufactuerId(paramManufacturer);
         form
           .addField({
             id: "custpage_manuf_id",
@@ -390,7 +394,66 @@ define([
           });
         }
       }
+      if (manufId) {
+        let manualBinField = form
+          .addField({
+            id: "custpage_manual_bin",
+            label: "Manual Bin Selection",
+            type: serverWidget.FieldType.CHECKBOX,
+          })
+          .updateDisplayType({
+            displayType: "NORMAL",
+          });
+        if (manualBin) {
+          let manualBinValue = manualBin == "true" ? "T" : "F";
+          log.error("val ", { manualBin, manualBinValue });
+          manualBinField.defaultValue = manualBinValue;
+        }
+        let binCategoryField = form
+          .addField({
+            id: "custpage_bincategory",
+            label: "Bin Category",
+            source: "customlist_bincategory",
+            type: serverWidget.FieldType.SELECT,
+          })
+          .updateDisplayType({
+            displayType: "DISABLED",
+          });
+        if (binCategory) {
+          binCategoryField.defaultValue = binCategory;
+        }
+        let binField = form
+          .addField({
+            id: "custpage_bin",
+            label: "Bin",
+            type: serverWidget.FieldType.SELECT,
+          })
+          .updateDisplayType({
+            displayType: "DISABLED",
+          });
+        if (binCategory) {
+          let fieldId = bag.getBinFieldId(binCategory);
+          const manufRec = record.load({
+            type: "customrecord_csegmanufacturer",
+            id: manufId,
+          });
+          let text = manufRec.getText(fieldId);
+          let ids = manufRec.getValue(fieldId);
 
+          if (text.length > 0) {
+            binField.addSelectOption({
+              text: " ",
+              value: " ",
+            });
+            for (let i = 0; i < text.length; i++) {
+              binField.addSelectOption({
+                text: text[i],
+                value: ids[i],
+              });
+            }
+          }
+        }
+      }
       return form;
     } catch (e) {
       log.error("createHeaderFields", e.message);

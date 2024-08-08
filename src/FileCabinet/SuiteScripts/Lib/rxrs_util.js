@@ -9,14 +9,17 @@ define([
   "N/search",
   "N/record",
   "N/https",
+  "./rxrs_verify_staging_lib",
 ], /**
+ * @param url
  * @param{email} email
  * @param{file} file
  * @param{runtime} runtime
  * @param{search} search
  * @param record
  * @param https
- */ (url, email, file, runtime, search, record, https) => {
+ * @param vslib
+ */ (url, email, file, runtime, search, record, https, vslib) => {
   const RRCATEGORY = Object.freeze({
     C2: 3,
     RXOTC: 1,
@@ -868,6 +871,111 @@ define([
     }
   }
 
+  /**
+   * Check if there is changes in the record or not if there is update the Lot item custom record.
+   * @param {object} options.oldRec
+   * @param {object} options.newRec
+   * @param {object} options.FIELDS
+   *@return {boolean} if there's update
+   */
+
+  function checkIfThereIsUpdate(options) {
+    log.audit("checkIfThereIsUpdate", options);
+    let updateNeed = false;
+    let { oldRec, newRec, FIELDS } = options;
+
+    try {
+      FIELDS.forEach((field) => {
+        const oldValue = oldRec.getValue(field);
+        const newValue = newRec.getValue(field);
+        log.debug("values", { field, oldValue, newValue });
+        if (oldValue != newValue) {
+          updateNeed = true;
+        }
+      });
+      return updateNeed;
+    } catch (e) {
+      log.error("checkIfThereIsUpdate", e.message);
+    }
+  }
+
+  /**
+   *
+   * @params options.oldBag -  Previous Bag assignment
+   * @params options.newBag - New Bag Assignment
+   */
+  function sendEmailMFGProcessingIsUpdated(options) {
+    let { newRec, receipient, sender, newBag, oldBag } = options;
+    try {
+      const emailParams = {
+        itemNDC: generateRedirectLink({
+          type: "lotnumberedinventoryitem",
+          id: newRec.getValue("custrecord_cs_return_req_scan_item"),
+        }),
+        returnRequestText: newRec.getText("custrecord_cs_ret_req_scan_rrid"),
+        bagPreviousAssignment: oldBag,
+        returnRequestLink: generateRedirectLink({
+          id: newRec.getValue("custrecord_cs_ret_req_scan_rrid"),
+          type: getReturnRequestType(
+            newRec.getValue("custrecord_cs_ret_req_scan_rrid"),
+          ),
+        }),
+        newBagAssignment: generateRedirectLink({
+          type: "customrecord_kd_taglabel",
+          id: newBag,
+        }),
+      };
+
+      log.emergency("EMAIL PARAMS", emailParams);
+      email.send({
+        author: -5,
+        recipients: 1177,
+        subject: "Manuf Processing has been changed",
+        body: `<table style="padding: 2px">
+  <tr>
+   <td>Item</td>
+    <td>Return Request</td>
+    <td>Previous Bag Assignment</td>
+    <td>Return Request Link</td>
+      <td>New Bag Assignment</td>
+  </tr>
+  <tr>
+    <td><a href="${emailParams.itemNDC}">ITEM <a/></td>
+       <td>${emailParams.returnRequestText}</td>
+   <td>${emailParams.bagPreviousAssignment}</td>
+     <td><a href=" ${emailParams.returnRequestLink}">Return Request Link</a></td>
+       <td><a href="${emailParams.newBagAssignment}"> New Bag Assignment</a> </td>
+  </tr>
+</table>`,
+      });
+      //  }
+    } catch (e) {
+      log.error("sendEmailMFGProcessingIsUpdated", e.message);
+    }
+  }
+
+  /**
+   * Create a redirect link
+   * @params {string} options.type
+   * @params {number} options.id
+   * @return {url} return URL
+   */
+  function generateRedirectLink(options) {
+    try {
+      return url.resolveRecord({
+        recordType: options.type,
+        recordId: options.id,
+        isEditMode: false,
+      });
+    } catch (e) {
+      log.error("generateRedirectLink", e.message);
+    }
+  }
+
+  function removeDuplicates(arr) {
+    return [...new Set(arr)];
+  }
+
   return {
     addDaysToDate,
     checkInstanceInstnaceMR,
@@ -894,5 +1002,8 @@ define([
     sendEmail,
     setBillDueDate,
     updateRecordHeader,
+    sendEmailMFGProcessingIsUpdated,
+    checkIfThereIsUpdate,
+    removeDuplicates,
   };
 });

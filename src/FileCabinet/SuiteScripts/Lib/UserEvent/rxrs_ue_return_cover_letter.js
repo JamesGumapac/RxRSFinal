@@ -106,11 +106,14 @@ define([
         nonReturnableAmount,
         nonReturnableFeePercent,
       });
+      let freeOfChargeWeight = 0;
+      freeOfChargeWeight = rec.getValue("custrecord_free_of_charge_weight");
       const processingWeight = rec.getValue("custrecord_processing_weight");
       const chargePerLBS = rec.getValue("custrecord_charge_per_lbs");
       const isForDisposal = rec.getValue("custrecord_for_disposal");
       if (isForDisposal == true) {
-        nonReturnableFeeAmount = (+processingWeight - 20) * chargePerLBS;
+        nonReturnableFeeAmount =
+          (+processingWeight - freeOfChargeWeight) * chargePerLBS;
         log.audit("Non returnable fee amt weight", nonReturnableFeeAmount);
       } else {
         nonReturnableFeeAmount = nonReturnableAmount * nonReturnableFeePercent;
