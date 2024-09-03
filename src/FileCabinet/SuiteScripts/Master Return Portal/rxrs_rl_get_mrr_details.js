@@ -2,14 +2,20 @@
  * @NApiVersion 2.1
  * @NScriptType Restlet
  */
-define(["N/https", "N/record", "N/runtime", "N/search"], /**
+define([
+  "N/https",
+  "N/record",
+  "N/runtime",
+  "N/search",
+  "../Lib/rxrs_transaction_lib",
+], /**
  * @param{https} https
  * @param{record} record
  * @param{runtime} runtime
  * @param{search} search
  * @param item_fulfillment_util
  * @param serviceLog
- */ (https, record, runtime, search, item_fulfillment_util, serviceLog) => {
+ */ (https, record, runtime, search, tranlib) => {
   /**
    * Defines the function that is executed when a GET request is sent to a RESTlet.
    * @param {Object} requestParams - Parameters from HTTP request URL; parameters passed as an Object (for all supported
@@ -24,6 +30,9 @@ define(["N/https", "N/record", "N/runtime", "N/search"], /**
     let soId;
     log.debug("requestParams", requestParams);
     try {
+      if (requestParams) {
+        tranlib.createMasterReturnRequest(requestParams);
+      }
       return requestParams;
     } catch (ex) {
       log.error("ERROR", ex.message);

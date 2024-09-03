@@ -42,9 +42,15 @@ define([
       const isStateLicenseExpired = masterRec.getValue(
         "custrecord_kd_state_license_expired",
       );
+      const SERVICETYPECATEGORY = {
+        mailIn: 2,
+        serlfService: 1,
+        refService: 3,
+      };
+
       let category = [];
-      const mailInOptions = masterRec.getValue("custrecord_kd_mail_in_option");
-      if (mailInOptions == true) {
+      const serviceType = masterRec.getValue("custrecord_service_type");
+      if (serviceType == SERVICETYPECATEGORY.mailIn) {
         const c2 = masterRec.getValue("custrecord_kd_c2");
         const c3to5 = masterRec.getValue("custrecord_kd_c3to5");
         const rxOtc = masterRec.getValue("custrecord_kd_rxotc");
@@ -57,7 +63,7 @@ define([
         if (rxOtc == true) {
           category.push({ value: 1, text: "RxOTC" });
         }
-      } else {
+      } else if (serviceType == SERVICETYPECATEGORY.serlfService) {
         category = customRec.getItemRequested(masterRec.id);
       }
 

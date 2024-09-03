@@ -92,6 +92,7 @@ define([
                   manufId: params.manufId,
                   rrId: params.rrId,
                   mfgProcessing: mfgProcessing,
+                  binNumber: binNumberId,
                 }),
               );
             }
@@ -108,6 +109,7 @@ define([
                   manufId: params.manufId,
                   rrId: params.rrId,
                   mfgProcessing: mfgProcessing,
+                  binNumber: binNumberId,
                 }),
               );
             }

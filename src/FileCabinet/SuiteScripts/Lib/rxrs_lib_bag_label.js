@@ -16,12 +16,14 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
    * @param {number} options.rrId return Request Id
    * @param {number} options.prevBag Previous Bag of the return item scan
    * @param {number} options.mfgProcessing Manuf Processing
+   * @param {number} options.binNumber - Bin Number Selected
    * @return {number} binId
    */
   function createBin(options) {
     log.audit("Create Bin", options);
     try {
-      let { mfgProcessing, mrrId, manufId, rrId, entity, prevBag } = options;
+      let { mfgProcessing, mrrId, manufId, rrId, entity, prevBag, binNumber } =
+        options;
       log.audit("createBin", options);
       log.audit("values", { mrrId, manufId, rrId });
       const binRec = record.create({
@@ -43,6 +45,11 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
         fieldId: "custrecord_kd_tag_return_request",
         value: options.rrId,
       });
+      binNumber &&
+        binRec.setValue({
+          fieldId: "custrecord_kd_putaway_loc",
+          value: binNumber,
+        });
       mfgProcessing &&
         binRec.setValue({
           fieldId: "custrecord_tag_label_processing",
@@ -91,11 +98,39 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
           fieldId: "custrecord_prev_bag_assignement",
           value: prevBag,
         });
-      binNumber &&
+      if (binNumber) {
+        let rsLookup = search.lookupFields({
+          type: "bin",
+          id: binNumber,
+          columns: ["custrecord_bincategory"],
+        });
+        let field;
+        let binCategory = rsLookup.custrecord_bincategory[0].value;
+        switch (+binCategory) {
+          case 1:
+            field = "custrecord_irs_inbound_bin";
+            break;
+          case 2:
+            field = "custrecord_irs_outbound_bin";
+            break;
+          case 3:
+            field = "custrecord_irs_control_bin";
+            break;
+          case 4:
+            field = "custrecord_irs_desctruction_bin";
+        }
+        log.audit(" bin values ", { binCategory, field });
+        bagRec.setValue({
+          fieldId: field,
+          value: binNumber,
+        });
         bagRec.setValue({
           fieldId: "custrecord_itemscanbin",
           value: binNumber,
         });
+        1;
+      }
+
       isVerify &&
         bagRec.setValue({
           fieldId: "custrecord_is_verified",
@@ -538,7 +573,245 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
     }
   }
 
+  /**
+   * Get the bag only that is put away
+   * @param options.manufId - Manufacturer Id
+   * @param options.binCategory - Bin Category,
+   * @param options.specificBin - identifies if the bin is specific bin
+   * @param options.productCategory - Return Request Category
+   * @param options.generalBin - Mark if the bin searching is a general bin
+   * @param options.forControlItems - - Mark if the bin searching is a general bin
+   */
+  function getBinPutAwayLocation(options) {
+    let binResult = [];
+    log.audit("getBinPutAwayLocation", options);
+    let {
+      manufId,
+      specificBin,
+      binCategory,
+      productCategory,
+      generalBin,
+      forControlItems,
+    } = options;
+
+    try {
+      const binSearchObj = search.create({
+        type: "bin",
+        filters: [["custrecord_bin_putaway_loc", "is", "T"]],
+        columns: [
+          search.createColumn({ name: "binnumber", label: "Bin Number" }),
+          search.createColumn({ name: "location", label: "Location" }),
+          search.createColumn({ name: "memo", label: "Memo" }),
+        ],
+      });
+      if (manufId) {
+        binSearchObj.filters.push(
+          search.createFilter({
+            name: "custrecord_kd_bin_manufacturer",
+            operator: "anyof",
+            values: manufId,
+          }),
+        );
+      }
+      if (productCategory) {
+        binSearchObj.filters.push(
+          search.createFilter({
+            name: "custrecord_bin_product_category",
+            operator: "anyof",
+            values: productCategory,
+          }),
+        );
+      }
+      if (binCategory) {
+        binSearchObj.filters.push(
+          search.createFilter({
+            name: "custrecord_bincategory",
+            operator: "anyof",
+            values: binCategory,
+          }),
+        );
+      }
+
+      if (generalBin == true) {
+        binSearchObj.filters.push(
+          search.createFilter({
+            name: "custrecord_general_bins",
+            operator: "is",
+            values: true,
+          }),
+        );
+      }
+      if (forControlItems) {
+        binSearchObj.filters.push(
+          search.createFilter({
+            name: "custrecord_bin_control_item",
+            operator: "is",
+            values: true,
+          }),
+        );
+      }
+      if (specificBin) {
+        binSearchObj.filters.push(
+          search.createFilter({
+            name: "custrecord_specific_bin",
+            operator: "is",
+            values: true,
+          }),
+        );
+      }
+      binSearchObj.run().each(function (result) {
+        binResult.push({
+          value: result.id,
+          text: result.getValue({ name: "binnumber" }),
+        });
+        return true;
+      });
+      return binResult;
+    } catch (e) {
+      log.error("getBinPutAwayLocation", e.message);
+    }
+  }
+
+  /**
+   * Remove specific bin to the manufacturer
+   * @param options.manufId manuf Internal Id
+   * @param options.fieldId - Field Id where to remove the bin
+   * @param options.binId - Bin Id to remove in the list
+   */
+  function removeBinToManuf(options) {
+    let { manufId, fieldId, binId } = options;
+    try {
+      const manufRec = record.load({
+        type: "customrecord_csegmanufacturer",
+        id: manufId,
+      });
+      let currentBins = manufRec.getValue(fieldId);
+      let newBins = removeBinFromArray({
+        currentBins: currentBins,
+        binId: binId.toString(),
+      });
+      log.audit("removeBinToManuf", { binId, newBins });
+      manufRec.setValue({
+        fieldId: fieldId,
+        value: newBins,
+      });
+      manufRec.setValue({
+        fieldId: "custrecord_use_specific_bin",
+        value: false,
+      });
+
+      return manufRec.save({
+        ignoreMandatoryFields: true,
+      });
+    } catch (e) {
+      log.error("removeBinToManuf", e.message);
+    }
+  }
+
+  /**
+   * Assign specific bin to the manufacturer
+   * @param options.manufId manuf Internal Id
+   * @param options.fieldId - Field Id where to remove the bin
+   * @param options.binId - Bin Id to remove in the list
+   */
+  function assignBinToManuf(options) {
+    let { manufId, fieldId, binId } = options;
+    try {
+      const manufRec = record.load({
+        type: "customrecord_csegmanufacturer",
+        id: manufId,
+      });
+      let currentBins = manufRec.getValue(fieldId);
+
+      currentBins.push(binId.toString());
+
+      log.audit("assignBinToManuf", { binId, currentBins });
+      manufRec.setValue({
+        fieldId: fieldId,
+        value: currentBins,
+      });
+      manufRec.setValue({
+        fieldId: "custrecord_use_specific_bin",
+        value: true,
+      });
+      return manufRec.save({
+        ignoreMandatoryFields: true,
+      });
+    } catch (e) {
+      log.error("assignBinToManuf", e.message);
+    }
+  }
+
+  /**
+   * Unassign specific manuf to the bin
+   * @param options.manufId manuf Internal Id
+   * @param options.fieldId - Field Id where to remove the bin
+   * @param options.binId - Bin Id to remove in the list
+   */
+  function unAssignManufToBin(options) {
+    log.audit("unAssignManufToBin", options);
+    let { binId, manufId } = options;
+    try {
+      const binRec = record.load({
+        type: "bin",
+        id: binId,
+      });
+      let useSpecificBin = binRec.getValue("custrecord_specific_bin");
+      if (useSpecificBin != true) return;
+      let currentManuf = binRec.getValue("custrecord_kd_bin_manufacturer");
+      let newManuf = removeBinFromArray({
+        currentBins: currentManuf,
+        binId: manufId.toString(),
+      });
+
+      log.audit("unAssignManufToBin", { manufId, newManuf });
+      binRec.setValue({
+        fieldId: "custrecord_kd_bin_manufacturer",
+        value: newManuf,
+      });
+      return binRec.save({
+        ignoreMandatoryFields: true,
+      });
+    } catch (e) {
+      log.error("unAssignManufToBin", e.message);
+    }
+  }
+
+  /**
+   * Assign specific manuf to the bin
+   * @param options.manufId manuf Internal Id
+   * @param options.fieldId - Field Id where to remove the bin
+   * @param options.binId - Bin Id to remove in the list
+   */
+  function assignManufToBin(options) {
+    log.audit("assignManufToBin", options);
+    let { binId, manufId } = options;
+    try {
+      const binRec = record.load({
+        type: "bin",
+        id: binId,
+      });
+      let useSpecificBin = binRec.getValue("custrecord_specific_bin");
+      if (useSpecificBin != true) return;
+      let currentManuf = binRec.getValue("custrecord_kd_bin_manufacturer");
+
+      currentManuf.push(manufId.toString());
+      log.audit("assignManufToBin", { manufId, currentManuf });
+      binRec.setValue({
+        fieldId: "custrecord_kd_bin_manufacturer",
+        value: currentManuf,
+      });
+      return binRec.save({
+        ignoreMandatoryFields: true,
+      });
+    } catch (e) {
+      log.error("assignManufToBin", e.message);
+    }
+  }
+
   return {
+    assignBinToManuf,
+    assignManufToBin,
     createBin,
     updateBagLabel,
     getBagCurrentAmount,
@@ -552,5 +825,8 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
     getManufWithSpeicificBin,
     removeBinFromArray,
     getBinFieldId,
+    getBinPutAwayLocation,
+    removeBinToManuf,
+    unAssignManufToBin,
   };
 });

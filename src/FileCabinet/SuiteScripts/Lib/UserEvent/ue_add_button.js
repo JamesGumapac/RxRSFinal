@@ -75,6 +75,7 @@ define([
                 tranId: rrId,
                 mrrId: rrMrrId,
                 rrType: rec.type,
+                category: rec.getValue("custbody_kd_rr_category"),
               },
             });
             let paramsRR = {
@@ -189,6 +190,7 @@ define([
                 tranId: rrpoId,
                 mrrId: rrpoMrrId,
                 rrType: rec.type,
+                category: rec.getValue("custbody_kd_rr_category"),
               },
             });
             let paramsRRPO = {
@@ -531,6 +533,9 @@ define([
            */
           case "customrecord_kod_masterreturn":
             const mrrRec = context.newRecord;
+            const MAILIN = 2;
+            const serviceType = mrrRec.getValue("custrecord_service_type");
+
             let generateLabelURL = url.resolveScript({
               scriptId: "customscript_rxrs_sl_generate_label",
               deploymentId: "customdeploy_rxrs_sl_generate_label",
@@ -540,7 +545,7 @@ define([
                 action: "createLabel",
 
                 customerId: mrrRec.getValue("custrecord_mrrentity"),
-                mailIn: mrrRec.getValue("custrecord_kd_mail_in_option"),
+                mailIn: serviceType == MAILIN ? true : false,
               },
             });
             let mmrParamsGenerateLabel = {

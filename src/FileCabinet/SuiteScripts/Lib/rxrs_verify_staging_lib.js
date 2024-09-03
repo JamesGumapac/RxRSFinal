@@ -839,7 +839,7 @@ define([
   }
 
   function groupObjectsByAmountLimit(objects, limit) {
-    log.error("groupObjectsByAmountLimit", objects, limit);
+    log.audit("groupObjectsByAmountLimit", objects, limit);
     let groups = [];
     let currentGroup = [];
     let currentSum = 0;
@@ -2059,7 +2059,7 @@ define([
         });
       }
       sublistFields.forEach((attri) => {
-        log.audit("attri", attri);
+        // log.audit("attri", attri);
 
         fieldName.push(attri.id);
         if (attri.source) {

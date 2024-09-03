@@ -6,10 +6,12 @@ define([
   "N/ui/serverWidget",
   "../rxrs_verify_staging_lib",
   "N/cache",
+  "N/search",
   "N/file",
   "N/record",
   "N/redirect",
   "../rxrs_lib_bag_label",
+  "../rxrs_util",
 ], /**
  * @param{serverWidget} serverWidget
  * @param rxrs_vs_util
@@ -17,7 +19,17 @@ define([
  * @param file
  * @param record
  * @param redirect
- */ (serverWidget, rxrs_vs_util, cache, file, record, redirect, bag) => {
+ */ (
+  serverWidget,
+  rxrs_vs_util,
+  cache,
+  search,
+  file,
+  record,
+  redirect,
+  bag,
+  util,
+) => {
   /**
    * Defines the Suitelet script trigger point.
    * @param {Object} scriptContext
@@ -69,7 +81,8 @@ define([
    */
   const createHeaderFields = (options) => {
     let form = options.form;
-    let { rrId, tranId, mrrId, returnList } = options.params;
+    let { rrId, tranId, mrrId, returnList, category } = options.params;
+
     log.debug("createHeaderFields returnList", returnList);
     try {
       returnList = JSON.parse(options.params.returnList);
@@ -81,6 +94,7 @@ define([
     log.emergency("returnList", returnList);
     let paramInDate = options.params.inDate;
     let manufId;
+    let binSearchParams = {};
     let paramIsHazardous = options.params.isHazardous;
     let paramSelectionType = options.params.selectionType;
     let paramManufacturer = options.params.manufacturer
@@ -214,6 +228,24 @@ define([
           .updateDisplayType({
             displayType: serverWidget.FieldDisplayType.HIDDEN,
           }).defaultValue = rrId;
+        let rslookup = search.lookupFields({
+          type: rrType,
+          id: rrId,
+          columns: ["custbody_kd_rr_category"],
+        });
+        category = rslookup.custbody_kd_rr_category[0].value;
+        if (rslookup) {
+          form
+            .addField({
+              id: "custpage_category",
+              label: "Category",
+              type: serverWidget.FieldType.SELECT,
+              source: "customlist_kod_itemcat_list",
+            })
+            .updateDisplayType({
+              displayType: serverWidget.FieldDisplayType.DISABLED,
+            }).defaultValue = category;
+        }
       }
       form.addFieldGroup({
         id: "fieldgroup_options",
@@ -394,7 +426,7 @@ define([
           });
         }
       }
-      if (manufId) {
+      if (manufId || paramIsHazardous) {
         let manualBinField = form
           .addField({
             id: "custpage_manual_bin",
@@ -413,15 +445,65 @@ define([
           .addField({
             id: "custpage_bincategory",
             label: "Bin Category",
-            source: "customlist_bincategory",
             type: serverWidget.FieldType.SELECT,
           })
           .updateDisplayType({
             displayType: "DISABLED",
           });
-        if (binCategory) {
-          binCategoryField.defaultValue = binCategory;
+        let binCategoryList = [];
+        if (category == util.RRCATEGORY.RXOTC) {
+          switch (paramSelectionType) {
+            case "Returnable":
+              binCategoryList.push({
+                text: "OutBound",
+                value: 2,
+              });
+              binSearchParams.manufId = manufId;
+              break;
+            case "Destruction":
+              binCategoryList.push({
+                text: "Destruction",
+                value: 4,
+              });
+              break;
+          }
         }
+        if (
+          category == util.RRCATEGORY.C2 ||
+          category == util.RRCATEGORY.C3TO5
+        ) {
+          switch (paramSelectionType) {
+            case "Returnable":
+              binCategoryList.push({
+                text: "OutBound",
+                value: 2,
+              });
+              binSearchParams.manufId = manufId;
+              binSearchParams.forControlItems = true;
+              binSearchParams.specificBin = true;
+              break;
+            case "Destruction":
+              binCategoryList.push({
+                text: "Destruction",
+                value: 4,
+              });
+              binSearchParams.manufId = manufId;
+              binSearchParams.forControlItems = true;
+              binSearchParams.generalBin = true;
+              break;
+          }
+        }
+        binCategoryField.addSelectOption({
+          text: " ",
+          value: " ",
+        });
+        for (let i = 0; i < binCategoryList.length; i++) {
+          binCategoryField.addSelectOption({
+            text: binCategoryList[i].text,
+            value: binCategoryList[i].value,
+          });
+        }
+
         let binField = form
           .addField({
             id: "custpage_bin",
@@ -432,23 +514,19 @@ define([
             displayType: "DISABLED",
           });
         if (binCategory) {
-          let fieldId = bag.getBinFieldId(binCategory);
-          const manufRec = record.load({
-            type: "customrecord_csegmanufacturer",
-            id: manufId,
+          binSearchParams.binCategory = binCategory;
+          binCategoryField.defaultValue = binCategory;
+          let binResult = bag.getBinPutAwayLocation(binSearchParams);
+          log.emergency("Bin Results", binResult);
+          binField.addSelectOption({
+            text: " ",
+            value: " ",
           });
-          let text = manufRec.getText(fieldId);
-          let ids = manufRec.getValue(fieldId);
-
-          if (text.length > 0) {
-            binField.addSelectOption({
-              text: " ",
-              value: " ",
-            });
-            for (let i = 0; i < text.length; i++) {
+          if (binResult.length > 0) {
+            for (let i = 0; i < binResult.length; i++) {
               binField.addSelectOption({
-                text: text[i],
-                value: ids[i],
+                text: binResult[i].text,
+                value: binResult[i].value,
               });
             }
           }

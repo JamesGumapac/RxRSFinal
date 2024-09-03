@@ -4008,6 +4008,114 @@ define([
     }
   }
 
+  /**
+   * Create Bin Transfer
+   * @param options
+   * @param options.location
+   * @param options.itemLine
+   */
+  function createBInTransfer(options) {
+    try {
+      const binTransferRec = record.create({
+        type: record.Type.BIN_TRANSFER,
+      });
+      binTransferRec.setValue({ fieldId: "subsidiary", value: 2 });
+      binTransferRec.setValue({ fieldId: "location", value: 1 });
+      binTransferRec.setSublistValue({
+        sublistId: "inventory",
+        fieldId: "item",
+        value: 118420,
+        line: 0,
+      });
+      let inventoryDetail = binTransferRec.getSublistSubrecord({
+        sublistId: "inventory",
+        fieldId: "inventorydetail",
+        line: 0,
+      });
+    } catch (e) {
+      log.error("createBInTransfer", e.message);
+    }
+  }
+
+  /**
+   * Create MRR Record
+   * @param options
+   * @param options.OrderId - Order Id
+   * @param options.BoxNumber
+   * @param options.CustomerNumber
+   * @param options.CustomerId
+   * @param options.BoxStatus
+   * @param options.BoxType
+   * @param options.ServiceType
+   * @param options.OrderDate
+   * @param options.CreateDate
+   * @param options.FileUploads
+   * @param options.FileUploads.Files
+   *
+   *
+   */
+  function createMasterReturnRequest(options) {
+    log.audit("createMasterReturnRequest", options);
+    let {
+      OrderId,
+      BoxNumber,
+      CustomerNumber,
+      CustomerId,
+      BoxStatus,
+      BoxType,
+      ServiceType,
+      OrderDate,
+      CreateDate,
+      FileUploads,
+    } = options;
+    log.audit("FileUploads", FileUploads);
+
+    try {
+      const mrrRec = record.create({
+        type: "customrecord_kod_masterreturn",
+      });
+      mrrRec.setValue({
+        fieldId: "name",
+        value: CustomerNumber + "-" + BoxNumber,
+      });
+      mrrRec.setValue({
+        fieldId: "custrecord_mrrentity",
+        value: rxrs_util.getEntityId({ entityId: CustomerNumber }),
+      });
+      mrrRec.setValue({
+        fieldId: "custrecord_kod_mr_requestdt",
+        value: new Date(OrderDate),
+      });
+      if (ServiceType.includes("MAIL") == true) {
+        mrrRec.setValue({
+          fieldId: "custrecord_service_type",
+          value: rxrs_util.SERVICETYPE.MAILIN,
+        });
+      }
+      if (BoxStatus.includes("PENDING") == true) {
+        mrrRec.setValue({
+          fieldId: "custrecord_kod_mr_status",
+          value: 1,
+        });
+      }
+      if (BoxType.includes("RX") == true) {
+        mrrRec.setValue({
+          fieldId: "custrecord_kd_rxotc",
+          value: true,
+        });
+      }
+      // if (FileUploads.Files.length > 0) {
+      //   FileUploads.Files.forEach(function (files) {});
+      // }
+      let mrrId = mrrRec.save({
+        ignoreMandatoryFields: true,
+      });
+      log.audit("mrrId", mrrId);
+    } catch (e) {
+      log.error("createMasterReturnRequest", e.message);
+    }
+  }
+
   return {
     addAccruedPurchaseItem: addAccruedPurchaseItem,
     addAcrruedAmountBasedonTransaction: addAcrruedAmountBasedonTransaction,
@@ -4047,5 +4155,6 @@ define([
     createVendorCredit: createVendorCredit,
     createJounralEntry: createJournalEntry,
     updateBinNumber: updateBinNumber,
+    createMasterReturnRequest: createMasterReturnRequest,
   };
 });

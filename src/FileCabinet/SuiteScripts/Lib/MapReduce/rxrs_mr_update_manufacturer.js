@@ -22,7 +22,7 @@ define(["N/record", "N/search", "N/runtime", "../rxrs_lib_bag_label"] /**
   const getInputData = (inputContext) => {
     try {
       const binNumberId = getParameter();
-
+      log.audit("GetInput", binNumberId);
       const binRec = record.load({
         type: "bin",
         id: binNumberId,
@@ -50,8 +50,19 @@ define(["N/record", "N/search", "N/runtime", "../rxrs_lib_bag_label"] /**
               binField: fieldToUpdate,
             });
           }
+          if (binNumberText.length == 1) {
+            let letters = baglib.getManufStartLetter({
+              startLetter: binNumberText[0],
+              endLetter: binNumberText[0],
+            });
+            log.audit("letters", letters);
+            return baglib.getManufList({
+              letterStart: letters,
+              binNumber: binNumberId,
+              binField: fieldToUpdate,
+            });
+          }
         } else {
-          return;
           log.debug("getting manuf based on name contains");
           return baglib.getManufacturer({
             name: binNumberText,

@@ -107,6 +107,11 @@ define([
     }
   }
 
+  const SERVICETYPE = {
+    SEFLSERVICE: 1,
+    MAILIN: 2,
+    REPSERVICE: 3,
+  };
   const rrStatus = Object.freeze({
     PendingReview: "A",
     Rejected: "B",
@@ -972,6 +977,30 @@ define([
     }
   }
 
+  /**
+   *Get Entity Internal Id
+   * @param options.entityId
+   */
+  function getEntityId(options) {
+    log.audit("getEntityId", options);
+    try {
+      let id;
+      let { entityId } = options;
+      const entitySearchObj = search.create({
+        type: "entity",
+        filters: [["formulatext: {entityid}", "is", entityId]],
+      });
+
+      entitySearchObj.run().each(function (result) {
+        id = result.id;
+        return true;
+      });
+      return id;
+    } catch (e) {
+      log.error("getEntityId", e.message);
+    }
+  }
+
   function removeDuplicates(arr) {
     return [...new Set(arr)];
   }
@@ -998,6 +1027,7 @@ define([
     RRCATEGORY,
     rrStatus,
     rxrsItem,
+    getEntityId,
     scriptInstanceChecker,
     sendEmail,
     setBillDueDate,
@@ -1005,5 +1035,6 @@ define([
     sendEmailMFGProcessingIsUpdated,
     checkIfThereIsUpdate,
     removeDuplicates,
+    SERVICETYPE,
   };
 });
