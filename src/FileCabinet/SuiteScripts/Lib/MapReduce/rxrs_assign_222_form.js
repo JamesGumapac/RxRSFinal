@@ -1,13 +1,8 @@
 /**
- *@NApiVersion 2.x
+ *@NApiVersion 2.1
  *@NScriptType MapReduceScript
  */
-define(["./kd_rxrs_constants", "N/search", "N/record", "../rxrs"], function (
-  constants,
-  search,
-  record,
-  util,
-) {
+define(["N/search", "N/record"], function (search, record) {
   var REC_RET_REQ = "customsale_kod_returnrequest";
   var REC_RETURN_ITEM_REQUESTED = "customrecord_kod_mr_item_request";
 
@@ -370,7 +365,7 @@ define(["./kd_rxrs_constants", "N/search", "N/record", "../rxrs"], function (
       //log.debug('TEST DEBUG HERE', rrId +  ' will be unmarked.');
 
       rrId = record.submitFields({
-        type: util.getReturnRequestType(rrId),
+        type: getReturnRequestType(rrId),
         id: rrId,
         values: {
           custbody_kd_for_222_form_assignment: "F",
@@ -391,34 +386,98 @@ define(["./kd_rxrs_constants", "N/search", "N/record", "../rxrs"], function (
   function summarize(summary) {
     log.debug("summarize", "START");
     /*var rrSearch = search.load({
-                                                                                        id: SEA_RR
-                                                                                    });
-                                                                                    rrSearch.filters.push(search.createFilter({
-                                                                                        name: FLD_RR_FOR_TAG_LABEL_GEN,
-                                                                                        operator: search.Operator.IS,
-                                                                                        values: true
-                                                                                    }));
-                                                                                    rrSearch.filters.push(search.createFilter({
-                                                                                        name: 'status',
-                                                                                        operator: search.Operator.IS,
-                                                                                        values: 'CuTrSale102:K'
-                                                                                    }));
-                                                                                    if(rrSearch.run().getRange({ start: 0, end: 1 }).length > 0){
-                                                                                        log.debug('TEST', 'there are still RR to be processed, scheduling another deployment.');
-                                                                                        try{
-                                                                                            var mrTask = task.create({
-                                                                                                taskType: task.TaskType.MAP_REDUCE,
-                                                                                                scriptId: 'customscript_kd_mr_create_tag_labels'
-                                                                                            });
-                                                                                            var mrTaskId = mrTask.submit();
-                                                                                            var mrTaskStatus = task.checkStatus({
-                                                                                                taskId: mrTaskId
-                                                                                            });
-                                                                                            log.debug('TEST', 'MR Task Status ' + mrTaskStatus);
-                                                                                        }catch(ex){
-                                                                                            log.error({title: 'map/reduce task creation', details: ex });
-                                                                                        }
-                                                                                    }*/
+                                                                                                                                    id: SEA_RR
+                                                                                                                                });
+                                                                                                                                rrSearch.filters.push(search.createFilter({
+                                                                                                                                    name: FLD_RR_FOR_TAG_LABEL_GEN,
+                                                                                                                                    operator: search.Operator.IS,
+                                                                                                                                    values: true
+                                                                                                                                }));
+                                                                                                                                rrSearch.filters.push(search.createFilter({
+                                                                                                                                    name: 'status',
+                                                                                                                                    operator: search.Operator.IS,
+                                                                                                                                    values: 'CuTrSale102:K'
+                                                                                                                                }));
+                                                                                                                                if(rrSearch.run().getRange({ start: 0, end: 1 }).length > 0){
+                                                                                                                                    log.debug('TEST', 'there are still RR to be processed, scheduling another deployment.');
+                                                                                                                                    try{
+                                                                                                                                        var mrTask = task.create({
+                                                                                                                                            taskType: task.TaskType.MAP_REDUCE,
+                                                                                                                                            scriptId: 'customscript_kd_mr_create_tag_labels'
+                                                                                                                                        });
+                                                                                                                                        var mrTaskId = mrTask.submit();
+                                                                                                                                        var mrTaskStatus = task.checkStatus({
+                                                                                                                                            taskId: mrTaskId
+                                                                                                                                        });
+                                                                                                                                        log.debug('TEST', 'MR Task Status ' + mrTaskStatus);
+                                                                                                                                    }catch(ex){
+                                                                                                                                        log.error({title: 'map/reduce task creation', details: ex });
+                                                                                                                                    }
+                                                                                                                                }*/
+  }
+
+  const constants = {
+    RECORDS: {
+      RETURN_REQUEST: "customsale_kod_returnrequest",
+      RETURN_REQUEST_PO: "custompurchase_returnrequestpo",
+      RETURN_ITEM_REQUESTED: "customrecord_kod_mr_item_request",
+      FORM_222_REFERENCE_NUMBER: "customrecord_kd_222formrefnum",
+    },
+    RECORDFIELDS: {
+      RIR_RETURN_REQUEST: "custrecord_kd_rir_return_request",
+      RIR_222_FORM_REF: "custrecord_kd_rir_form222_ref",
+      F2RN_REF_NUM: "custrecord_kd_refnum",
+      F2RN_PAGE: "custrecord_kd_form222_page",
+      F2RN_RETURN_REQUEST: "custrecord_kd_returnrequest",
+    },
+    RRSTATUS: Object.freeze({
+      PendingReview: "A",
+      Rejected: "B",
+      Authorized: "C",
+      PendingPackageReceipt: "D",
+      ReceivedPendingProcessing: "E",
+      Processing: "F",
+      PendingApproval: "G",
+      Rejected_Resubmission: "H",
+      Approved: "I",
+      C2Kittobemailed: "J",
+      PendingVerification: "K",
+    }),
+    MRRSTATUS: Object.freeze({
+      CustomerSubmitted: 1,
+      New: 11,
+      WaitingForApproval: 8,
+      Approved: 10,
+      PriceLocked: 12,
+      Archived: 13,
+      InProgress: 14,
+    }),
+    TEMPITEM: Object.freeze({
+      RxOTC: 897,
+      C3To5: 896,
+      C2: 895,
+      NonScannableItem: 649,
+    }),
+    RRCATEGORY: Object.freeze({
+      C2: 3,
+      RXOTC: 1,
+      C3TO5: 4,
+    }),
+  };
+
+  function getReturnRequestType(rrId) {
+    var type;
+    var transactionSearchObj = search.create({
+      type: "transaction",
+      filters: [["internalid", "anyof", rrId]],
+      columns: [
+        search.createColumn({ name: "recordtype", label: "Record Type" }),
+      ],
+    });
+    transactionSearchObj.run().each(function (result) {
+      type = result.getValue("recordtype");
+    });
+    return type;
   }
 
   return {

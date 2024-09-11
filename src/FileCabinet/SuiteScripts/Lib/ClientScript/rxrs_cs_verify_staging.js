@@ -43,6 +43,7 @@ define([
       let arrTemp = window.location.href.split("?");
       urlParams = new URLSearchParams(arrTemp[1]);
       initialPaymentName = suitelet.getValue("custpage_payment_name");
+
       if (window.location.href.indexOf("isReload") != -1) {
         let isReload = urlParams.get("isReload");
         console.log("isReload" + isReload);
@@ -317,6 +318,10 @@ define([
 
   function verify() {
     try {
+      let arrTemp = window.location.href.split("?");
+      urlParams = new URLSearchParams(arrTemp[1]);
+      let isHazardous = urlParams.get("isHazardous");
+
       let existingBags = [];
       let selectionType = suitelet.getValue("custpage_radio");
       let binNumber = suitelet.getValue("custpage_bin");
@@ -336,12 +341,14 @@ define([
         console.log("setting to returnable");
         mfgProcessing = RETURNABLE;
       }
+
+      const manualBin = suitelet.getValue("custpage_manual_bin");
       console.log("MFG PROCESSING", mfgProcessing);
       let maxAmount = suitelet.getValue("custpage_manuf_max_so_amt");
       let returnItemScanIds = [];
       let tempHolder = [];
       let returnType = suitelet.getValue("custpage_radio");
-      console.log(returnType);
+      console.log("returntype", returnType);
       for (
         let i = 0;
         i < suitelet.getLineCount("custpage_items_sublist");
@@ -352,6 +359,12 @@ define([
           fieldId: "custpage_internalid",
           line: i,
         });
+        const isSelected = suitelet.getSublistValue({
+          sublistId: RETURNABLESUBLIST,
+          fieldId: "custpage_verified",
+          line: i,
+        });
+        console.log("isSelected", isSelected, i);
         let amount = suitelet.getSublistValue({
           sublistId: RETURNABLESUBLIST,
           fieldId: "custpage_amount",
@@ -367,7 +380,31 @@ define([
           fieldId: "custpage_bag_tag_label",
           line: i,
         });
-
+        const indate = suitelet.getSublistValue({
+          sublistId: RETURNABLESUBLIST,
+          fieldId: "custpage_in_date",
+          line: i,
+        });
+        const isAerosol = suitelet.getSublistValue({
+          sublistId: RETURNABLESUBLIST,
+          fieldId: "custpage_aerosol",
+          line: i,
+        });
+        const isSharp = suitelet.getSublistValue({
+          sublistId: RETURNABLESUBLIST,
+          fieldId: "custpage_sharp",
+          line: i,
+        });
+        const nonScannable = suitelet.getSublistValue({
+          sublistId: RETURNABLESUBLIST,
+          fieldId: "custpage_nonscannable",
+          line: i,
+        });
+        const patientVial = suitelet.getSublistValue({
+          sublistId: RETURNABLESUBLIST,
+          fieldId: "custpage_patientvial",
+          line: i,
+        });
         if (prevBag.length <= 96) {
           prevBag = null;
           itemWithoutBag += 1;
@@ -375,73 +412,205 @@ define([
           existingBags.push(prevBag);
           bagCount += 1;
         }
-
-        if (returnType != "Destruction") {
-          if (+amount > +maxAmount && +maxAmount != 0) {
-            alert(
-              `Line #${
-                i + 1
-              } exceeds the maximum SO amount of the Manufacturer. This will not get verified and bag will not be created for this line.`,
-            );
-            continue;
-          }
-          if (prevBag == null) {
-            returnItemScanIds.push({
+        switch (returnType) {
+          case "InDated":
+            console.log("This is Indated");
+            console.log("manualbin ", manualBin);
+            if (manualBin == true) {
+              if (isSelected == true) {
+                returnItemScanIds.push({
+                  id: internalId,
+                  amount: amount || 0,
+                  itemId: itemId,
+                  prevBag: prevBag,
+                  indate: indate,
+                });
+              }
+            } else {
+              returnItemScanIds.push({
+                id: internalId,
+                amount: amount || 0,
+                itemId: itemId,
+                prevBag: prevBag,
+                indate: indate,
+              });
+            }
+            break;
+          case "Destruction":
+            console.log("This is Destruction");
+            console.log("manualbin ", manualBin);
+            if (manualBin == true) {
+              if (isSelected == true) {
+                returnItemScanIds.push({
+                  id: internalId,
+                  amount: amount || 0,
+                  itemId: itemId,
+                  prevBag: prevBag,
+                  indate: indate,
+                });
+              }
+            } else {
+              if (isHazardous == false || isHazardous == "false") {
+                returnItemScanIds.push({
+                  id: internalId,
+                  amount: amount || 0,
+                  itemId: itemId,
+                  prevBag: prevBag,
+                  indate: indate,
+                  isAerosol: isAerosol,
+                  isSharp: isSharp,
+                  patientVial: patientVial,
+                  nonScannable: nonScannable,
+                });
+              }
+            }
+            break;
+          case "Returnable":
+            if (prevBag == null) {
+              returnItemScanIds.push({
+                id: internalId,
+                amount: amount || 0,
+                itemId: itemId,
+                prevBag: prevBag,
+              });
+            } else {
+              exitingBagId = getPreviousBag(prevBag);
+            }
+            tempHolder.push({
               id: internalId,
               amount: amount || 0,
               itemId: itemId,
               prevBag: prevBag,
+              indate: indate,
             });
-          } else {
-            exitingBagId = getPreviousBag(prevBag);
-          }
-        } else {
-          if (prevBag == null) {
-            returnItemScanIds.push({
-              id: internalId,
-              amount: amount || 0,
-              itemId: itemId,
-              prevBag: prevBag,
-            });
-          } else {
-            exitingBagId = getPreviousBag(prevBag);
-          }
+            break;
         }
-        tempHolder.push({
-          id: internalId,
-          amount: amount || 0,
-          itemId: itemId,
-          prevBag: prevBag,
-        });
-        console.log(typeof prevBag);
       }
-      console.table(tempHolder);
-      console.log("all bags the same", allSame(existingBags));
-      const allBagTheSame = allSame(existingBags);
-      console.table(bagCount, itemWithoutBag, exitingBagId, returnItemScanIds);
-      console.table("returnItemScanIds: " + returnItemScanIds);
-      let m = message.create({
-        type: message.Type.WARNING,
-        title: "WARNING",
-        message: "NO ITEM TO PROCESS. All ITEM IS ALREADY ASSIGNED TO A BAG",
-      });
-      if (returnItemScanIds.length <= 0 && allBagTheSame == true) {
-        m.show({
-          duration: 2000,
-        });
+      //   if (returnType != "Returnable") {
+      //     if (+amount > +maxAmount && +maxAmount != 0) {
+      //       alert(
+      //         `Line #${
+      //           i + 1
+      //         } exceeds the maximum SO amount of the Manufacturer. This will not get verified and bag will not be created for this line.`,
+      //       );
+      //       continue;
+      //     }
+      //   } else {
+      //     if (prevBag == null) {
+      //       returnItemScanIds.push({
+      //         id: internalId,
+      //         amount: amount || 0,
+      //         itemId: itemId,
+      //         prevBag: prevBag,
+      //       });
+      //     } else {
+      //       exitingBagId = getPreviousBag(prevBag);
+      //     }
+      //   }
+      //   tempHolder.push({
+      //     id: internalId,
+      //     amount: amount || 0,
+      //     itemId: itemId,
+      //     prevBag: prevBag,
+      //     indate: indate,
+      //   });
+      //   console.log(typeof prevBag);
+      // }
+      switch (returnType) {
+        case "Returnable":
+          console.table(tempHolder);
+          console.log("all bags the same", allSame(existingBags));
+          const allBagTheSame = allSame(existingBags);
+          console.table(
+            bagCount,
+            itemWithoutBag,
+            exitingBagId,
+            returnItemScanIds,
+          );
+          console.table("returnItemScanIds: " + returnItemScanIds);
+          let m = message.create({
+            type: message.Type.WARNING,
+            title: "WARNING",
+            message:
+              "NO ITEM TO PROCESS. All ITEM IS ALREADY ASSIGNED TO A BAG",
+          });
+          if (returnItemScanIds.length <= 0 && allBagTheSame == true) {
+            m.show({
+              duration: 2000,
+            });
 
-        return;
-      } else {
-        alert("ASSIGNING ALL ITEM TO NEW BAG");
-        returnItemScanIds = tempHolder;
-        exitingBagId = null;
+            return;
+          } else {
+            alert("ASSIGNING ALL ITEM TO NEW BAG");
+            returnItemScanIds = tempHolder;
+            exitingBagId = null;
+          }
+          break;
+        case "InDated":
+          if (manualBin == true) {
+            let warning;
+
+            if (returnItemScanIds.length == 0) {
+              warning = message.create({
+                type: message.Type.WARNING,
+                title: "WARNING",
+                message: "NO ITEM TO PROCESS.",
+              });
+              warning.show({
+                duration: 2000,
+              });
+              return;
+            }
+            if (isEmpty(binNumber) == true) {
+              warning = message.create({
+                type: message.Type.WARNING,
+                title: "WARNING",
+                message: "Bin is Required",
+              });
+              warning.show({
+                duration: 2000,
+              });
+              return;
+            }
+          }
+          break;
+        case "Destruction":
+          if (manualBin == true) {
+            let warning;
+
+            if (returnItemScanIds.length == 0) {
+              warning = message.create({
+                type: message.Type.WARNING,
+                title: "WARNING",
+                message: "NO ITEM TO PROCESS.",
+              });
+              warning.show({
+                duration: 2000,
+              });
+              return;
+            }
+            if (isEmpty(binNumber) == true) {
+              warning = message.create({
+                type: message.Type.WARNING,
+                title: "WARNING",
+                message: "Bin is Required",
+              });
+              warning.show({
+                duration: 2000,
+              });
+              return;
+            }
+          }
+          break;
       }
 
+      console.table(returnItemScanIds);
       let maximumAmount = suitelet.getValue("custpage_manuf_max_so_amt");
       let rrId = suitelet.getValue("custpage_rrid");
       let mrrId = suitelet.getValue("custpage_mrrid");
       let rrType = suitelet.getValue("custpage_rr_type");
       let manufId = suitelet.getValue("custpage_manuf_id");
+      const category = suitelet.getValue("custpage_category");
 
       let params = {
         custscript_payload: JSON.stringify(returnItemScanIds),
@@ -455,7 +624,12 @@ define([
         returnType: returnType,
         exitingBagId: exitingBagId,
         mfgProcessing: mfgProcessing,
+        category: category,
+        manualBin: manualBin,
+        isHazardous: isHazardous,
       };
+
+      console.table(params);
 
       handleButtonClick();
       setTimeout(function () {
@@ -531,6 +705,21 @@ define([
         });
       curRec.commitLine(SUBLIST);
     }
+  }
+
+  function isEmpty(stValue) {
+    return (
+      stValue === " " ||
+      stValue === "" ||
+      stValue == null ||
+      false ||
+      (stValue.constructor === Array && stValue.length == 0) ||
+      (stValue.constructor === Object &&
+        (function (v) {
+          for (var k in v) return false;
+          return true;
+        })(stValue))
+    );
   }
 
   /**

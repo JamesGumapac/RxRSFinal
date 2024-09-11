@@ -8,12 +8,13 @@ define([
   "../rxrs_lib_bag_label",
   "../rxrs_transaction_lib",
   "../rxrs_custom_rec_lib",
+  "../rxrs_util",
 ], /**
  * @param{record} record
  * @param rxrsUtil
  * @param rxrsBagUtil
  * @param rxrs_tran_lib
- */ (record, rxrsUtil, rxrsBagUtil, rxrs_tran_lib, rxrs_custom_rec) => {
+ */ (record, rxrsUtil, rxrsBagUtil, rxrs_tran_lib, rxrs_custom_rec, util) => {
   /**
    * Defines the Suitelet script trigger point.
    * @param {Object} context
@@ -26,138 +27,364 @@ define([
       try {
         let params = context.request.parameters;
         log.debug("Params", params);
-        let maximumAmount = params.maximumAmount;
-        let mfgProcessing = params.mfgProcessing;
-        let binNumberId = params.binNumber;
-        let exitingBagId = params.exitingBagId;
+        let {
+          maximumAmount,
+          mfgProcessing,
+          binNumber,
+          exitingBagId,
+          category,
+          manualBin,
+          rrType,
+          returnType,
+          rrId,
+          mrrid,
+          manufId,
+          custscript_payload,
+          isVerify,
+          isHazardous,
+        } = params;
 
-        let returnScanList = JSON.parse(params.custscript_payload);
+        let curAmount = 0;
+        let returnScanList = JSON.parse(custscript_payload);
+        const entity = rxrsUtil.getEntityFromMrr(+mrrid);
+        let bag = [];
         log.debug("returnScanList", returnScanList);
-        let curAmount = returnScanList.reduce(function (acc, obj) {
+        curAmount = returnScanList.reduce(function (acc, obj) {
           return acc + obj.amount;
         }, 0);
-        const sortByAmount = returnScanList.sort(
-          (a, b) => parseFloat(a.amount) - parseFloat(b.amount),
-        );
-        let rrType = params.rrType;
-        // let existingBag = rxrsBagUtil.getBaglabelAvailable({
-        //   manufId: params.manufId,
-        //   maximumAmount: maximumAmount,
-        //   mfgProcessing: mfgProcessing,
-        //   lowestIRSAmount: sortByAmount[0].amount,
-        // });
-        // log.audit("existingbag", existingBag);
-        //
+        let bags = [];
+
         log.debug("amount", { curAmount, maximumAmount });
         let numberOfBags;
-        if (params.returnType != "Destruction") {
-          if (maximumAmount == 0) {
-            numberOfBags = 1;
-          } else {
-            numberOfBags =
-              +maximumAmount > +curAmount ? 1 : +curAmount / +maximumAmount;
-          }
+        switch (returnType) {
+          case "Returnable":
+            const sortByAmount = returnScanList.sort(
+              (a, b) => parseFloat(a.amount) - parseFloat(b.amount),
+            );
 
-          log.debug("numberOfBags", numberOfBags);
-        } else {
-          numberOfBags = 1;
-        }
-        if (maximumAmount == 0 && curAmount == 0) {
-          numberOfBags = 1;
-        }
-
-        if (!numberOfBags) {
-          log.emergency("numberofbags", numberOfBags);
-          numberOfBags = 1;
-        }
-        log.emergency("numberOfBags", typeof numberOfBags);
-        log.emergency("numberOfBags", typeof numberOfBags == null);
-        let bags = [];
-        /**
-         * Create Bags label depending on the maximum amount
-         */
-
-        let entity = rxrsUtil.getEntityFromMrr(+params.mrrid);
-        if (params.returnType == "Destruction") {
-          log.audit("existing  bag");
-          if (exitingBagId) {
-            bags.push(exitingBagId);
-          } else {
-            log.error("creating destruction bag");
-            for (let i = 0; i < numberOfBags; i++) {
-              bags.push(
-                rxrsBagUtil.createBin({
-                  mrrId: +params.mrrid,
-                  entity: entity,
-                  manufId: params.manufId,
-                  rrId: params.rrId,
-                  mfgProcessing: mfgProcessing,
-                  binNumber: binNumberId,
-                }),
-              );
-            }
-          }
-        } else {
-          for (let i = 0; i < numberOfBags; i++) {
-            if (exitingBagId) {
-              bags.push(exitingBagId);
+            if (maximumAmount == 0) {
+              numberOfBags = 1;
             } else {
-              bags.push(
-                rxrsBagUtil.createBin({
-                  mrrId: +params.mrrid,
+              numberOfBags =
+                +maximumAmount > +curAmount ? 1 : +curAmount / +maximumAmount;
+            }
+            if (maximumAmount == 0 && curAmount == 0) {
+              numberOfBags = 1;
+            }
+            if (!numberOfBags) {
+              log.emergency("numberofbags", numberOfBags);
+              numberOfBags = 1;
+            }
+            log.emergency("numberOfBags", typeof numberOfBags);
+            log.emergency("numberOfBags", typeof numberOfBags == null);
+            log.debug("numberOfBags", numberOfBags);
+            for (let i = 0; i < numberOfBags; i++) {
+              if (exitingBagId) {
+                bags.push(exitingBagId);
+              } else {
+                bags.push(
+                  rxrsBagUtil.createBin({
+                    mrrId: +mrrid,
+                    entity: entity,
+                    manufId: manufId,
+                    rrId: rrId,
+                    mfgProcessing: mfgProcessing,
+                    binNumber: binNumber,
+                  }),
+                );
+              }
+            }
+            /**
+             * Create Bags label depending on the maximum amount
+             */
+            for (let i = 0; i < returnScanList.length; i++) {
+              let prevBag = returnScanList[i].prevBag;
+              if (!rxrsUtil.isEmpty(prevBag)) {
+                prevBag = prevBag.split("&");
+                prevBag = prevBag[1]; // get the id from the URL
+                prevBag = prevBag.substring(3, prevBag.length);
+                log.audit("prevbag", prevBag);
+                if (prevBag.includes("=") == true) {
+                  prevBag = null;
+                }
+                log.audit("prevbag", prevBag);
+              } else {
+                prevBag = null;
+              }
+              bag.push({
+                bag: bags[0],
+                scanId: returnScanList[i].id,
+                prevBag: prevBag,
+              });
+              /**
+               * Assign Bag to the Item Return Scan
+               */
+              log.audit("bags", { bags, binNumberId: binNumber });
+
+              bag.forEach((b) => {
+                rxrsBagUtil.updateBagLabel({
+                  ids: b.scanId,
+                  isVerify: JSON.parse(isVerify),
+                  bagId: b.bag,
+                  prevBag: b.prevBag,
+                  binNumber: binNumber,
+                });
+              });
+            }
+            break;
+          case "InDated":
+            if (manualBin == true || manualBin == "true") {
+              log.audit("inDated Manual Bin Selection", {
+                returnScanList,
+                binNumberId: binNumber,
+              });
+              let bagTagId = rxrsBagUtil.createBin({
+                mrrId: mrrid,
+                entity: entity,
+                manufId: manufId,
+                rrId: rrId,
+                mfgProcessing: mfgProcessing,
+                binNumber: binNumber,
+              });
+              log.audit("inDated", { bagTagId });
+              if (bagTagId) {
+                returnScanList.forEach(function (item) {
+                  log.audit("item", item);
+                  rxrsBagUtil.updateBagLabel({
+                    ids: item.id,
+                    isVerify: JSON.parse(isVerify),
+                    bagId: bagTagId,
+                    prevBag: item.prevBag ? getPreviousBag(item.prevBag) : null,
+                    binNumber: binNumber,
+                  });
+                });
+              }
+            } else {
+              let groupIndated = util.groupByDate(returnScanList, "indate");
+              log.audit("GroupIndated", groupIndated);
+              const keys = Object.keys(groupIndated);
+              let values = Object.values(groupIndated);
+
+              for (let i = 0; i < keys.length; i++) {
+                let bagTagId;
+                log.audit("In Date", keys[i]);
+                log.audit("Values", values[i]);
+                const month = keys[i].split("-")[1];
+                const year = keys[i].split("-")[0];
+
+                let binId = rxrsBagUtil.getBinPutAwayLocation({
+                  generalBin: true,
+                  binCategory: rxrsBagUtil.BINCATEGORY.Outbound,
+                  isIndated: true,
+                  productCategory: category,
+                  inDateYear: year,
+                  inDateMonth: month,
+                });
+
+                log.audit("bin", binId);
+                if (binId.length < 1) {
+                  binId = rxrsBagUtil.getBinPutAwayLocation({
+                    generalBin: true,
+                    binCategory: rxrsBagUtil.BINCATEGORY.Outbound,
+                    isIndated: true,
+                    productCategory: category,
+                    inDateYear: year,
+                    inDateMonth: "wholeyear",
+                  });
+                }
+                if (binId.length > 0) {
+                  binId = binId[0].value;
+                  bagTagId = rxrsBagUtil.createBin({
+                    mrrId: mrrid,
+                    entity: entity,
+                    manufId: manufId,
+                    rrId: rrId,
+                    mfgProcessing: mfgProcessing,
+                    binNumber: binId,
+                  });
+                  log.audit("Creating Bag Tag", bagTagId);
+                  if (bagTagId) {
+                    log.audit("values", values);
+                    values[i].forEach(function (item) {
+                      log.audit("item", item);
+                      rxrsBagUtil.updateBagLabel({
+                        ids: item.id,
+                        isVerify: JSON.parse(isVerify),
+                        bagId: bagTagId,
+                        prevBag: item.prevBag
+                          ? getPreviousBag(item.prevBag)
+                          : null,
+                        binNumber: binId,
+                      });
+                    });
+                  }
+                }
+              }
+            }
+            break;
+          case "Destruction":
+            if (category == util.RRCATEGORY.RXOTC) {
+              const GL1Disp_OTC = 1029; // NON hazardous bag
+              const GL2Disp_NoScanPatVit = 1030; // Unscannable bag
+              const GL3Disp_Aero_Comb = 1031;
+              const GL4Disp_Sharp = 1032;
+              const nonHazardousBag = [];
+              const unscannableBag = [];
+              const aeroSolBag = [];
+              const sharpBag = [];
+
+              returnScanList.forEach(function (item) {
+                let { itemId, isAerosol, isSharp, patientVial, nonScannable } =
+                  item;
+                log.audit("Non Hazardous", item);
+
+                if (isAerosol == true && isSharp == true) {
+                  sharpBag.push(item);
+                } else if (isAerosol == true) {
+                  aeroSolBag.push(item);
+                } else if (isSharp == true) {
+                  sharpBag.push(item);
+                } else if (patientVial == true || nonScannable == true) {
+                  unscannableBag.push(item);
+                } else {
+                  if (isHazardous == false || isHazardous == "false") {
+                    nonHazardousBag.push(item);
+                  } else {
+                    log.audit("No destruction bag", item);
+                  }
+                }
+              });
+              log.audit("Destruction bags", {
+                nonHazardousBag,
+                unscannableBag,
+                aeroSolBag,
+                sharpBag,
+              });
+              if (nonHazardousBag.length > 0) {
+                let nonHazardousBagId = rxrsBagUtil.createBin({
+                  mrrId: +mrrid,
                   entity: entity,
-                  manufId: params.manufId,
-                  rrId: params.rrId,
+                  manufId: manufId,
+                  rrId: rrId,
                   mfgProcessing: mfgProcessing,
-                  binNumber: binNumberId,
-                }),
-              );
+                  binNumber: GL1Disp_OTC,
+                });
+                if (nonHazardousBagId) {
+                  nonHazardousBag.forEach(function (item) {
+                    rxrsBagUtil.updateBagLabel({
+                      ids: item.id,
+                      isVerify: JSON.parse(isVerify),
+                      bagId: nonHazardousBagId,
+                      prevBag: item.prevBag
+                        ? getPreviousBag(item.prevBag)
+                        : null,
+                      binNumber: GL1Disp_OTC,
+                    });
+                  });
+                }
+              }
+
+              if (unscannableBag.length > 0) {
+                let unscannablebagId = rxrsBagUtil.createBin({
+                  mrrId: +mrrid,
+                  entity: entity,
+                  manufId: manufId,
+                  rrId: rrId,
+                  mfgProcessing: mfgProcessing,
+                  binNumber: GL2Disp_NoScanPatVit,
+                });
+                if (unscannablebagId) {
+                  unscannableBag.forEach(function (item) {
+                    rxrsBagUtil.updateBagLabel({
+                      ids: item.id,
+                      isVerify: JSON.parse(isVerify),
+                      bagId: unscannablebagId,
+                      prevBag: item.prevBag
+                        ? getPreviousBag(item.prevBag)
+                        : null,
+                      binNumber: GL2Disp_NoScanPatVit,
+                    });
+                  });
+                }
+              }
+              if (aeroSolBag.length > 0) {
+                let aerosolBagId = rxrsBagUtil.createBin({
+                  mrrId: +mrrid,
+                  entity: entity,
+                  manufId: manufId,
+                  rrId: rrId,
+                  mfgProcessing: mfgProcessing,
+                  binNumber: GL3Disp_Aero_Comb,
+                });
+                if (aerosolBagId) {
+                  aeroSolBag.forEach(function (item) {
+                    rxrsBagUtil.updateBagLabel({
+                      ids: item.id,
+                      isVerify: JSON.parse(isVerify),
+                      bagId: aerosolBagId,
+                      prevBag: item.prevBag
+                        ? getPreviousBag(item.prevBag)
+                        : null,
+                      binNumber: GL3Disp_Aero_Comb,
+                      isAerosol: item.isAerosol,
+                      isSharp: item.isSharp,
+                    });
+                  });
+                }
+              }
+              if (sharpBag.length > 0) {
+                let sharpBagId = rxrsBagUtil.createBin({
+                  mrrId: +mrrid,
+                  entity: entity,
+                  manufId: manufId,
+                  rrId: rrId,
+                  mfgProcessing: mfgProcessing,
+                  binNumber: GL4Disp_Sharp,
+                });
+                if (sharpBagId) {
+                  sharpBag.forEach(function (item) {
+                    rxrsBagUtil.updateBagLabel({
+                      ids: item.id,
+                      isVerify: JSON.parse(isVerify),
+                      bagId: sharpBagId,
+                      prevBag: item.prevBag
+                        ? getPreviousBag(item.prevBag)
+                        : null,
+                      binNumber: GL4Disp_Sharp,
+                      isAerosol: item.isAerosol,
+                      isSharp: item.isSharp,
+                    });
+                  });
+                }
+              }
             }
-          }
+
+            //   log.audit("existing  bag");
+            // if (exitingBagId) {
+            //   bags.push(exitingBagId);
+            // } else {
+            //   log.error("creating destruction bag");
+            //   for (let i = 0; i < numberOfBags; i++) {
+            //     bags.push(
+            //       rxrsBagUtil.createBin({
+            //         mrrId: +mrrid,
+            //         entity: entity,
+            //         manufId: manufId,
+            //         rrId: rrId,
+            //         mfgProcessing: mfgProcessing,
+            //         binNumber: binNumber,
+            //       }),
+            //     );
+            //   }
+            // }
+            break;
         }
-
-        /**
-         * Assign Bag to the Item Return Scan
-         */
-        log.audit("bags", { bags, binNumberId });
-        let bag = [];
-
-        for (let i = 0; i < returnScanList.length; i++) {
-          let prevBag = returnScanList[i].prevBag;
-          if (!rxrsUtil.isEmpty(prevBag)) {
-            prevBag = prevBag.split("&");
-            prevBag = prevBag[1]; // get the id from the URL
-            prevBag = prevBag.substring(3, prevBag.length);
-            log.audit("prevbag", prevBag);
-            if (prevBag.includes("=") == true) {
-              prevBag = null;
-            }
-            log.audit("prevbag", prevBag);
-          } else {
-            prevBag = null;
-          }
-          bag.push({
-            bag: bags[0],
-            scanId: returnScanList[i].id,
-            prevBag: prevBag,
-          });
-        }
-
-        bag.forEach((b) => {
-          rxrsBagUtil.updateBagLabel({
-            ids: b.scanId,
-            isVerify: JSON.parse(params.isVerify),
-            bagId: b.bag,
-            prevBag: b.prevBag,
-            binNumber: binNumberId,
-          });
-        });
 
         if (rrType == "customsale_kod_returnrequest") {
           log.audit("Creating Inventory Adjustment");
           rxrs_tran_lib.createInventoryAdjustment({
-            rrId: params.rrId,
-            mrrId: params.mrrid,
+            rrId: rrId,
+            mrrId: mrrid,
           });
         }
         // else {

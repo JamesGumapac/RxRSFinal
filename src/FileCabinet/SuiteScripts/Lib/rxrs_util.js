@@ -1005,6 +1005,39 @@ define([
     return [...new Set(arr)];
   }
 
+  /**
+   * Group By Date
+   * @param items
+   * @param dateField
+   * @returns {*}
+   */
+  function groupByDate(items, dateField) {
+    return items.reduce((acc, item) => {
+      // Ensure the date field exists and is a valid date string
+      const date = new Date(item[dateField]);
+      if (isNaN(date.getTime())) {
+        throw new Error(`Invalid date: ${item[dateField]}`);
+      }
+
+      // Format the date as YYYY-MM-DD (or any format you prefer)
+      const dateString = date.toISOString().split("T")[0];
+
+      // Initialize the array for this date if it doesn't exist yet
+      if (!acc[dateString]) {
+        acc[dateString] = [];
+      }
+
+      // Add the item to the array for this date
+      acc[dateString].push(item);
+
+      return acc;
+    }, {});
+  }
+
+  function removeEmptyArrays(arr) {
+    return arr.filter((item) => Array.isArray(item) && item.length > 0);
+  }
+
   return {
     addDaysToDate,
     checkInstanceInstnaceMR,
@@ -1013,6 +1046,7 @@ define([
     createReturnRequest,
     createTask,
     formatDate,
+    groupByDate,
     generateRRPODocumentNumber,
     getDefaultTaskAssignee,
     getEntityType,
@@ -1035,6 +1069,7 @@ define([
     sendEmailMFGProcessingIsUpdated,
     checkIfThereIsUpdate,
     removeDuplicates,
+    removeEmptyArrays,
     SERVICETYPE,
   };
 });

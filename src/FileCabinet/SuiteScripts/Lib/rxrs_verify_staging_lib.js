@@ -330,8 +330,7 @@ define([
         type: "TEXT",
         label: "Manuf Id",
         updateDisplayType: "HIDDEN",
-      },
-      // {
+      }, // {
       //   id: "custpage_settononreturnable",
       //   type: "CHECKBOX",
       //   label: "Change Pharma Processing",
@@ -471,6 +470,18 @@ define([
         updateDisplayType: "NORMAL",
       },
       {
+        id: "custpage_aerosol",
+        type: "CHECKBOX",
+        label: "AERO/COMBUSTIBLE",
+        updateDisplayType: "NORMAL",
+      },
+      {
+        id: "custpage_sharp",
+        type: "CHECKBOX",
+        label: "SHARP/CONTAINERS",
+        updateDisplayType: "NORMAL",
+      },
+      {
         id: "custpage_ndc",
         type: "TEXT",
         label: "NDC",
@@ -540,6 +551,24 @@ define([
         id: "custpage_bag_tag_label",
         type: "TEXT",
         label: "Bag Tag Label",
+        updateDisplayType: "INLINE",
+      },
+      {
+        id: "custpage_item_id",
+        type: "TEXT",
+        label: "Item Id",
+        updateDisplayType: "HIDDEN",
+      },
+      {
+        id: "custpage_nonscannable",
+        type: "CHECKBOX",
+        label: "Non Scannable",
+        updateDisplayType: "INLINE",
+      },
+      {
+        id: "custpage_patientvial",
+        type: "CHECKBOX",
+        label: "Patient Vial",
         updateDisplayType: "INLINE",
       },
     ],
@@ -755,12 +784,12 @@ define([
               returnableScanList,
               manufMaximumAmount,
             );
-            log.audit("groupObject ", groupedObjects);
           }
         } catch (e) {
           log.error("GROUPING RETURN LIST", e.message);
         }
-
+        groupedObjects = rxrs_util.removeEmptyArrays(groupedObjects);
+        log.audit("groupObject ", groupedObjects);
         groupedObjects.forEach((bag) => {
           let verification = checkIfReturnScanIsVerified({
             recId: rrId,
@@ -1634,7 +1663,7 @@ define([
             mrrId: options.mrrId,
           },
         });
-        log.emergency("Is Hazzard", isHazardous);
+
         let isVerified = checkIfHazardousIsVerified({
           recId: rrId,
           isHazardous: isHazardous,
@@ -1823,6 +1852,15 @@ define([
             name: "custrecord_scanbagtaglabel",
             label: "Bag Tag Label",
           }),
+          search.createColumn({
+            name: "custitem_item_nonscannable",
+            join: "CUSTRECORD_CS_RETURN_REQ_SCAN_ITEM",
+            label: "Non Scannable Item",
+          }),
+          search.createColumn({
+            name: "custrecord_scanpatienvial",
+            label: "Patient Vial",
+          }),
         ],
       });
       let column = customrecord_cs_item_ret_scanSearchObj.columns;
@@ -1865,6 +1903,20 @@ define([
           bagTagLabel: bagTagLabel
             ? `<a href ="${bagLabelURL}" target="_blank">${bagTagLabel}</a>`
             : null,
+          itemId: itemId,
+          nonSannable:
+            result.getValue({
+              name: "custitem_item_nonscannable",
+              join: "CUSTRECORD_CS_RETURN_REQ_SCAN_ITEM",
+            }) == true
+              ? "T"
+              : "F",
+          patientVial:
+            result.getValue({
+              name: "custrecord_scanpatienvial",
+            }) == true
+              ? "T"
+              : "F",
         });
         return true;
       });
@@ -2190,7 +2242,12 @@ define([
       }
 
       sublistFields.forEach((attri) => {
-        fieldName.push(attri.id);
+        if (attri.id == "custpage_aerosol" || attri.id == "custpage_sharp") {
+          log.emergency("not pushing aro");
+        } else {
+          fieldName.push(attri.id);
+        }
+
         sublist
           .addField({
             id: attri.id,
@@ -2201,6 +2258,7 @@ define([
             displayType: serverWidget.FieldDisplayType[attri.updateDisplayType],
           });
       });
+      log.emergency("val", { fieldName, value });
       let mainLineInfo = [];
       value.forEach((val) => {
         let value = Object.values(val);

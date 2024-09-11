@@ -468,10 +468,7 @@ define([
               break;
           }
         }
-        if (
-          category == util.RRCATEGORY.C2 ||
-          category == util.RRCATEGORY.C3TO5
-        ) {
+        if (category) {
           switch (paramSelectionType) {
             case "Returnable":
               binCategoryList.push({
@@ -490,6 +487,15 @@ define([
               binSearchParams.manufId = manufId;
               binSearchParams.forControlItems = true;
               binSearchParams.generalBin = true;
+              break;
+            case "InDated":
+              binSearchParams.isIndated = true;
+              binSearchParams.generalBin = true;
+              binCategoryList.push({
+                text: "OutBound",
+                value: 2,
+              });
+              binSearchParams.productCategory = category;
               break;
           }
         }

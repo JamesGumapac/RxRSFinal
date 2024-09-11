@@ -76,12 +76,14 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
    * @param {number} options.bagId
    * @param {number} options.prevBag
    * @param {number} options.binNumber
-   * @param
+   * @param {boolean}options.isAerosol
+   * @param {boolean}options.isSharp - Needles Sharp/Containers
    * @return {number} item return scan Id
    */
   function updateBagLabel(options) {
     try {
-      let { bagId, prevBag, ids, isVerify, binNumber } = options;
+      let { bagId, prevBag, ids, isVerify, binNumber, isAerosol, isSharp } =
+        options;
       log.audit("updateBagLabel", options);
 
       const bagRec = record.load({
@@ -104,31 +106,53 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
           id: binNumber,
           columns: ["custrecord_bincategory"],
         });
-        let field;
+        let newBinField, oldBinField;
         let binCategory = rsLookup.custrecord_bincategory[0].value;
         switch (+binCategory) {
           case 1:
-            field = "custrecord_irs_inbound_bin";
+            newBinField = "custrecord_irs_inbound_bin";
+            oldBinField = "custrecord_irs_prev_inbound_bin";
             break;
           case 2:
-            field = "custrecord_irs_outbound_bin";
+            newBinField = "custrecord_irs_outbound_bin";
+            oldBinField = "custrecord_irs_prev_outbound_bin";
             break;
           case 3:
-            field = "custrecord_irs_control_bin";
+            newBinField = "custrecord_irs_control_bin";
+            oldBinField = "custrecord_irs_prev_control_bin";
             break;
           case 4:
-            field = "custrecord_irs_desctruction_bin";
+            newBinField = "custrecord_irs_desctruction_bin";
+            oldBinField = "custrecord_irs_prev_desctruct_bin";
         }
-        log.audit(" bin values ", { binCategory, field });
+
+        log.audit(" bin values ", { binCategory, field: newBinField });
+        const prevBin = bagRec.getValue(newBinField);
+        if (prevBin) {
+          bagRec.setValue({
+            fieldId: oldBinField,
+            value: prevBin,
+          });
+        }
         bagRec.setValue({
-          fieldId: field,
+          fieldId: newBinField,
           value: binNumber,
         });
         bagRec.setValue({
           fieldId: "custrecord_itemscanbin",
           value: binNumber,
         });
-        1;
+      }
+      if (isAerosol == true || isAerosol == "true")
+        bagRec.setValue({
+          fieldId: "custrecord_itemscan_aero_combustible",
+          value: isAerosol,
+        });
+      if (isSharp == true || isSharp == "true") {
+        bagRec.setValue({
+          fieldId: "custrecord_itemscan_needles_sharpcont",
+          value: isSharp,
+        });
       }
 
       isVerify &&
@@ -581,6 +605,9 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
    * @param options.productCategory - Return Request Category
    * @param options.generalBin - Mark if the bin searching is a general bin
    * @param options.forControlItems - - Mark if the bin searching is a general bin
+   * @param options.inDateMonth - Values must be month Equivalent number
+   * @param options.inDateYear - In Date Year
+   * @param options.isIndated - Set True if indated
    */
   function getBinPutAwayLocation(options) {
     let binResult = [];
@@ -592,6 +619,9 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
       productCategory,
       generalBin,
       forControlItems,
+      inDateMonth,
+      inDateYear,
+      isIndated,
     } = options;
 
     try {
@@ -641,7 +671,16 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
           }),
         );
       }
-      if (forControlItems) {
+      if (isIndated == true) {
+        binSearchObj.filters.push(
+          search.createFilter({
+            name: "custrecord_bin_indated",
+            operator: "is",
+            values: true,
+          }),
+        );
+      }
+      if (forControlItems == true) {
         binSearchObj.filters.push(
           search.createFilter({
             name: "custrecord_bin_control_item",
@@ -650,7 +689,7 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
           }),
         );
       }
-      if (specificBin) {
+      if (specificBin == true) {
         binSearchObj.filters.push(
           search.createFilter({
             name: "custrecord_specific_bin",
@@ -659,7 +698,28 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
           }),
         );
       }
+      if (inDateMonth) {
+        binSearchObj.filters.push(
+          search.createFilter({
+            name: "custrecord_bin_indate_month",
+            operator: "anyof",
+            values: BIN_INDATE_MONTH[0][inDateMonth],
+          }),
+        );
+      }
+      if (inDateYear) {
+        binSearchObj.filters.push(
+          search.createFilter({
+            name: "custrecord_bin_indate_year",
+            operator: "anyof",
+            values: BIN_INDATE_YEAR[0][inDateYear],
+          }),
+        );
+      }
+
+      log.audit("binSearchFilter", binSearchObj.filters);
       binSearchObj.run().each(function (result) {
+        log.audit("result", result);
         binResult.push({
           value: result.id,
           text: result.getValue({ name: "binnumber" }),
@@ -809,6 +869,37 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
     }
   }
 
+  const BIN_INDATE_MONTH = [
+    {
+      "01": 1,
+      "02": 1,
+      "03": 1,
+      "04": 2,
+      "05": 2,
+      "06": 3,
+      "07": 3,
+      "08": 3,
+      "09": 4,
+      10: 4,
+      11: 5,
+      12: 5,
+      wholeyear: 6,
+    },
+  ];
+  const BIN_INDATE_YEAR = [
+    {
+      2024: 1,
+      2025: 2,
+      2026: 3,
+      2027: 4,
+    },
+  ];
+  const BINCATEGORY = {
+    Inbound: 1,
+    Outbound: 2,
+    Control: 3,
+    Destruction: 4,
+  };
   return {
     assignBinToManuf,
     assignManufToBin,
@@ -828,5 +919,6 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
     getBinPutAwayLocation,
     removeBinToManuf,
     unAssignManufToBin,
+    BINCATEGORY,
   };
 });
