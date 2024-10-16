@@ -108,9 +108,9 @@ define([
   }
 
   const SERVICETYPE = {
-    SEFLSERVICE: 1,
-    MAILIN: 2,
-    REPSERVICE: 3,
+    "SELF SERVICE": 1,
+    "MAIL-IN": 2,
+    "REP SERVICE": 3,
   };
   const rrStatus = Object.freeze({
     PendingReview: "A",
@@ -906,11 +906,26 @@ define([
 
   /**
    *
-   * @params options.oldBag -  Previous Bag assignment
+   * @params options.oldBag - Previous Bag assignment
    * @params options.newBag - New Bag Assignment
+   * @params options.newBin - New Bin
+   * @params options.oldBin - oldBin
+   * @params options.itemText - Item Text
+   * @params options.RRText - Return Request Text
    */
   function sendEmailMFGProcessingIsUpdated(options) {
-    let { newRec, receipient, sender, newBag, oldBag } = options;
+    log.audit("sendEmailMFGProcessingIsUpdated", options);
+    let {
+      newRec,
+      receipient,
+      sender,
+      newBag,
+      oldBag,
+      oldBin,
+      newBin,
+      itemText,
+      RRText,
+    } = options;
     try {
       const emailParams = {
         itemNDC: generateRedirectLink({
@@ -918,7 +933,10 @@ define([
           id: newRec.getValue("custrecord_cs_return_req_scan_item"),
         }),
         returnRequestText: newRec.getText("custrecord_cs_ret_req_scan_rrid"),
-        bagPreviousAssignment: oldBag,
+        bagPreviousAssignment: generateRedirectLink({
+          type: "customrecord_kd_taglabel",
+          id: oldBag,
+        }),
         returnRequestLink: generateRedirectLink({
           id: newRec.getValue("custrecord_cs_ret_req_scan_rrid"),
           type: getReturnRequestType(
@@ -929,27 +947,31 @@ define([
           type: "customrecord_kd_taglabel",
           id: newBag,
         }),
+        newBin: newBin,
+        oldBin: oldBin,
       };
 
       log.emergency("EMAIL PARAMS", emailParams);
       email.send({
         author: -5,
-        recipients: 1177,
-        subject: "Manuf Processing has been changed",
+        recipients: getWareHouseEmployeeRole(),
+        subject: "Manuf Processing or Bin has been changed ",
         body: `<table style="padding: 2px">
   <tr>
    <td>Item</td>
-    <td>Return Request</td>
-    <td>Previous Bag Assignment</td>
-    <td>Return Request Link</td>
-      <td>New Bag Assignment</td>
+   <td>Return Request</td>
+   <td>Previous Bag</td>
+   <td>New Bag </td>
+   <td>New Bin</td>
+   <td>Old Bin</td>
   </tr>
   <tr>
-    <td><a href="${emailParams.itemNDC}">ITEM <a/></td>
-       <td>${emailParams.returnRequestText}</td>
-   <td>${emailParams.bagPreviousAssignment}</td>
-     <td><a href=" ${emailParams.returnRequestLink}">Return Request Link</a></td>
-       <td><a href="${emailParams.newBagAssignment}"> New Bag Assignment</a> </td>
+    <td><a href="${emailParams.itemNDC}">${newRec.getText("custrecord_cs_return_req_scan_item")} <a/>&nbsp;&nbsp;</td>
+    <td><a href=" ${emailParams.returnRequestLink}">${emailParams.returnRequestText}&nbsp;&nbsp;</a></td>
+   <td><a href="${emailParams.bagPreviousAssignment}">${oldBag}&nbsp;&nbsp;<a></td>    
+   <td><a href="${emailParams.newBagAssignment}"> ${newBag}&nbsp;&nbsp;</a> </td>
+        <td>${emailParams.newBin}&nbsp;&nbsp;</td>
+       <td>${emailParams.oldBin}&nbsp;&nbsp;</td>
   </tr>
 </table>`,
       });
@@ -1038,6 +1060,39 @@ define([
     return arr.filter((item) => Array.isArray(item) && item.length > 0);
   }
 
+  /**
+   * Get the user with  warehouse verifier, warehouse assistant manager and warehouse manager for sending email update
+   * @returns {*[]}
+   */
+  function getWareHouseEmployeeRole() {
+    try {
+      let ids = [];
+      const employeeSearchObj = search.create({
+        type: "employee",
+        filters: [["role", "anyof", "1035", "1055", "1052"]],
+        columns: [
+          search.createColumn({ name: "entityid", label: "Name" }),
+          search.createColumn({ name: "email", label: "Email" }),
+          search.createColumn({ name: "phone", label: "Phone" }),
+          search.createColumn({ name: "altphone", label: "Office Phone" }),
+          search.createColumn({ name: "fax", label: "Fax" }),
+          search.createColumn({ name: "supervisor", label: "Supervisor" }),
+          search.createColumn({ name: "title", label: "Job Title" }),
+          search.createColumn({ name: "altemail", label: "Alt. Email" }),
+        ],
+      });
+      const searchResultCount = employeeSearchObj.runPaged().count;
+      log.debug("getWareHouseEmployeeRole result count", searchResultCount);
+      employeeSearchObj.run().each(function (result) {
+        ids.push(result.id);
+        return true;
+      });
+      return ids;
+    } catch (e) {
+      log.error("getWareHouseEmployeeRole", e.message);
+    }
+  }
+
   return {
     addDaysToDate,
     checkInstanceInstnaceMR,
@@ -1056,6 +1111,7 @@ define([
     getPeriodId,
     getReturnRequestType,
     moveFolderToDone,
+    getWareHouseEmployeeRole,
     mrrStatus,
     priceLevel,
     RRCATEGORY,

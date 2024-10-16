@@ -543,9 +543,8 @@ define([
               params: {
                 mrrId: mrrRec.id,
                 action: "createLabel",
-
                 customerId: mrrRec.getValue("custrecord_mrrentity"),
-                mailIn: serviceType == MAILIN ? true : false,
+                serviceType: serviceType,
               },
             });
             let mmrParamsGenerateLabel = {
@@ -554,6 +553,22 @@ define([
             if (
               mrrRec.getValue("custrecord_kod_mr_status") ==
               rxrs_util.mrrStatus.CustomerSubmitted
+            ) {
+              //Customer Submitted
+              context.form.addButton({
+                id: "custpage_generate_label",
+                label: "Add Label",
+                functionName: `openSuitelet(${JSON.stringify(
+                  mmrParamsGenerateLabel,
+                )})`,
+              });
+            }
+            if (
+              mrrRec.getValue("custrecord_kod_mr_status") ==
+                rxrs_util.mrrStatus.New &&
+              (serviceType == rxrs_util.SERVICETYPE["REP SERVICE"] ||
+                serviceType == rxrs_util.SERVICETYPE["SELF SERVICE"])
+              // Rep Service
             ) {
               //Customer Submitted
               context.form.addButton({

@@ -747,9 +747,9 @@ define([
         },
       });
       /*invcRec.setValue({
-                                                                                                                                                                                                                                      fieldId: 'custbody_kd_for_so_batch',
-                                                                                                                                                                                                                                      value: true
-                                                                                                                                                                                                                                  });*/
+                                                                                                                                                                                                                                                  fieldId: 'custbody_kd_for_so_batch',
+                                                                                                                                                                                                                                                  value: true
+                                                                                                                                                                                                                                              });*/
       log.debug("TEST", "tagged RR for so batch");
     }
     if (hasItemLine) {
@@ -1137,16 +1137,16 @@ define([
 
   function getItemsRequested(mrrId) {
     /*var searchRs = search.load({
-                                                                                                                                                            id: SEA_RETURN_ITEM_RQSTD,
-                                                                                                                                                            filters: search.createFilter({
-                                                                                                                                                                name: 'custrecord_kd_rir_masterid',
-                                                                                                                                                                operator: search.Operator.ANYOF,
-                                                                                                                                                                values: mrrId
-                                                                                                                                                            })
-                                                                                                                                                        }).run().getRange({ start: 0, end: 1000 });
-                                                                                                                                                        var itemsRequested = [];
-                                                                                                                                                        var rirId, item, itemDesc, itemNdc, qty, fulPar;
-                                                                                                                                                        log.debug('test', JSON.stringify(searchRs));*/
+                                                                                                                                                                    id: SEA_RETURN_ITEM_RQSTD,
+                                                                                                                                                                    filters: search.createFilter({
+                                                                                                                                                                        name: 'custrecord_kd_rir_masterid',
+                                                                                                                                                                        operator: search.Operator.ANYOF,
+                                                                                                                                                                        values: mrrId
+                                                                                                                                                                    })
+                                                                                                                                                                }).run().getRange({ start: 0, end: 1000 });
+                                                                                                                                                                var itemsRequested = [];
+                                                                                                                                                                var rirId, item, itemDesc, itemNdc, qty, fulPar;
+                                                                                                                                                                log.debug('test', JSON.stringify(searchRs));*/
 
     var objSearch = search.load({
       id: SEA_RETURN_ITEM_RQSTD,
@@ -1172,34 +1172,34 @@ define([
     log.debug("getItemsRequested", "searchRs: " + JSON.stringify(searchRs));
 
     /*var objSearch = search.create({
-                                                                                                                                                            type: search.Type.SALES_ORDER,
-                                                                                                                                                            title: 'My Second SalesOrder Search',
-                                                                                                                                                            id: 'customsearch_my_second_so_search',
-                                                                                                                                                            columns: [{
-                                                                                                                                                                name: 'id'
-                                                                                                                                                            }, {
-                                                                                                                                                                name: 'custrecord_kd_rir_item'
-                                                                                                                                                            }, {
-                                                                                                                                                                name: 'displayname',
-                                                                                                                                                                join: 'CUSTRECORD_KD_RIR_ITEM'
-                                                                                                                                                            }, {
-                                                                                                                                                                name: 'custitem_kod_item_ndc',
-                                                                                                                                                                join: 'CUSTRECORD_KD_RIR_ITEM'
-                                                                                                                                                            }, {
-                                                                                                                                                                name: 'custrecord_kd_rir_fulpar'
-                                                                                                                                                            }, {
-                                                                                                                                                                name: 'custrecord_kd_rir_masterid'
-                                                                                                                                                            }],
-                                                                                                                                                            filters: [{
-                                                                                                                                                                name: 'custrecord_kd_rir_masterid',
-                                                                                                                                                                operator: 'anyof',
-                                                                                                                                                                values: [mrrId]
-                                                                                                                                                            }]
-                                                                                                                                                        });
-                                                                                                                                                        var searchRs = objSearch.run().getRange({ start: 0, end: 1000 });
-                                                                                                                                                        var itemsRequested = [];
-                                                                                                                                                        var rirId, item, itemDesc, itemNdc, qty, fulPar;
-                                                                                                                                                        log.debug('test', JSON.stringify(searchRs));*/
+                                                                                                                                                                    type: search.Type.SALES_ORDER,
+                                                                                                                                                                    title: 'My Second SalesOrder Search',
+                                                                                                                                                                    id: 'customsearch_my_second_so_search',
+                                                                                                                                                                    columns: [{
+                                                                                                                                                                        name: 'id'
+                                                                                                                                                                    }, {
+                                                                                                                                                                        name: 'custrecord_kd_rir_item'
+                                                                                                                                                                    }, {
+                                                                                                                                                                        name: 'displayname',
+                                                                                                                                                                        join: 'CUSTRECORD_KD_RIR_ITEM'
+                                                                                                                                                                    }, {
+                                                                                                                                                                        name: 'custitem_kod_item_ndc',
+                                                                                                                                                                        join: 'CUSTRECORD_KD_RIR_ITEM'
+                                                                                                                                                                    }, {
+                                                                                                                                                                        name: 'custrecord_kd_rir_fulpar'
+                                                                                                                                                                    }, {
+                                                                                                                                                                        name: 'custrecord_kd_rir_masterid'
+                                                                                                                                                                    }],
+                                                                                                                                                                    filters: [{
+                                                                                                                                                                        name: 'custrecord_kd_rir_masterid',
+                                                                                                                                                                        operator: 'anyof',
+                                                                                                                                                                        values: [mrrId]
+                                                                                                                                                                    }]
+                                                                                                                                                                });
+                                                                                                                                                                var searchRs = objSearch.run().getRange({ start: 0, end: 1000 });
+                                                                                                                                                                var itemsRequested = [];
+                                                                                                                                                                var rirId, item, itemDesc, itemNdc, qty, fulPar;
+                                                                                                                                                                log.debug('test', JSON.stringify(searchRs));*/
 
     for (var i = 0; i < searchRs.length; i++) {
       rirId = searchRs[i].getValue({
@@ -1258,202 +1258,206 @@ define([
   }
 
   function addC2ItemsReqSublist(context) {
-    context.form.addTab({
-      id: "custpage_tab_items_requested",
-      label: "C2 Items Requested",
-    });
-    log.debug("addC2ItemsReqSublist", "Added Items Requested tab");
+    try {
+      context.form.addTab({
+        id: "custpage_tab_items_requested",
+        label: "C2 Items Requested",
+      });
+      log.debug("addC2ItemsReqSublist", "Added Items Requested tab");
 
-    var objSublist = context.form.addSublist({
-      id: "custpage_sublist_items_requested",
-      type: serverWidget.SublistType.LIST,
-      label: "Items Requested",
-      tab: "custpage_tab_items_requested",
-    });
-    objSublist.addField({
-      id: "custpage_edit",
-      type: serverWidget.FieldType.TEXT,
-      label: "Edit",
-    });
-    objSublist
-      .addField({
-        id: "custpage_col_id",
-        label: "ID",
-        type: serverWidget.FieldType.SELECT,
-        source: "customrecord_kod_mr_item_request",
-      })
-      .updateDisplayType({
-        displayType: serverWidget.FieldDisplayType.INLINE,
+      var objSublist = context.form.addSublist({
+        id: "custpage_sublist_items_requested",
+        type: serverWidget.SublistType.LIST,
+        label: "Items Requested",
+        tab: "custpage_tab_items_requested",
       });
-    objSublist
-      .addField({
-        id: "custpage_col_item",
-        label: "Item",
-        type: serverWidget.FieldType.SELECT,
-        source: "item",
-      })
-      .updateDisplayType({
-        displayType: serverWidget.FieldDisplayType.INLINE,
-      });
-    objSublist
-      .addField({
-        id: "custpage_col_item_description",
-        label: "Item Description",
-        type: serverWidget.FieldType.TEXT,
-      })
-      .updateDisplayType({
-        displayType: serverWidget.FieldDisplayType.INLINE,
-      });
-    objSublist
-      .addField({
-        id: "custpage_col_item_ndc",
-        label: "Item NDC",
-        type: serverWidget.FieldType.TEXT,
-      })
-      .updateDisplayType({
-        displayType: serverWidget.FieldDisplayType.INLINE,
-      });
-    objSublist
-      .addField({
-        id: "custpage_col_item_qty",
-        label: "Quantity",
-        type: serverWidget.FieldType.TEXT,
-      })
-      .updateDisplayType({
-        displayType: serverWidget.FieldDisplayType.INLINE,
-      });
-    objSublist
-      .addField({
-        id: "custpage_col_item_ful_par",
-        label: "Full/Partial",
-        type: serverWidget.FieldType.SELECT,
-        source: "customlist_kod_fullpartial",
-      })
-      .updateDisplayType({
-        displayType: serverWidget.FieldDisplayType.INLINE,
-      });
-    objSublist
-      .addField({
-        id: "custpage_col_item_form_222_no",
-        label: "Form 222 No.",
-        type: serverWidget.FieldType.TEXT,
-      })
-      .updateDisplayType({
-        displayType: serverWidget.FieldDisplayType.INLINE,
-      });
-    objSublist.addField({
-      id: "custpage_col_item_form_222_ref_no",
-      type: serverWidget.FieldType.TEXT,
-      label: "Form 222 Ref No.",
-    });
-    /*objSublist.addField({
-                                                                                                                                                            id: 'custpage_col_item_form_222_ref_no',
-                                                                                                                                                            label: 'Form 222 Ref No.',
-                                                                                                                                                            type: serverWidget.FieldType.TEXT
-                                                                                                                                                        }).updateDisplayType({
-                                                                                                                                                            displayType: serverWidget.FieldDisplayType.INLINE
-                                                                                                                                                        });*/
-    var itemsRequested = getItemsRequested(
-      context.newRecord.getValue(FLD_RETREQ_MRR),
-    );
-    log.debug(
-      "addC2ItemsReqSublist",
-      "return request id: " + context.newRecord.getValue(FLD_RETREQ_MRR),
-    );
-    log.debug(
-      "addC2ItemsReqSublist",
-      "itemsRequested: " + JSON.stringify(itemsRequested),
-    );
-    //var netsuiteSiteUrl = getDataCenterURL();
-    var domain = url.resolveDomain({
-      hostType: url.HostType.APPLICATION,
-    });
-    //itemsRequested = itemsRequested[0];
-    for (var i = 0; i < itemsRequested.length; i++) {
-      log.debug("TEST HERE", i);
-      var editUrl = url.resolveRecord({
-        recordType: "customrecord_kod_mr_item_request",
-        recordId: itemsRequested[i].id,
-        isEditMode: true,
-      });
-      var lineUrl = "https://" + domain + editUrl;
-      objSublist.setSublistValue({
+      objSublist.addField({
         id: "custpage_edit",
-        line: i,
-        value: '<a href="' + lineUrl + '">EDIT</a>',
+        type: serverWidget.FieldType.TEXT,
+        label: "Edit",
       });
-      /*contacts.setSublistValue({
-                                                                                                                                                                                                                                      id: 'edit',
-                                                                                                                                                                                                                                      line: ctr,
-                                                                                                                                                                                                                                      value: 'https://' + domain + editUrl
-                                                                                                                                                                                                                                  });*/
-      /*objSublist.setSublistValue({
-                                                                                                                                                                                                                                      id: 'custpage_edit',
-                                                                                                                                                                                                                                      line: i,
-                                                                                                                                                                                                                                      value: 'https://' + domain + editUrl
-                                                                                                                                                                                                                                  });*/
-      objSublist.setSublistValue({
-        id: "custpage_col_id",
-        value: itemsRequested[i].id,
-        line: i,
-      });
-      objSublist.setSublistValue({
-        id: "custpage_col_item",
-        value: itemsRequested[i].item,
-        line: i,
-      });
-      objSublist.setSublistValue({
-        id: "custpage_col_item_description",
-        value: itemsRequested[i].displayname,
-        line: i,
-      });
-      objSublist.setSublistValue({
-        id: "custpage_col_item_ndc",
-        value: itemsRequested[i].ndc,
-        line: i,
-      });
-      if (itemsRequested[i].qty != "") {
-        objSublist.setSublistValue({
+      objSublist
+        .addField({
+          id: "custpage_col_id",
+          label: "ID",
+          type: serverWidget.FieldType.SELECT,
+          source: "customrecord_kod_mr_item_request",
+        })
+        .updateDisplayType({
+          displayType: serverWidget.FieldDisplayType.INLINE,
+        });
+      objSublist
+        .addField({
+          id: "custpage_col_item",
+          label: "Item",
+          type: serverWidget.FieldType.SELECT,
+          source: "item",
+        })
+        .updateDisplayType({
+          displayType: serverWidget.FieldDisplayType.INLINE,
+        });
+      objSublist
+        .addField({
+          id: "custpage_col_item_description",
+          label: "Item Description",
+          type: serverWidget.FieldType.TEXT,
+        })
+        .updateDisplayType({
+          displayType: serverWidget.FieldDisplayType.INLINE,
+        });
+      objSublist
+        .addField({
+          id: "custpage_col_item_ndc",
+          label: "Item NDC",
+          type: serverWidget.FieldType.TEXT,
+        })
+        .updateDisplayType({
+          displayType: serverWidget.FieldDisplayType.INLINE,
+        });
+      objSublist
+        .addField({
           id: "custpage_col_item_qty",
-          value: itemsRequested[i].qty,
-          line: i,
+          label: "Quantity",
+          type: serverWidget.FieldType.TEXT,
+        })
+        .updateDisplayType({
+          displayType: serverWidget.FieldDisplayType.INLINE,
         });
-      }
-      objSublist.setSublistValue({
-        id: "custpage_col_item_ful_par",
-        value: itemsRequested[i].fulpar,
-        line: i,
-      });
-      if (itemsRequested[i].form222No != "") {
-        objSublist.setSublistValue({
+      objSublist
+        .addField({
+          id: "custpage_col_item_ful_par",
+          label: "Full/Partial",
+          type: serverWidget.FieldType.SELECT,
+          source: "customlist_kod_fullpartial",
+        })
+        .updateDisplayType({
+          displayType: serverWidget.FieldDisplayType.INLINE,
+        });
+      objSublist
+        .addField({
           id: "custpage_col_item_form_222_no",
-          value: itemsRequested[i].form222No,
-          line: i,
+          label: "Form 222 No.",
+          type: serverWidget.FieldType.TEXT,
+        })
+        .updateDisplayType({
+          displayType: serverWidget.FieldDisplayType.INLINE,
         });
-      }
-      if (itemsRequested[i].form222RefNo != "") {
-        objSublist.setSublistValue({
-          id: "custpage_col_item_form_222_ref_no",
-          value: itemsRequested[i].form222RefNo,
-          line: i,
-        });
-        var form222RefNoViewUrl = url.resolveRecord({
-          recordType: "customrecord_kd_222formrefnum",
-          recordId: itemsRequested[i].form222RefNoId,
-          isEditMode: false,
+      objSublist.addField({
+        id: "custpage_col_item_form_222_ref_no",
+        type: serverWidget.FieldType.TEXT,
+        label: "Form 222 Ref No.",
+      });
+      /*objSublist.addField({
+                                                                                                                                                                          id: 'custpage_col_item_form_222_ref_no',
+                                                                                                                                                                          label: 'Form 222 Ref No.',
+                                                                                                                                                                          type: serverWidget.FieldType.TEXT
+                                                                                                                                                                      }).updateDisplayType({
+                                                                                                                                                                          displayType: serverWidget.FieldDisplayType.INLINE
+                                                                                                                                                                      });*/
+      var itemsRequested = getItemsRequested(
+        context.newRecord.getValue(FLD_RETREQ_MRR),
+      );
+      log.debug(
+        "addC2ItemsReqSublist",
+        "return request id: " + context.newRecord.getValue(FLD_RETREQ_MRR),
+      );
+      log.debug(
+        "addC2ItemsReqSublist",
+        "itemsRequested: " + JSON.stringify(itemsRequested),
+      );
+      //var netsuiteSiteUrl = getDataCenterURL();
+      var domain = url.resolveDomain({
+        hostType: url.HostType.APPLICATION,
+      });
+      //itemsRequested = itemsRequested[0];
+      for (var i = 0; i < itemsRequested.length; i++) {
+        log.debug("TEST HERE", i);
+        var editUrl = url.resolveRecord({
+          recordType: "customrecord_kod_mr_item_request",
+          recordId: itemsRequested[i].id,
+          isEditMode: true,
         });
         var lineUrl = "https://" + domain + editUrl;
         objSublist.setSublistValue({
-          id: "custpage_col_item_form_222_ref_no",
+          id: "custpage_edit",
           line: i,
-          value:
-            '<a href="' +
-            form222RefNoViewUrl +
-            '">' +
-            itemsRequested[i].form222RefNo +
-            "</a>",
+          value: '<a href="' + lineUrl + '">EDIT</a>',
         });
+        /*contacts.setSublistValue({
+                                                                                                                                                                                                                                                        id: 'edit',
+                                                                                                                                                                                                                                                        line: ctr,
+                                                                                                                                                                                                                                                        value: 'https://' + domain + editUrl
+                                                                                                                                                                                                                                                    });*/
+        /*objSublist.setSublistValue({
+                                                                                                                                                                                                                                                        id: 'custpage_edit',
+                                                                                                                                                                                                                                                        line: i,
+                                                                                                                                                                                                                                                        value: 'https://' + domain + editUrl
+                                                                                                                                                                                                                                                    });*/
+        objSublist.setSublistValue({
+          id: "custpage_col_id",
+          value: itemsRequested[i].id,
+          line: i,
+        });
+        objSublist.setSublistValue({
+          id: "custpage_col_item",
+          value: itemsRequested[i].item,
+          line: i,
+        });
+        objSublist.setSublistValue({
+          id: "custpage_col_item_description",
+          value: itemsRequested[i].displayname,
+          line: i,
+        });
+        objSublist.setSublistValue({
+          id: "custpage_col_item_ndc",
+          value: itemsRequested[i].ndc,
+          line: i,
+        });
+        if (itemsRequested[i].qty != "") {
+          objSublist.setSublistValue({
+            id: "custpage_col_item_qty",
+            value: itemsRequested[i].qty,
+            line: i,
+          });
+        }
+        objSublist.setSublistValue({
+          id: "custpage_col_item_ful_par",
+          value: itemsRequested[i].fulpar,
+          line: i,
+        });
+        if (itemsRequested[i].form222No != "") {
+          objSublist.setSublistValue({
+            id: "custpage_col_item_form_222_no",
+            value: itemsRequested[i].form222No,
+            line: i,
+          });
+        }
+        if (itemsRequested[i].form222RefNo != "") {
+          objSublist.setSublistValue({
+            id: "custpage_col_item_form_222_ref_no",
+            value: itemsRequested[i].form222RefNo,
+            line: i,
+          });
+          var form222RefNoViewUrl = url.resolveRecord({
+            recordType: "customrecord_kd_222formrefnum",
+            recordId: itemsRequested[i].form222RefNoId,
+            isEditMode: false,
+          });
+          var lineUrl = "https://" + domain + editUrl;
+          objSublist.setSublistValue({
+            id: "custpage_col_item_form_222_ref_no",
+            line: i,
+            value:
+              '<a href="' +
+              form222RefNoViewUrl +
+              '">' +
+              itemsRequested[i].form222RefNo +
+              "</a>",
+          });
+        }
       }
+    } catch (e) {
+      log.error("addC2ItemsReqSublist", e.message);
     }
   }
 
@@ -1476,10 +1480,10 @@ define([
           values: "Unidentified",
         },
         /*{
-                                                                                                                                                                                                                                                                                                name: 'custcol_kd_baglabel_link',
-                                                                                                                                                                                                                                                                                                operator: 'anyof',
-                                                                                                                                                                                                                                                                                                values: ['@NONE@']
-                                                                                                                                                                                                                                                                                            },*/ {
+                                                                                                                                                                                                                                                                                                                name: 'custcol_kd_baglabel_link',
+                                                                                                                                                                                                                                                                                                                operator: 'anyof',
+                                                                                                                                                                                                                                                                                                                values: ['@NONE@']
+                                                                                                                                                                                                                                                                                                            },*/ {
           name: "internalid",
           operator: "anyof",
           values: [recReturnRequest.id],
@@ -1521,27 +1525,27 @@ define([
     if (!haveUnidentifiedItem && haveItemWithoutBag) return true;
     return false;
     /*var rrItemsSearch = search.load({
-                                                                                                                                                            id: SEA_RET_REQ_ITEMS
-                                                                                                                                                        });
-                                                                                                                                                        rrItemsSearch.filters.push(search.createFilter({
-                                                                                                                                                            name: 'name',
-                                                                                                                                                            join: 'item',
-                                                                                                                                                            operator: search.Operator.STARTSWITH,
-                                                                                                                                                            values: 'Unidentified'
-                                                                                                                                                        }));
-                                                                                                                                                        rrItemsSearch.filters.push(search.createFilter({
-                                                                                                                                                            name: 'internalid',
-                                                                                                                                                            operator: search.Operator.ANYOF,
-                                                                                                                                                            values: recReturnRequest.id
-                                                                                                                                                        }));
-                                                                                                                                    
-                                                                                                                                                        var searchRs = rrItemsSearch.run().getRange({start: 0, end: 1000});
-                                                                                                                                    
-                                                                                                                                                        if (searchRs.length > 0) {
-                                                                                                                                                            return false;
-                                                                                                                                                        }
-                                                                                                                                    
-                                                                                                                                                        return true;*/
+                                                                                                                                                                    id: SEA_RET_REQ_ITEMS
+                                                                                                                                                                });
+                                                                                                                                                                rrItemsSearch.filters.push(search.createFilter({
+                                                                                                                                                                    name: 'name',
+                                                                                                                                                                    join: 'item',
+                                                                                                                                                                    operator: search.Operator.STARTSWITH,
+                                                                                                                                                                    values: 'Unidentified'
+                                                                                                                                                                }));
+                                                                                                                                                                rrItemsSearch.filters.push(search.createFilter({
+                                                                                                                                                                    name: 'internalid',
+                                                                                                                                                                    operator: search.Operator.ANYOF,
+                                                                                                                                                                    values: recReturnRequest.id
+                                                                                                                                                                }));
+                                                                                                                                            
+                                                                                                                                                                var searchRs = rrItemsSearch.run().getRange({start: 0, end: 1000});
+                                                                                                                                            
+                                                                                                                                                                if (searchRs.length > 0) {
+                                                                                                                                                                    return false;
+                                                                                                                                                                }
+                                                                                                                                            
+                                                                                                                                                                return true;*/
   }
 
   function rrHasReturnItemRequested(rrId) {
@@ -1642,23 +1646,23 @@ define([
         context.type == "view"
       ) {
         /*var updateNoC2FormsUrl = url.resolveScript({
-                                                                                                                                                                                                                                                                                                                scriptId: 'customscript_kd_sl_update_no_c2_forms',
-                                                                                                                                                                                                                                                                                                                deploymentId: 'customdeploy_kd_sl_update_no_c2_forms'
-                                                                                                                                                                                                                                                                                                            });
-                                                                                                                                                                                                                                                                        
-                                                                                                                                                                                                                                                                                                            updateNoC2FormsUrl += '&custscript_id=' + context.newRecord.id;
-                                                                                                                                                                                                                                                                                                            log.debug('test', 'updateNoC2FormsUrl ' + updateNoC2FormsUrl);
-                                                                                                                                                                                                                                                                                                            context.form.addButton({
-                                                                                                                                                                                                                                                                                                                id : 'custpage_update_no_c2_forms',
-                                                                                                                                                                                                                                                                                                                label : 'Update No. of C2 Forms',
-                                                                                                                                                                                                                                                                                                                functionName: "window.open('" + updateNoC2FormsUrl + "');"
-                                                                                                                                                                                                                                                                                                            });*/
+                                                                                                                                                                                                                                                                                                                                scriptId: 'customscript_kd_sl_update_no_c2_forms',
+                                                                                                                                                                                                                                                                                                                                deploymentId: 'customdeploy_kd_sl_update_no_c2_forms'
+                                                                                                                                                                                                                                                                                                                            });
+                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                            updateNoC2FormsUrl += '&custscript_id=' + context.newRecord.id;
+                                                                                                                                                                                                                                                                                                                            log.debug('test', 'updateNoC2FormsUrl ' + updateNoC2FormsUrl);
+                                                                                                                                                                                                                                                                                                                            context.form.addButton({
+                                                                                                                                                                                                                                                                                                                                id : 'custpage_update_no_c2_forms',
+                                                                                                                                                                                                                                                                                                                                label : 'Update No. of C2 Forms',
+                                                                                                                                                                                                                                                                                                                                functionName: "window.open('" + updateNoC2FormsUrl + "');"
+                                                                                                                                                                                                                                                                                                                            });*/
 
         /*var btnUpdateNoC2Forms = context.form.addButton({
-                                                                                                                                                                                                                                                                                                                id: 'custpage_update_no_c2_forms',
-                                                                                                                                                                                                                                                                                                                label: 'Update No. of C2 Forms',
-                                                                                                                                                                                                                                                                                                                functionName: 'updateNoC2Forms("' + context.newRecord.id + '")'
-                                                                                                                                                                                                                                                                                                            });*/
+                                                                                                                                                                                                                                                                                                                                id: 'custpage_update_no_c2_forms',
+                                                                                                                                                                                                                                                                                                                                label: 'Update No. of C2 Forms',
+                                                                                                                                                                                                                                                                                                                                functionName: 'updateNoC2Forms("' + context.newRecord.id + '")'
+                                                                                                                                                                                                                                                                                                                            });*/
 
         var fileId = search
           .create({
@@ -1687,30 +1691,30 @@ define([
           //{custbody_kd_rr_category.id}=3 and {userrole.id} in (3,1028) and {custbody_kd_c2_no_of_labels} is not null
           //check on rir if more than 2
           /*if (returnRequestRec.getLineCount('custpage_sublist_items_requested') > 1) {
-                                                                                                                                                                                                                                                                                                                                                                                          context.form.addButton({
-                                                                                                                                                                                                                                                                                                                                                                                              id: 'custpage_btn_update_no_form_222',
-                                                                                                                                                                                                                                                                                                                                                                                              label: 'Update No. of Form 222',
-                                                                                                                                                                                                                                                                                                                                                                                              functionName: 'updateNoForm222("' + context.newRecord.id + '")'
-                                                                                                                                                                                                                                                                                                                                                                                          });
-                                                                                                                                                                                                                                                                                                                                                                                      }*/
+                                                                                                                                                                                                                                                                                                                                                                                                              context.form.addButton({
+                                                                                                                                                                                                                                                                                                                                                                                                                  id: 'custpage_btn_update_no_form_222',
+                                                                                                                                                                                                                                                                                                                                                                                                                  label: 'Update No. of Form 222',
+                                                                                                                                                                                                                                                                                                                                                                                                                  functionName: 'updateNoForm222("' + context.newRecord.id + '")'
+                                                                                                                                                                                                                                                                                                                                                                                                              });
+                                                                                                                                                                                                                                                                                                                                                                                                          }*/
 
           /*context.form.addButton({
-                                                                                                                                                                                                                                                                                                                                                                                          id: 'custpage_btn_auto_assign_form_222',
-                                                                                                                                                                                                                                                                                                                                                                                          label: 'Auto Assign Form 222',
-                                                                                                                                                                                                                                                                                                                                                                                          functionName: 'autoAssignForm222("' + context.newRecord.id + ',' + returnRequestRec.getValue(FLD_RETREQ_MRR) + '")'
-                                                                                                                                                                                                                                                                                                                                                                                      });*/
+                                                                                                                                                                                                                                                                                                                                                                                                              id: 'custpage_btn_auto_assign_form_222',
+                                                                                                                                                                                                                                                                                                                                                                                                              label: 'Auto Assign Form 222',
+                                                                                                                                                                                                                                                                                                                                                                                                              functionName: 'autoAssignForm222("' + context.newRecord.id + ',' + returnRequestRec.getValue(FLD_RETREQ_MRR) + '")'
+                                                                                                                                                                                                                                                                                                                                                                                                          });*/
 
           /*context.form.addButton({
-                                                                                                                                                                                                                                                                                                                                                                                          id: 'custpage_btn_form222',
-                                                                                                                                                                                                                                                                                                                                                                                          label: 'Generate Form 222',
-                                                                                                                                                                                                                                                                                                                                                                                          functionName: "createForm222"
-                                                                                                                                                                                                                                                                                                                                                                                      });*/
+                                                                                                                                                                                                                                                                                                                                                                                                              id: 'custpage_btn_form222',
+                                                                                                                                                                                                                                                                                                                                                                                                              label: 'Generate Form 222',
+                                                                                                                                                                                                                                                                                                                                                                                                              functionName: "createForm222"
+                                                                                                                                                                                                                                                                                                                                                                                                          });*/
 
           /*context.form.addButton({
-                                                                                                                                                                                                                                                                                                                                                                                          id: 'custpage_btn_authorize',
-                                                                                                                                                                                                                                                                                                                                                                                          label: 'Authorize',
-                                                                                                                                                                                                                                                                                                                                                                                          functionName: "authorize"
-                                                                                                                                                                                                                                                                                                                                                                                      });*/
+                                                                                                                                                                                                                                                                                                                                                                                                              id: 'custpage_btn_authorize',
+                                                                                                                                                                                                                                                                                                                                                                                                              label: 'Authorize',
+                                                                                                                                                                                                                                                                                                                                                                                                              functionName: "authorize"
+                                                                                                                                                                                                                                                                                                                                                                                                          });*/
           var fileId = search
             .create({
               type: "file",
@@ -1753,19 +1757,19 @@ define([
       rrHasReturnItemRequested(rec.id)
     ) {
       /*context.form.addButton({
-                                                                                                                                                                                                                                      id : 'custpage_btn_form222',                                                                                                                                                                                                functionName: "createForm222"
-                                                                                                                                                                                                                                  });*/
+                                                                                                                                                                                                                                                  id : 'custpage_btn_form222',                                                                                                                                                                                                functionName: "createForm222"
+                                                                                                                                                                                                                                              });*/
       /*var fileId = search.create({
-                                                                                                                                                                                                                      log.debug('test', 'cs file id: ' + fileId[0].id);
-                                                                                                                                                                                                                                  context.form.clientScriptFileId = fileId[0].id;*/
+                                                                                                                                                                                                                                  log.debug('test', 'cs file id: ' + fileId[0].id);
+                                                                                                                                                                                                                                              context.form.clientScriptFileId = fileId[0].id;*/
     }
     //if((returnRequestRec.getText('transtatus').toUpperCase() == 'PROCESSING' || returnRequestRec.getText('transtatus').toUpperCase() == 'PROCESSED/PENDING APPROVAL') && context.type == 'view'){
     if (rec.getValue("transtatus") == "F" && context.type == "view") {
       /*var btnApplyReturnPolicy = context.form.addButton({
-                                                                                                                                                                                                                                      id: 'custpage_apply_return_policy',
-                                                                                                                                                                                                                                      label: 'Apply Return Policy',
-                                                                                                                                                                                                                                      functionName: 'applyReturnPolicy'
-                                                                                                                                                                                                                                  });*/
+                                                                                                                                                                                                                                                  id: 'custpage_apply_return_policy',
+                                                                                                                                                                                                                                                  label: 'Apply Return Policy',
+                                                                                                                                                                                                                                                  functionName: 'applyReturnPolicy'
+                                                                                                                                                                                                                                              });*/
       var fileId = search
         .create({
           type: "file",
@@ -2030,16 +2034,16 @@ define([
           }
         }
         /*}else if(pharmaProcessing == PROCESSING_NONRETURNABLE){
-                                                                                                                                                                                                                                                                                                                try{
-                                                                                                                                                                                                                                                                                                                    rrRec.setCurrentSublistValue({
-                                                                                                                                                                                                                                                                                                                        sublistId: 'item',
-                                                                                                                                                                                                                                                                                                                        fieldId: 'price',
-                                                                                                                                                                                                                                                                                                                        value: 7
-                                                                                                                                                                                                                                                                                                                    });
-                                                                                                                                                                                                                                                                                                                }catch(ex){
-                                                                                                                                                                                                                                                                                                                    log.debug('NONRETURNABLE_SET_PRICE_LEVEL', 'Non-Returnable Price Level is not available for the item.')
-                                                                                                                                                                                                                                                                                                                }
-                                                                                                                                                                                                                                                                                                            }*/
+                                                                                                                                                                                                                                                                                                                                try{
+                                                                                                                                                                                                                                                                                                                                    rrRec.setCurrentSublistValue({
+                                                                                                                                                                                                                                                                                                                                        sublistId: 'item',
+                                                                                                                                                                                                                                                                                                                                        fieldId: 'price',
+                                                                                                                                                                                                                                                                                                                                        value: 7
+                                                                                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                                                                                }catch(ex){
+                                                                                                                                                                                                                                                                                                                                    log.debug('NONRETURNABLE_SET_PRICE_LEVEL', 'Non-Returnable Price Level is not available for the item.')
+                                                                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                                                            }*/
       }
       rrRec.commitLine("item");
     }
@@ -2134,14 +2138,14 @@ define([
             scriptId: "customscript_kd_mr_assign_222_form",
             deploymentId: "customdeploy_kd_mr_assign_222_form",
             /*,
-                                                                                                                                                                                                                                        params: {
-                                                                                                                                                                                                                                            custscript_mrr_id: mrrRec.id
-                                                                                                                                                                                                                                        }*/
+                                                                                                                                                                                                                                                                params: {
+                                                                                                                                                                                                                                                                    custscript_mrr_id: mrrRec.id
+                                                                                                                                                                                                                                                                }*/
           });
           var mrTaskId = mrTask.submit();
           /*var mrTaskStatus = task.checkStatus({
-                                                                                                                                                                                                                                                                                                                        taskId: mrTaskId
-                                                                                                                                                                                                                                                                                                                    });*/
+                                                                                                                                                                                                                                                                                                                                            taskId: mrTaskId
+                                                                                                                                                                                                                                                                                                                                        });*/
           log.debug("test", "scheduled for tag creation" + mrTaskId);
           //if(mrTaskStatus == FAILED)
         } catch (ex) {
@@ -2208,8 +2212,8 @@ define([
         });
         log.debug("afterSubmit", generatePdfUrl + " >> " + returnRequestRec.id);
         /*redirect.redirect({
-                                                                                                                                                                                                                                                url: generatePdfUrl+'&id='+context.newRecord.id
-                                                                                                                                                                                                                                            });*/
+                                                                                                                                                                                                                                                                url: generatePdfUrl+'&id='+context.newRecord.id
+                                                                                                                                                                                                                                                            });*/
         redirect.toSuitelet({
           scriptId: SCR_ID_GENERATE_FORM_222,
           deploymentId: DPLYMNT_GENERATE_FORM_222,
@@ -2219,12 +2223,12 @@ define([
         });
         // move the status to next stage after generation of the form 222 pdf
         /*var rrId = record.submitFields({
-                                                                                                                                                                                                                                                type: 'customsale_kod_returnrequest',
-                                                                                                                                                                                                                                                id: context.newRecord.id,
-                                                                                                                                                                                                                                                values: {
-                                                                                                                                                                                                                                                    'transtatus': 'D'
-                                                                                                                                                                                                                                                }
-                                                                                                                                                                                                                                            });*/
+                                                                                                                                                                                                                                                                type: 'customsale_kod_returnrequest',
+                                                                                                                                                                                                                                                                id: context.newRecord.id,
+                                                                                                                                                                                                                                                                values: {
+                                                                                                                                                                                                                                                                    'transtatus': 'D'
+                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                            });*/
         //added transition from C2 Kit to be mail to pending package receipt
       } else if (
         returnRequestRec.getValue("transtatus") == "J" &&

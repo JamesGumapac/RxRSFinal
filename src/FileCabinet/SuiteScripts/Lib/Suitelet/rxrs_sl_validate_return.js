@@ -164,7 +164,7 @@ define([
               log.audit("GroupIndated", groupIndated);
               const keys = Object.keys(groupIndated);
               let values = Object.values(groupIndated);
-
+              log.audit("In Dated", { values, keys });
               for (let i = 0; i < keys.length; i++) {
                 let bagTagId;
                 log.audit("In Date", keys[i]);
@@ -223,142 +223,176 @@ define([
             }
             break;
           case "Destruction":
-            if (category == util.RRCATEGORY.RXOTC) {
-              const GL1Disp_OTC = 1029; // NON hazardous bag
-              const GL2Disp_NoScanPatVit = 1030; // Unscannable bag
-              const GL3Disp_Aero_Comb = 1031;
-              const GL4Disp_Sharp = 1032;
-              const nonHazardousBag = [];
-              const unscannableBag = [];
-              const aeroSolBag = [];
-              const sharpBag = [];
+            if (manualBin == true || manualBin == "true") {
+              log.audit("inDated Manual Bin Selection", {
+                returnScanList,
+                binNumberId: binNumber,
+              });
+              let bagTagId = rxrsBagUtil.createBin({
+                mrrId: mrrid,
+                entity: entity,
+                manufId: manufId,
+                rrId: rrId,
+                mfgProcessing: mfgProcessing,
+                binNumber: binNumber,
+              });
+              log.audit("Destruction", { bagTagId });
+              if (bagTagId) {
+                returnScanList.forEach(function (item) {
+                  log.audit("item", item);
+                  rxrsBagUtil.updateBagLabel({
+                    ids: item.id,
+                    isVerify: JSON.parse(isVerify),
+                    bagId: bagTagId,
+                    prevBag: item.prevBag ? getPreviousBag(item.prevBag) : null,
+                    binNumber: binNumber,
+                    isAerosol: item.isAerosol,
+                    isSharp: item.isSharp,
+                  });
+                });
+              }
+            } else {
+              if (category == util.RRCATEGORY.RXOTC) {
+                const GL1Disp_OTC = 1029; // NON hazardous bag
+                const GL2Disp_NoScanPatVit = 1030; // Unscannable bag
+                const GL3Disp_Aero_Comb = 1031;
+                const GL4Disp_Sharp = 1032;
+                const nonHazardousBag = [];
+                const unscannableBag = [];
+                const aeroSolBag = [];
+                const sharpBag = [];
 
-              returnScanList.forEach(function (item) {
-                let { itemId, isAerosol, isSharp, patientVial, nonScannable } =
-                  item;
-                log.audit("Non Hazardous", item);
+                returnScanList.forEach(function (item) {
+                  let {
+                    itemId,
+                    isAerosol,
+                    isSharp,
+                    patientVial,
+                    nonScannable,
+                  } = item;
+                  log.audit("Non Hazardous", item);
 
-                if (isAerosol == true && isSharp == true) {
-                  sharpBag.push(item);
-                } else if (isAerosol == true) {
-                  aeroSolBag.push(item);
-                } else if (isSharp == true) {
-                  sharpBag.push(item);
-                } else if (patientVial == true || nonScannable == true) {
-                  unscannableBag.push(item);
-                } else {
-                  if (isHazardous == false || isHazardous == "false") {
-                    nonHazardousBag.push(item);
+                  if (isAerosol == true && isSharp == true) {
+                    sharpBag.push(item);
+                  } else if (isAerosol == true) {
+                    aeroSolBag.push(item);
+                  } else if (isSharp == true) {
+                    sharpBag.push(item);
+                  } else if (patientVial == true || nonScannable == true) {
+                    unscannableBag.push(item);
                   } else {
-                    log.audit("No destruction bag", item);
+                    if (isHazardous == false || isHazardous == "false") {
+                      nonHazardousBag.push(item);
+                    } else {
+                      log.audit("No destruction bag", item);
+                    }
+                  }
+                });
+                log.audit("Destruction bags", {
+                  nonHazardousBag,
+                  unscannableBag,
+                  aeroSolBag,
+                  sharpBag,
+                });
+                if (nonHazardousBag.length > 0) {
+                  let nonHazardousBagId = rxrsBagUtil.createBin({
+                    mrrId: +mrrid,
+                    entity: entity,
+                    manufId: manufId,
+                    rrId: rrId,
+                    mfgProcessing: mfgProcessing,
+                    binNumber: GL1Disp_OTC,
+                  });
+                  if (nonHazardousBagId) {
+                    nonHazardousBag.forEach(function (item) {
+                      rxrsBagUtil.updateBagLabel({
+                        ids: item.id,
+                        isVerify: JSON.parse(isVerify),
+                        bagId: nonHazardousBagId,
+                        prevBag: item.prevBag
+                          ? getPreviousBag(item.prevBag)
+                          : null,
+                        binNumber: GL1Disp_OTC,
+                      });
+                    });
                   }
                 }
-              });
-              log.audit("Destruction bags", {
-                nonHazardousBag,
-                unscannableBag,
-                aeroSolBag,
-                sharpBag,
-              });
-              if (nonHazardousBag.length > 0) {
-                let nonHazardousBagId = rxrsBagUtil.createBin({
-                  mrrId: +mrrid,
-                  entity: entity,
-                  manufId: manufId,
-                  rrId: rrId,
-                  mfgProcessing: mfgProcessing,
-                  binNumber: GL1Disp_OTC,
-                });
-                if (nonHazardousBagId) {
-                  nonHazardousBag.forEach(function (item) {
-                    rxrsBagUtil.updateBagLabel({
-                      ids: item.id,
-                      isVerify: JSON.parse(isVerify),
-                      bagId: nonHazardousBagId,
-                      prevBag: item.prevBag
-                        ? getPreviousBag(item.prevBag)
-                        : null,
-                      binNumber: GL1Disp_OTC,
-                    });
-                  });
-                }
-              }
 
-              if (unscannableBag.length > 0) {
-                let unscannablebagId = rxrsBagUtil.createBin({
-                  mrrId: +mrrid,
-                  entity: entity,
-                  manufId: manufId,
-                  rrId: rrId,
-                  mfgProcessing: mfgProcessing,
-                  binNumber: GL2Disp_NoScanPatVit,
-                });
-                if (unscannablebagId) {
-                  unscannableBag.forEach(function (item) {
-                    rxrsBagUtil.updateBagLabel({
-                      ids: item.id,
-                      isVerify: JSON.parse(isVerify),
-                      bagId: unscannablebagId,
-                      prevBag: item.prevBag
-                        ? getPreviousBag(item.prevBag)
-                        : null,
-                      binNumber: GL2Disp_NoScanPatVit,
-                    });
+                if (unscannableBag.length > 0) {
+                  let unscannablebagId = rxrsBagUtil.createBin({
+                    mrrId: +mrrid,
+                    entity: entity,
+                    manufId: manufId,
+                    rrId: rrId,
+                    mfgProcessing: mfgProcessing,
+                    binNumber: GL2Disp_NoScanPatVit,
                   });
+                  if (unscannablebagId) {
+                    unscannableBag.forEach(function (item) {
+                      rxrsBagUtil.updateBagLabel({
+                        ids: item.id,
+                        isVerify: JSON.parse(isVerify),
+                        bagId: unscannablebagId,
+                        prevBag: item.prevBag
+                          ? getPreviousBag(item.prevBag)
+                          : null,
+                        binNumber: GL2Disp_NoScanPatVit,
+                      });
+                    });
+                  }
                 }
-              }
-              if (aeroSolBag.length > 0) {
-                let aerosolBagId = rxrsBagUtil.createBin({
-                  mrrId: +mrrid,
-                  entity: entity,
-                  manufId: manufId,
-                  rrId: rrId,
-                  mfgProcessing: mfgProcessing,
-                  binNumber: GL3Disp_Aero_Comb,
-                });
-                if (aerosolBagId) {
-                  aeroSolBag.forEach(function (item) {
-                    rxrsBagUtil.updateBagLabel({
-                      ids: item.id,
-                      isVerify: JSON.parse(isVerify),
-                      bagId: aerosolBagId,
-                      prevBag: item.prevBag
-                        ? getPreviousBag(item.prevBag)
-                        : null,
-                      binNumber: GL3Disp_Aero_Comb,
-                      isAerosol: item.isAerosol,
-                      isSharp: item.isSharp,
-                    });
+                if (aeroSolBag.length > 0) {
+                  let aerosolBagId = rxrsBagUtil.createBin({
+                    mrrId: +mrrid,
+                    entity: entity,
+                    manufId: manufId,
+                    rrId: rrId,
+                    mfgProcessing: mfgProcessing,
+                    binNumber: GL3Disp_Aero_Comb,
                   });
+                  if (aerosolBagId) {
+                    aeroSolBag.forEach(function (item) {
+                      rxrsBagUtil.updateBagLabel({
+                        ids: item.id,
+                        isVerify: JSON.parse(isVerify),
+                        bagId: aerosolBagId,
+                        prevBag: item.prevBag
+                          ? getPreviousBag(item.prevBag)
+                          : null,
+                        binNumber: GL3Disp_Aero_Comb,
+                        isAerosol: item.isAerosol,
+                        isSharp: item.isSharp,
+                      });
+                    });
+                  }
                 }
-              }
-              if (sharpBag.length > 0) {
-                let sharpBagId = rxrsBagUtil.createBin({
-                  mrrId: +mrrid,
-                  entity: entity,
-                  manufId: manufId,
-                  rrId: rrId,
-                  mfgProcessing: mfgProcessing,
-                  binNumber: GL4Disp_Sharp,
-                });
-                if (sharpBagId) {
-                  sharpBag.forEach(function (item) {
-                    rxrsBagUtil.updateBagLabel({
-                      ids: item.id,
-                      isVerify: JSON.parse(isVerify),
-                      bagId: sharpBagId,
-                      prevBag: item.prevBag
-                        ? getPreviousBag(item.prevBag)
-                        : null,
-                      binNumber: GL4Disp_Sharp,
-                      isAerosol: item.isAerosol,
-                      isSharp: item.isSharp,
-                    });
+                if (sharpBag.length > 0) {
+                  let sharpBagId = rxrsBagUtil.createBin({
+                    mrrId: +mrrid,
+                    entity: entity,
+                    manufId: manufId,
+                    rrId: rrId,
+                    mfgProcessing: mfgProcessing,
+                    binNumber: GL4Disp_Sharp,
                   });
+                  if (sharpBagId) {
+                    sharpBag.forEach(function (item) {
+                      rxrsBagUtil.updateBagLabel({
+                        ids: item.id,
+                        isVerify: JSON.parse(isVerify),
+                        bagId: sharpBagId,
+                        prevBag: item.prevBag
+                          ? getPreviousBag(item.prevBag)
+                          : null,
+                        binNumber: GL4Disp_Sharp,
+                        isAerosol: item.isAerosol,
+                        isSharp: item.isSharp,
+                      });
+                    });
+                  }
                 }
               }
             }
-
             //   log.audit("existing  bag");
             // if (exitingBagId) {
             //   bags.push(exitingBagId);

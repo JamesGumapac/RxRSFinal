@@ -1565,8 +1565,41 @@ define([
     }
   }
 
+  /**
+   * Get the return to info of the manufacturer
+   * @param options.manufId Manufacturer Id
+   * @returns {null}
+   */
+  function getReturnToInfo(options) {
+    log.audit("getReturnToInfo", options);
+    let { manufId } = options;
+    try {
+      let returnToId = null;
+      const customrecord_manuf_returntoinfoSearchObj = search.create({
+        type: "customrecord_manuf_returntoinfo",
+        filters: [["custrecord_returnto_manuf", "anyof", manufId]],
+        columns: [
+          search.createColumn({
+            name: "custrecord_returnto",
+            label: "Return To",
+          }),
+        ],
+      });
+
+      customrecord_manuf_returntoinfoSearchObj.run().each(function (result) {
+        returnToId = result.getValue({
+          name: "custrecord_returnto",
+        });
+      });
+      return returnToId;
+    } catch (e) {
+      log.error("getReturnToInfo", e.message);
+    }
+  }
+
   return {
     lookForExistingCreditMemoRec,
+    getReturnToInfo,
     createCreditMemoRec,
     deleteCreditMemo,
     getCMParentInfo,

@@ -27,6 +27,11 @@ define([
   let initialPaymentName;
   const RETURNABLE = 2;
   const NONRETURNABLE = 1;
+  const RRCATEGORY = Object.freeze({
+    C2: 3,
+    RXOTC: 1,
+    C3TO5: 4,
+  });
 
   /**
    * Function to be executed after page is initialized.
@@ -65,12 +70,16 @@ define([
       if (manualBin) {
         let binCategoryField = suitelet.getField("custpage_bincategory");
         let binNumberField = suitelet.getField("custpage_bin");
+        let returntoField = suitelet.getField("custpage_returnto");
+
         if (manualBin == true) {
           binNumberField.isDisabled = false;
           binCategoryField.isDisabled = false;
+          returntoField.isDisabled = false;
         } else {
           binNumberField.isDisabled = true;
           binCategoryField.isDisabled = true;
+          returntoField.isDisabled = true;
         }
       }
     } catch (e) {
@@ -213,9 +222,11 @@ define([
         let manualBin = suitelet.getValue("custpage_manual_bin");
         let binCategoryField = suitelet.getField("custpage_bincategory");
         let binNumberField = suitelet.getField("custpage_bin");
+        let returnToField = suitelet.getField("custpage_returnto");
         if (manualBin == true) {
           binNumberField.isDisabled = false;
           binCategoryField.isDisabled = false;
+          returnToField.isDisabled = false;
         } else {
           suitelet.setValue({
             fieldId: "custpage_bincategory",
@@ -227,19 +238,25 @@ define([
           });
           binNumberField.isDisabled = true;
           binCategoryField.isDisabled = true;
+          returnToField.isDisabled = true;
         }
       }
-      if (scriptContext.fieldId == "custpage_bincategory") {
+      if (
+        scriptContext.fieldId == "custpage_bincategory" ||
+        scriptContext.fieldId == "custpage_returnto"
+      ) {
         window.ischanged = false;
         window.ischanged = false;
         let url = window.location.href;
-
         url = removeURLParameter(url, "binCategory");
         url = removeURLParameter(url, "manualBin");
+        url = removeURLParameter(url, "returnTo");
         url += "&binCategory=" + suitelet.getValue("custpage_bincategory");
         url += "&manualBin=" + suitelet.getValue("custpage_manual_bin");
+        url += "&returnTo=" + suitelet.getValue("custpage_returnto");
         window.open(url, "_self");
       }
+
       /**
        * SO suitelet 222 form reference
        */
@@ -321,6 +338,7 @@ define([
       let arrTemp = window.location.href.split("?");
       urlParams = new URLSearchParams(arrTemp[1]);
       let isHazardous = urlParams.get("isHazardous");
+      const category = suitelet.getValue("custpage_category");
 
       let existingBags = [];
       let selectionType = suitelet.getValue("custpage_radio");
@@ -446,7 +464,8 @@ define([
                   amount: amount || 0,
                   itemId: itemId,
                   prevBag: prevBag,
-                  indate: indate,
+                  isAerosol: isAerosol,
+                  isSharp: isSharp,
                 });
               }
             } else {
@@ -486,36 +505,7 @@ define([
             break;
         }
       }
-      //   if (returnType != "Returnable") {
-      //     if (+amount > +maxAmount && +maxAmount != 0) {
-      //       alert(
-      //         `Line #${
-      //           i + 1
-      //         } exceeds the maximum SO amount of the Manufacturer. This will not get verified and bag will not be created for this line.`,
-      //       );
-      //       continue;
-      //     }
-      //   } else {
-      //     if (prevBag == null) {
-      //       returnItemScanIds.push({
-      //         id: internalId,
-      //         amount: amount || 0,
-      //         itemId: itemId,
-      //         prevBag: prevBag,
-      //       });
-      //     } else {
-      //       exitingBagId = getPreviousBag(prevBag);
-      //     }
-      //   }
-      //   tempHolder.push({
-      //     id: internalId,
-      //     amount: amount || 0,
-      //     itemId: itemId,
-      //     prevBag: prevBag,
-      //     indate: indate,
-      //   });
-      //   console.log(typeof prevBag);
-      // }
+
       switch (returnType) {
         case "Returnable":
           console.table(tempHolder);
@@ -534,7 +524,11 @@ define([
             message:
               "NO ITEM TO PROCESS. All ITEM IS ALREADY ASSIGNED TO A BAG",
           });
-          if (returnItemScanIds.length <= 0 && allBagTheSame == true) {
+          if (
+            returnItemScanIds.length <= 0 &&
+            allBagTheSame == true &&
+            category == RRCATEGORY.RXOTC
+          ) {
             m.show({
               duration: 2000,
             });
@@ -600,6 +594,18 @@ define([
               });
               return;
             }
+          } else {
+            if (isHazardous == true || isHazardous == "true") {
+              let warning = message.create({
+                type: message.Type.ERROR,
+                title: "ERROR",
+                message: "Manual Bin Selection is Required.",
+              });
+              warning.show({
+                duration: 3000,
+              });
+              return;
+            }
           }
           break;
       }
@@ -610,7 +616,6 @@ define([
       let mrrId = suitelet.getValue("custpage_mrrid");
       let rrType = suitelet.getValue("custpage_rr_type");
       let manufId = suitelet.getValue("custpage_manuf_id");
-      const category = suitelet.getValue("custpage_category");
 
       let params = {
         custscript_payload: JSON.stringify(returnItemScanIds),

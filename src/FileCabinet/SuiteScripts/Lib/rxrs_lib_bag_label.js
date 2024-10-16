@@ -1,10 +1,10 @@
 /**
  * @NApiVersion 2.1
  */
-define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
+define(["N/record", "N/search", "./rxrs_verify_staging_lib", "./rxrs_util"], /**
  * @param{record} record
  * @param{search} search
- */ (record, search, vs_lib) => {
+ */ (record, search, vs_lib, rxrs_util) => {
   const RETURNABLE = 2;
   const NONRETURNABLE = 1;
 
@@ -31,20 +31,17 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
       });
       binRec.setValue({
         fieldId: "custrecord_kd_mrr_link",
-        value: options.mrrId,
+        value: mrrId,
       });
       binRec.setValue({
         fieldId: "custrecord_kd_mfgname",
-        value: options.manufId,
+        value: manufId,
       });
       binRec.setValue({
         fieldId: "custrecord_kd_tag_return_request",
-        value: options.rrId,
+        value: rrId,
       });
-      binRec.setValue({
-        fieldId: "custrecord_kd_tag_return_request",
-        value: options.rrId,
-      });
+
       binNumber &&
         binRec.setValue({
           fieldId: "custrecord_kd_putaway_loc",
@@ -53,13 +50,13 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
       mfgProcessing &&
         binRec.setValue({
           fieldId: "custrecord_tag_label_processing",
-          value: options.mfgProcessing,
+          value: mfgProcessing,
         });
-
-      binRec.setValue({
-        fieldId: "custrecord_tagentity",
-        value: options.entity,
-      });
+      entity &&
+        binRec.setValue({
+          fieldId: "custrecord_tagentity",
+          value: entity,
+        });
 
       return binRec.save({
         ignoreMandatoryFields: true,
@@ -101,43 +98,43 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
           value: prevBag,
         });
       if (binNumber) {
-        let rsLookup = search.lookupFields({
-          type: "bin",
-          id: binNumber,
-          columns: ["custrecord_bincategory"],
-        });
-        let newBinField, oldBinField;
-        let binCategory = rsLookup.custrecord_bincategory[0].value;
-        switch (+binCategory) {
-          case 1:
-            newBinField = "custrecord_irs_inbound_bin";
-            oldBinField = "custrecord_irs_prev_inbound_bin";
-            break;
-          case 2:
-            newBinField = "custrecord_irs_outbound_bin";
-            oldBinField = "custrecord_irs_prev_outbound_bin";
-            break;
-          case 3:
-            newBinField = "custrecord_irs_control_bin";
-            oldBinField = "custrecord_irs_prev_control_bin";
-            break;
-          case 4:
-            newBinField = "custrecord_irs_desctruction_bin";
-            oldBinField = "custrecord_irs_prev_desctruct_bin";
-        }
-
-        log.audit(" bin values ", { binCategory, field: newBinField });
-        const prevBin = bagRec.getValue(newBinField);
+        // let rsLookup = search.lookupFields({
+        //   type: "bin",
+        //   id: binNumber,
+        //   columns: ["custrecord_bincategory"],
+        // });
+        // let newBinField, oldBinField;
+        // let binCategory = rsLookup.custrecord_bincategory[0].value;
+        // switch (+binCategory) {
+        //   case 1:
+        //     newBinField = "custrecord_irs_inbound_bin";
+        //     oldBinField = "custrecord_irs_prev_inbound_bin";
+        //     break;
+        //   case 2:
+        //     newBinField = "custrecord_irs_outbound_bin";
+        //     oldBinField = "custrecord_irs_prev_outbound_bin";
+        //     break;
+        //   case 3:
+        //     newBinField = "custrecord_irs_control_bin";
+        //     oldBinField = "custrecord_irs_prev_control_bin";
+        //     break;
+        //   case 4:
+        //     newBinField = "custrecord_irs_desctruction_bin";
+        //     oldBinField = "custrecord_irs_prev_desctruct_bin";
+        // }
+        //
+        // log.audit(" bin values ", { binCategory, field: newBinField });
+        const prevBin = bagRec.getValue("custrecord_itemscanbin");
         if (prevBin) {
           bagRec.setValue({
-            fieldId: oldBinField,
+            fieldId: "custrecord_previous_bin",
             value: prevBin,
           });
         }
-        bagRec.setValue({
-          fieldId: newBinField,
-          value: binNumber,
-        });
+        // bagRec.setValue({
+        //   fieldId: newBinField,
+        //   value: binNumber,
+        // });
         bagRec.setValue({
           fieldId: "custrecord_itemscanbin",
           value: binNumber,
@@ -300,6 +297,7 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
   function getManufStartLetter(options) {
     const alphabet = "abcdefghijklmnopqrstuvwxyz";
     let { startLetter, endLetter, binNumber } = options;
+    log.audit("getManufStartLetter", options);
     try {
       const start = alphabet.indexOf(startLetter.toLowerCase());
       const end = alphabet.indexOf(endLetter.toLowerCase());
@@ -309,6 +307,7 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
         index.push(i);
       }
       index.forEach((i) => letterStart.push(alphabet[i]));
+      log.error("getManufStartLetter", letterStart);
       return letterStart;
     } catch (e) {
       log.error("getIndex", e.message);
@@ -608,9 +607,17 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
    * @param options.inDateMonth - Values must be month Equivalent number
    * @param options.inDateYear - In Date Year
    * @param options.isIndated - Set True if indated
+   * @param options.forHazardous - Set true if the bin for hazardous
+   * @param options.forQuanalex - Set the internal of Quanalex if the return to is for Quanalex
+   * @param options.forInmar -  Set the internal of Inmar if the return to is for Inmar
+   * @param options.miscReturnTo - Set to true to return misc bins
+   * @param options.manufStartLetter - Start Letter of the name of the Manufacturer
+   * @param options.rxDestruction
    */
   function getBinPutAwayLocation(options) {
     let binResult = [];
+    const OUTBOUNDAISLE7 = 420;
+    const CONTROLAISLE4 = 403;
     log.audit("getBinPutAwayLocation", options);
     let {
       manufId,
@@ -622,6 +629,11 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
       inDateMonth,
       inDateYear,
       isIndated,
+      forHazardous,
+      miscReturnTo,
+      forQuanalex,
+      forInmar,
+      manufStartLetter,
     } = options;
 
     try {
@@ -640,6 +652,33 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
             name: "custrecord_kd_bin_manufacturer",
             operator: "anyof",
             values: manufId,
+          }),
+        );
+      }
+      if (miscReturnTo == true) {
+        binSearchObj.filters.push(
+          search.createFilter({
+            name: "custrecord_bin_misc",
+            operator: "is",
+            values: true,
+          }),
+        );
+      }
+      if (forInmar) {
+        binSearchObj.filters.push(
+          search.createFilter({
+            name: "custrecord_bin_othername",
+            operator: "anyof",
+            values: forInmar,
+          }),
+        );
+      }
+      if (forQuanalex) {
+        binSearchObj.filters.push(
+          search.createFilter({
+            name: "custrecord_bin_othername",
+            operator: "anyof",
+            values: forQuanalex,
           }),
         );
       }
@@ -662,6 +701,33 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
         );
       }
 
+      if (forHazardous == true || forHazardous == "true") {
+        binSearchObj.filters.push(
+          search.createFilter({
+            name: "custrecord_bin_hazmat",
+            operator: "is",
+            values: true,
+          }),
+        );
+        if (productCategory == rxrs_util.RRCATEGORY.RXOTC) {
+          binSearchObj.filters.push(
+            search.createFilter({
+              name: "custrecord_parent_bin",
+              operator: "anyof",
+              values: OUTBOUNDAISLE7,
+            }),
+          );
+        }
+        if (productCategory == rxrs_util.RRCATEGORY.C3TO5) {
+          binSearchObj.filters.push(
+            search.createFilter({
+              name: "custrecord_parent_bin",
+              operator: "anyof",
+              values: CONTROLAISLE4,
+            }),
+          );
+        }
+      }
       if (generalBin == true) {
         binSearchObj.filters.push(
           search.createFilter({
@@ -689,6 +755,7 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
           }),
         );
       }
+
       if (specificBin == true) {
         binSearchObj.filters.push(
           search.createFilter({
@@ -719,11 +786,26 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
 
       log.audit("binSearchFilter", binSearchObj.filters);
       binSearchObj.run().each(function (result) {
+        const binName = result.getValue({ name: "binnumber" });
+        if (miscReturnTo == true) {
+          const containsManuf = getManufStartLetter({
+            startLetter: binName.split("-")[2][0],
+            endLetter: binName.split("-")[2][1],
+          }).includes(manufStartLetter);
+          if (containsManuf == true) {
+            binResult.push({
+              value: result.id,
+              text: binName,
+            });
+          }
+        } else {
+          binResult.push({
+            value: result.id,
+            text: binName,
+          });
+        }
         log.audit("result", result);
-        binResult.push({
-          value: result.id,
-          text: result.getValue({ name: "binnumber" }),
-        });
+
         return true;
       });
       return binResult;
@@ -900,6 +982,34 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
     Control: 3,
     Destruction: 4,
   };
+
+  /**
+   * Get the internal id of the serial lot number
+   * @param {string}options.inventoryName inventory name text
+   * @returns {*} id of the inventory number
+   */
+  function getInventoryNumberId(options) {
+    let { inventoryName } = options;
+    try {
+      let id;
+      const inventorynumberSearchObj = search.create({
+        type: "inventorynumber",
+        filters: [["inventorynumber", "is", inventoryName]],
+        columns: [
+          search.createColumn({ name: "inventorynumber", label: "Number" }),
+        ],
+      });
+      const searchResultCount = inventorynumberSearchObj.runPaged().count;
+      log.debug("inventorynumberSearchObj result count", searchResultCount);
+      inventorynumberSearchObj.run().each(function (result) {
+        id = result.id;
+      });
+      return id;
+    } catch (e) {
+      log.error("getInventoryNumberId", e.message);
+    }
+  }
+
   return {
     assignBinToManuf,
     assignManufToBin,
@@ -909,6 +1019,7 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib"], /**
     getBaglabelAvailable,
     getBagCurrentAmount,
     getManufStartLetter,
+    getInventoryNumberId,
     getManufList,
     getManufacturer,
     getFieldToUpdate,

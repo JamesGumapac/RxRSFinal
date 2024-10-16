@@ -12,6 +12,7 @@ define([
   "N/redirect",
   "../rxrs_lib_bag_label",
   "../rxrs_util",
+  "../rxrs_custom_rec_lib",
 ], /**
  * @param{serverWidget} serverWidget
  * @param rxrs_vs_util
@@ -29,6 +30,7 @@ define([
   redirect,
   bag,
   util,
+  customrec,
 ) => {
   /**
    * Defines the Suitelet script trigger point.
@@ -103,6 +105,7 @@ define([
     let rrType = options.params.rrType;
     let binCategory = options.params.binCategory;
     let manualBin = options.params.manualBin;
+    let returnTo = options.params.returnTo;
     try {
       paramManufacturer = paramManufacturer.includes("_")
         ? paramManufacturer.replaceAll("_", "&")
@@ -427,6 +430,7 @@ define([
         }
       }
       if (manufId || paramIsHazardous) {
+        let forControlReturnable = false;
         let manualBinField = form
           .addField({
             id: "custpage_manual_bin",
@@ -451,23 +455,7 @@ define([
             displayType: "DISABLED",
           });
         let binCategoryList = [];
-        if (category == util.RRCATEGORY.RXOTC) {
-          switch (paramSelectionType) {
-            case "Returnable":
-              binCategoryList.push({
-                text: "OutBound",
-                value: 2,
-              });
-              binSearchParams.manufId = manufId;
-              break;
-            case "Destruction":
-              binCategoryList.push({
-                text: "Destruction",
-                value: 4,
-              });
-              break;
-          }
-        }
+
         if (category) {
           switch (paramSelectionType) {
             case "Returnable":
@@ -475,9 +463,57 @@ define([
                 text: "OutBound",
                 value: 2,
               });
-              binSearchParams.manufId = manufId;
-              binSearchParams.forControlItems = true;
-              binSearchParams.specificBin = true;
+              binSearchParams.category = category;
+              if (category != util.RRCATEGORY.RXOTC) {
+                binSearchParams.forControlItems = true;
+                let returnToFields = form.addField({
+                  id: "custpage_returnto",
+                  label: "Return To",
+                  type: serverWidget.FieldType.SELECT,
+                });
+                returnToFields.addSelectOption({
+                  text: "",
+                  value: 0,
+                });
+                const returnToInfo = customrec.getReturnToInfo({
+                  manufId: manufId,
+                });
+                binSearchParams.productCategory = category;
+                const INMAR = 12502;
+                const QUANALEX = 12501;
+                log.error("Return to Infor", returnToInfo);
+                if (returnToInfo == INMAR) {
+                  returnToFields.addSelectOption({
+                    text: "Inmar",
+                    value: 1,
+                  });
+                  binSearchParams.forInmar = INMAR;
+                } else if (returnToInfo == QUANALEX) {
+                  returnToFields.addSelectOption({
+                    text: "Quanalex ",
+                    value: 2,
+                  });
+                  binSearchParams.forQuanalex = QUANALEX;
+                } else {
+                  returnToFields.addSelectOption({
+                    text: "Misc. (Return To)",
+                    value: 3,
+                  });
+
+                  binSearchParams.miscReturnTo = true;
+                  binSearchParams.manufStartLetter =
+                    paramManufacturer[0].toLowerCase();
+                }
+                delete binSearchParams.manufId;
+                if (returnTo) {
+                  returnToFields.defaultValue = returnTo;
+                }
+                forControlReturnable = true;
+              } else {
+                binSearchParams.manufId = manufId;
+                binSearchParams.specificBin = true;
+              }
+
               break;
             case "Destruction":
               binCategoryList.push({
@@ -485,7 +521,14 @@ define([
                 value: 4,
               });
               binSearchParams.manufId = manufId;
-              binSearchParams.forControlItems = true;
+              if (
+                category == util.RRCATEGORY.C2 ||
+                category == util.RRCATEGORY.C3TO5
+              ) {
+                binSearchParams.forControlItems = true;
+              }
+              binSearchParams.forHazardous = paramIsHazardous;
+              binSearchParams.productCategory = category;
               binSearchParams.generalBin = true;
               break;
             case "InDated":
@@ -522,6 +565,10 @@ define([
         if (binCategory) {
           binSearchParams.binCategory = binCategory;
           binCategoryField.defaultValue = binCategory;
+          if (forControlReturnable == true) {
+            delete binSearchParams.manufId;
+          }
+          log.error(binSearchParams);
           let binResult = bag.getBinPutAwayLocation(binSearchParams);
           log.emergency("Bin Results", binResult);
           binField.addSelectOption({

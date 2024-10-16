@@ -98,7 +98,7 @@ define([
       label: "Input Rate",
     }),
     search.createColumn({
-      name: "custrecord_scanindate",
+      name: "custrecord_ret_start_date",
       label: "In Date",
     }),
     search.createColumn({
@@ -703,7 +703,7 @@ define([
       if (options.inDated == true) {
         columns.push(
           search.createColumn({
-            name: "custrecord_scanindate",
+            name: "custrecord_ret_start_date",
             summary: "MAX",
           }),
         );
@@ -761,7 +761,7 @@ define([
         let inDate;
         if (options.inDated == true) {
           inDate = result.getValue({
-            name: "custrecord_scanindate",
+            name: "custrecord_ret_start_date",
             summary: "MAX",
           });
         }
@@ -1327,7 +1327,7 @@ define([
             pharmaProcessing: result.getText(column[9]),
             amount: amount || 0,
             qty: qty,
-            inDate: result.getValue("custrecord_scanindate"),
+            inDate: result.getValue("custrecord_ret_start_date"),
             bagTagLabel: bagTagLabel
               ? `<a href ="${bagLabelURL}" target="_blank">${bagTagLabel}</a>`
               : " ",
@@ -1968,7 +1968,7 @@ define([
   function getWACPrice(itemId) {
     try {
       return rxrs_util.getItemRate({
-        priceLevelName: "WAC",
+        priceLevelName: "BASE PRICE",
         itemId: itemId,
       });
     } catch (e) {
@@ -2307,7 +2307,7 @@ define([
           }),
           search.createColumn({
             name: "formulanumeric",
-            formula: "{today}-{custrecord_scanindate}",
+            formula: "{today}-{custrecord_ret_start_date}",
             label: "Formula (Numeric)",
           }),
         ],
@@ -2316,7 +2316,7 @@ define([
       customrecord_cs_item_ret_scanSearchObj.run().each(function (result) {
         inDays = result.getValue({
           name: "formulanumeric",
-          formula: "{today}-{custrecord_scanindate}",
+          formula: "{today}-{custrecord_ret_start_date}",
         });
         log.audit("inDays", { inDays, irsId });
       });

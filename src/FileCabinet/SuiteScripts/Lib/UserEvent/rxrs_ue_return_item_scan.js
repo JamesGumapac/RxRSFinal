@@ -123,18 +123,28 @@ define([
       } catch (e) {
         log.error("Reloading the RR", e.message);
       }
+      const newRecBin = rec.getValue("custrecord_itemscanbin");
+      const oldRecBin = rec.getValue("custrecord_itemscanbin");
       const RETURNABLE = 2;
       const NONRETURNABLE = 1;
       const ADJUSTMENTITEM = 917;
-
+      /**
+       * Send Email when new bin is assigned
+       */
+      util.sendEmailMFGProcessingIsUpdated({
+        newRec: rec,
+        oldBag: rec.getValue("custrecord_prev_bag_assignement"),
+        newBag: rec.getValue("custrecord_scanbagtaglabel"),
+        oldBin: rec.getText("custrecord_previous_bin"),
+        newBin: rec.getText("custrecord_itemscanbin"),
+      });
       /**
        * Update processing of the PO and Bill if there's changes in
        */
+      const billId = rec.getValue("custrecord_rxrs_bill_internal_id");
       const masterReturnId = rec.getValue(
         "custrecord_irs_master_return_request",
       );
-
-      const billId = rec.getValue("custrecord_rxrs_bill_internal_id");
       const poId = rec.getValue("custrecord_rxrs_po_internal_id");
       let irsRec = record.load({
         type: "customrecord_cs_item_ret_scan",

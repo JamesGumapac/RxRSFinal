@@ -60,7 +60,7 @@ define([
         numberOfLabels,
         returnPackageDetails,
         rrId,
-        mailIn,
+        serviceType,
         mrrId,
         action,
       } = params;
@@ -146,9 +146,19 @@ define([
    */
   const createHeaderFields = (options) => {
     let form = options.form;
-
-    let { mrrId, generateLabel, scheduledPickUp, customerId, rrId, mailIn } =
-      options.params;
+    const SERVICE_TYPE = {
+      mailIn: 2,
+      selfService: 1,
+      repService: 3,
+    };
+    let {
+      mrrId,
+      generateLabel,
+      scheduledPickUp,
+      customerId,
+      rrId,
+      serviceType,
+    } = options.params;
     generateLabel = true;
     log.debug("createHeaderFields", options.params);
 
@@ -179,7 +189,7 @@ define([
       if (customerId) {
         customerField.defaultValue = customerId;
       }
-      if (mailIn == "true") {
+      if (serviceType == SERVICE_TYPE.mailIn) {
         let returnRequestList =
           rxrs_tran_lib.getMasterReturnReturnRequest(mrrId);
         log.audit("returnRequestList", returnRequestList);

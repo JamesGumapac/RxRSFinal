@@ -220,7 +220,7 @@ define([
       label: "Input Rate",
     }),
     search.createColumn({
-      name: "custrecord_scanindate",
+      name: "custrecord_ret_start_date",
       label: "In Date",
     }),
     search.createColumn({

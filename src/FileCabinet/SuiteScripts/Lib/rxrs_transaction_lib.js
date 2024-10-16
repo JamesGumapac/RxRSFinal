@@ -2,6 +2,8 @@
  * @NApiVersion 2.1
  */
 define([
+  "N/encode",
+  "N/file",
   "N/record",
   "N/search",
   "N/url",
@@ -9,6 +11,7 @@ define([
   "./rxrs_verify_staging_lib",
   "./rxrs_util",
   "./rxrs_return_cover_letter_lib",
+  "./rxrs_item_lib",
 ], /**
  * @param{record} record
  * @param{search} search
@@ -17,7 +20,18 @@ define([
  * @param rxrsUtil_vl
  * @param rxrs_util
  * @param rxrs_rcl_lib
- */ (record, search, url, https, rxrsUtil_vl, rxrs_util, rxrs_rcl_lib) => {
+ */ (
+  encode,
+  file,
+  record,
+  search,
+  url,
+  https,
+  rxrsUtil_vl,
+  rxrs_util,
+  rxrs_rcl_lib,
+  rxrs_itemlib,
+) => {
   const SUBSIDIARY = 2; //Rx Return Services
   // const ACCOUNT = 212; //50000 Cost of Goods Sold
   const LOCATION = 1; //Clearwater
@@ -955,7 +969,10 @@ define([
         ],
         columns: [
           search.createColumn({ name: "line", label: "Line ID" }),
-          search.createColumn({ name: "type", label: "Type" }),
+          search.createColumn({
+            name: "type",
+            label: "Type",
+          }),
         ],
       });
       const searchResultCount = transactionSearchObj.runPaged().count;
@@ -1073,8 +1090,7 @@ define([
     try {
       let poLines = [];
       const customrecord_cs_item_ret_scanSearchObj = search.create({
-        type: "customrecord_cs_item_ret_scan",
-        // filters: ["custrecord_cs__rqstprocesing", "anyof", [1, 2]],
+        type: "customrecord_cs_item_ret_scan", // filters: ["custrecord_cs__rqstprocesing", "anyof", [1, 2]],
         columns: [
           search.createColumn({
             name: "custrecord_final_payment_schedule",
@@ -1215,7 +1231,10 @@ define([
         ],
         columns: [
           search.createColumn({ name: "item", label: "Item" }),
-          search.createColumn({ name: "quantity", label: "Quantity" }),
+          search.createColumn({
+            name: "quantity",
+            label: "Quantity",
+          }),
           search.createColumn({
             name: "binnumber",
             join: "inventoryDetail",
@@ -4056,6 +4075,7 @@ define([
    */
   function createMasterReturnRequest(options) {
     log.audit("createMasterReturnRequest", options);
+    const folderId = 7246;
     let {
       OrderId,
       BoxNumber,
@@ -4066,9 +4086,10 @@ define([
       ServiceType,
       OrderDate,
       CreateDate,
+      Items,
       FileUploads,
     } = options;
-    log.audit("FileUploads", FileUploads);
+    log.audit("ServiceType ", ServiceType);
 
     try {
       const mrrRec = record.create({
@@ -4086,33 +4107,243 @@ define([
         fieldId: "custrecord_kod_mr_requestdt",
         value: new Date(OrderDate),
       });
-      if (ServiceType.includes("MAIL") == true) {
-        mrrRec.setValue({
-          fieldId: "custrecord_service_type",
-          value: rxrs_util.SERVICETYPE.MAILIN,
-        });
+
+      if (
+        rxrs_util.SERVICETYPE[ServiceType] == rxrs_util.SERVICETYPE["MAIL-IN"]
+      ) {
+        if (BoxType.includes("RX") == true) {
+          mrrRec.setValue({
+            fieldId: "custrecord_kd_c2",
+            value: true,
+          });
+        }
+        if (BoxType.includes("C2") == true) {
+          mrrRec.setValue({
+            fieldId: "custrecord_kd_rxotc",
+            value: true,
+          });
+        }
+        if (BoxType.includes("C3-5") == true) {
+          mrrRec.setValue({
+            fieldId: "custrecord_kd_c3to5",
+            value: true,
+          });
+        }
+
+        if (FileUploads.Files.length > 0) {
+          log.audit("Files", FileUploads.Files[0]);
+          FileUploads.Files.forEach(function (files) {
+            log.audit("files", files);
+
+            let { FileName, FileContent } = files;
+
+            const base64 = encode.convert({
+              string: FileContent,
+              inputEncoding: encode.Encoding.UTF_8,
+              outputEncoding: encode.Encoding.BASE_64,
+            });
+            log.audit("Base64", base64);
+            const fileObject = file.create({
+              name: FileName,
+              fileType: file.Type.PDF,
+              contents: base64,
+              folder: folderId,
+            });
+
+            let fileId = fileObject.save();
+            log.audit("fileobject", fileId);
+            if (fileId) {
+              if (FileName.includes("RX")) {
+                mrrRec.setValue({
+                  fieldId: "custrecord_kd_mrr_rx_otc_file",
+                  value: fileId,
+                });
+              } else if (FileName.includes("C2")) {
+                mrrRec.setValue({
+                  fieldId: "custrecord_kd_mrr_c2_file",
+                  value: fileId,
+                });
+              } else if (FileName.includes("C3")) {
+                mrrRec.setValue({
+                  fieldId: "custrecord_kd_mrr_c3_5_file",
+                  value: fileId,
+                });
+              }
+            }
+          });
+        }
       }
       if (BoxStatus.includes("PENDING") == true) {
         mrrRec.setValue({
           fieldId: "custrecord_kod_mr_status",
-          value: 1,
+          value: rxrs_util.mrrStatus.New,
         });
       }
-      if (BoxType.includes("RX") == true) {
-        mrrRec.setValue({
-          fieldId: "custrecord_kd_rxotc",
-          value: true,
-        });
-      }
-      // if (FileUploads.Files.length > 0) {
-      //   FileUploads.Files.forEach(function (files) {});
-      // }
+      mrrRec.setValue({
+        fieldId: "custrecord_service_type",
+        value: rxrs_util.SERVICETYPE[ServiceType],
+      });
+
       let mrrId = mrrRec.save({
         ignoreMandatoryFields: true,
       });
+
+      if (
+        rxrs_util.SERVICETYPE[ServiceType] !==
+          rxrs_util.SERVICETYPE["MAIL-IN"] &&
+        mrrId
+      ) {
+        Items.forEach(function (item) {
+          createItemRequested({
+            items: item,
+            mrrId: mrrId,
+          });
+        });
+      }
       log.audit("mrrId", mrrId);
     } catch (e) {
       log.error("createMasterReturnRequest", e.message);
+    }
+  }
+
+  /**
+   * Create Item Requested
+   * @param options
+   * @param options.items - Items Array if service type is rep service
+   * @param options.mrrId
+   */
+  function createItemRequested(options) {
+    let {
+      ID,
+      NDC,
+      LotNumber,
+      ExpirationDate,
+      Quantity,
+      Control,
+      IsPartial,
+      IsPatientVial,
+      IsDeleted,
+    } = options.items;
+    try {
+      const itemRequestedRec = record.create({
+        type: "customrecord_kod_mr_item_request",
+        isDynamic: true,
+      });
+
+      NDC &&
+        itemRequestedRec.setValue({
+          fieldId: "custrecord_kd_rir_item",
+          value: rxrs_itemlib.getItemId(NDC),
+        });
+      ExpirationDate &&
+        itemRequestedRec.setValue({
+          fieldId: "custrecord_kd_rir_lotexp",
+          value: new Date(ExpirationDate),
+        });
+      Quantity &&
+        itemRequestedRec.setValue({
+          fieldId: "custrecord_kd_rir_quantity",
+          value: Quantity,
+        });
+      LotNumber &&
+        itemRequestedRec.setValue({
+          fieldId: "custrecord_kd_rir_lotnumber",
+          value: Quantity,
+        });
+
+      options.mrrId &&
+        itemRequestedRec.setValue({
+          fieldId: "custrecord_kd_rir_masterid",
+          value: options.mrrId,
+        });
+      return itemRequestedRec.save({
+        ignoreMandatoryFields: true,
+      });
+    } catch (e) {
+      log.error("createItemRequested", e.message);
+    }
+  }
+
+  /**
+   * Create Bin Transfer
+   * @param {number} options.itemId - Internal Id of the item
+   * @param {number} options.quantity - Quantity of the transfer
+   * @param {number} options.fromBin - Internal Id of the bin source
+   * @param {number} options.toBin - Internal Id of the receiving Bin
+   * @param {number} options.location - Internal Id of the location
+   * @param {number} options.binNumberId - Internal id of the bin number record
+   * @param options.memo - Memo
+   * @return {number} Internal Id of the Created Bin
+   *
+   */
+  function createBinTransfer(options) {
+    log.audit("createBinTransfer", options);
+    let { itemId, quantity, fromBin, toBin, location, memo, binNumberId } =
+      options;
+    try {
+      const rec = record.create({
+        type: record.Type.BIN_TRANSFER,
+        isDynamic: true,
+      });
+
+      rec.setValue({
+        fieldId: "location",
+        value: location,
+      });
+      memo &&
+        rec.setValue({
+          fieldId: "memo",
+          value: memo,
+        });
+      rec.selectNewLine({
+        sublistId: "inventory",
+      });
+      rec.setCurrentSublistValue({
+        sublistId: "inventory",
+        fieldId: "item",
+        value: itemId,
+      }); // item
+      rec.setCurrentSublistValue({
+        sublistId: "inventory",
+        fieldId: "quantity",
+        value: quantity,
+      }); // qty
+      const subrec = rec.getCurrentSublistSubrecord({
+        sublistId: "inventory",
+        fieldId: "inventorydetail",
+      });
+      subrec.setCurrentSublistValue({
+        sublistId: "inventoryassignment",
+        fieldId: "issueinventorynumber",
+        value: binNumberId,
+      });
+      subrec.setCurrentSublistValue({
+        sublistId: "inventoryassignment",
+        fieldId: "binnumber",
+        value: fromBin,
+      }); // from bins
+      subrec.setCurrentSublistValue({
+        sublistId: "inventoryassignment",
+        fieldId: "tobinnumber",
+        value: toBin,
+      }); // to bins
+      subrec.setCurrentSublistValue({
+        sublistId: "inventoryassignment",
+        fieldId: "quantity",
+        value: quantity,
+      });
+      subrec.commitLine({
+        sublistId: "inventoryassignment",
+      });
+      rec.commitLine({
+        sublistId: "inventory",
+      });
+
+      const recId = rec.save();
+      log.audit("Bin transfer id", recId);
+      return recId;
+    } catch (e) {
+      log.error("createBinTransfer", e.message);
     }
   }
 
@@ -4126,13 +4357,18 @@ define([
     checkIfTransAlreadyExist: checkIfTransAlreadyExist,
     createAllServiceFees: createAllServiceFees,
     createBill: createBill,
+    createBinTransfer: createBinTransfer,
     createCreditMemoFromInv: createCreditMemoFromInv,
     createInventoryAdjustment: createInventoryAdjustment,
+    createJounralEntry: createJournalEntry,
+    createMasterReturnRequest: createMasterReturnRequest,
     createPayment: createPayment,
     createPO: createPO,
+    createVendorCredit: createVendorCredit,
     deleteTransaction: deleteTransaction,
     getAllBills: getAllBills,
     getBillId: getBillId,
+    getBillStatus: getBillStatus,
     getCertainField: getCertainField,
     getInvoiceLineAmount: getInvoiceLineAmount,
     getInvoiceLineCountWithCmPayment: getInvoiceLineCountWithCmPayment,
@@ -4141,20 +4377,16 @@ define([
     getPaymentSum: getPaymentSum,
     getReturnRequestPerCategory: getReturnRequestPerCategory,
     getSalesTransactionLine: getSalesTransactionLine,
+    removeBillCreditLine: removeBillCreditLine,
     removeCMFromInvoiceLine: removeCMFromInvoiceLine,
     removeVBLine: removeVBLine,
     setAdjustmentFee: setAdjustmentFee,
     setERVDiscountPrice: setERVDiscountPrice,
     setIRSRelatedTranLineProcessing: setIRSRelatedTranLineProcessing,
     setPartialAmount: setPartialAmount,
+    updateBinNumber: updateBinNumber,
     updateProcessing: updateProcessing,
     updateSO222Form: updateSO222Form,
     updateTranLineCM: updateTranLineCM,
-    removeBillCreditLine: removeBillCreditLine,
-    getBillStatus: getBillStatus,
-    createVendorCredit: createVendorCredit,
-    createJounralEntry: createJournalEntry,
-    updateBinNumber: updateBinNumber,
-    createMasterReturnRequest: createMasterReturnRequest,
   };
 });

@@ -33,7 +33,7 @@ define([
         filters: [
           ["custrecord_scanindated", "is", "T"],
           "AND",
-          ["custrecord_scanindate", "isnotempty", ""],
+          ["custrecord_ret_start_date", "isnotempty", ""],
         ],
         columns: [
           search.createColumn({
