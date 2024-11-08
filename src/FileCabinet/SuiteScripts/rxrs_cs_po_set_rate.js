@@ -19,7 +19,7 @@ define(["N/search"], function (search) {
     },
   ];
   const priceLevel2 = [
-    { priceName: "WAC", column: "price1" },
+    { priceName: "BASE PRICE", column: "price1" },
     { priceName: "ERV (DISCOUNTED)", column: "price15" },
     { priceName: "ERV-CONFIGURED", column: "price14" },
     { priceName: "M-CONFIGURED", column: "price8" },

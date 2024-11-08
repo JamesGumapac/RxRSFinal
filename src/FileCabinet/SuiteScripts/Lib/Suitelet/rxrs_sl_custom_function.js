@@ -263,6 +263,20 @@ define([
               }),
             );
             break;
+          case "reload":
+            log.audit("reloading record", { type: type, id: params.id });
+            const customRec = record.load({
+              id: params.id,
+              type: type,
+              isDynamic: true,
+            });
+            log.audit(
+              "reloading",
+              customRec.save({
+                ignoreMandatoryFields: true,
+              }),
+            );
+            break;
         }
       } catch (e) {
         context.response.writeLine("ERROR:" + e.message);

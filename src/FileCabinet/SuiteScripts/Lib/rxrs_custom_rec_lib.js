@@ -1456,9 +1456,10 @@ define([
     };
     try {
       const rate = util.getItemRate({
-        priceLevelName: "WAC",
+        priceLevelName: "WHOLESALE ACQUISITION COST",
         itemId: item,
       });
+      log.error("rate", rate);
       let amount = 0;
       const isOverrideRate = rec.getValue("custrecord_isc_overriderate");
       const inputRate = rec.getValue("custrecord_isc_inputrate")
@@ -1470,7 +1471,7 @@ define([
       let WACAmount = 0;
       if (fulPartialPackage == PACKAGESIZE.FULL) {
         WACAmount = +qty * +rate;
-        log.debug("values", { isOverrideRate, selectedRate, qty });
+        log.debug("values", { isOverrideRate, selectedRate, qty, WACAmount });
         amount =
           isOverrideRate == true ? +inputRate * +qty : +selectedRate * qty;
       } else {
@@ -1489,10 +1490,10 @@ define([
         WACAmount = qty * (partialCount / packageSize) * rate;
       }
       log.debug("beforeSubmit amount", { WACAmount, amount });
-      // rec.setValue({
-      //   fieldId: "custrecord_wac_amount",
-      //   value: WACAmount || 0,
-      // });
+      rec.setValue({
+        fieldId: "custrecord_wac_amount",
+        value: WACAmount || 0,
+      });
       rec.setValue({
         fieldId: "custrecord_irc_total_amount",
         value: amount || 0,

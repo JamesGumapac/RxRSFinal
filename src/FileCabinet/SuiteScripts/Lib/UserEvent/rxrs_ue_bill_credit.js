@@ -30,7 +30,10 @@ define(["N/record", "N/search", "../rxrs_transaction_lib"] /**
     if (scriptContext.type == "create") {
       try {
         let rec = scriptContext.newRecord;
-        rec = tranlib.removeBillCreditLine({ rec: rec, pharmaProcessing: 2 });
+        rec = tranlib.removeBillCreditLine({
+          newRec: rec,
+          pharmaProcessing: 2,
+        });
       } catch (e) {
         log.error("beforeSubmit", e.message);
       }

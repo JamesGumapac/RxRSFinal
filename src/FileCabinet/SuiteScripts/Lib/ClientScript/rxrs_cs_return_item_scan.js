@@ -33,7 +33,7 @@ define(["N/search"], function (search) {
 
     if (fieldId == "custrecord_cs__rqstprocesing") {
       const pharmaProcessing = currentRecord.getValue(
-        "custrecord_cs__rqstprocesing"
+        "custrecord_cs__rqstprocesing",
       );
       console.log(pharmaProcessing);
       if (pharmaProcessing == NONRETURNABLE)
@@ -95,7 +95,7 @@ define(["N/search"], function (search) {
   function validateField(scriptContext) {
     let { currentRecord, fieldId } = scriptContext;
     const billInteranlId = currentRecord.getValue(
-      "custrecord_rxrs_bill_internal_id"
+      "custrecord_rxrs_bill_internal_id",
     );
     if (!billInteranlId) return;
     try {
@@ -111,7 +111,7 @@ define(["N/search"], function (search) {
         console.log(billStatus);
         if (billStatus == "paidInFull") {
           alert(
-            "Cannot change status of the processing, related bill record is already paid in full"
+            "Cannot change status of the processing, related bill record is already paid in full",
           );
           return false;
         } else {

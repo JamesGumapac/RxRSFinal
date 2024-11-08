@@ -282,6 +282,45 @@ define([
   }
 
   /**
+   * Check if the master return request exist
+   * @param options.mrrName Name of the master return
+   * @returns {*} the internal id if existing
+   */
+  function checkIfMRRExist(options) {
+    log.audit("checkIfMRRExist", options);
+    let { mrrName } = options;
+    let internalId = null;
+    try {
+      const customrecord_kod_masterreturnSearchObj = search.create({
+        type: "customrecord_kod_masterreturn",
+        filters: [["name", "is", mrrName]],
+        columns: [
+          search.createColumn({ name: "name", label: "Name" }),
+          search.createColumn({
+            name: "id",
+            label: "ID",
+          }),
+          search.createColumn({ name: "scriptid", label: "Script ID" }),
+          search.createColumn({
+            name: "custrecord_kod_customer",
+            label: "Customer Name",
+          }),
+          search.createColumn({
+            name: "custrecord_kod_mr_status",
+            label: "Status",
+          }),
+        ],
+      });
+      customrecord_kod_masterreturnSearchObj.run().each(function (result) {
+        internalId = result.id;
+      });
+      return internalId;
+    } catch (e) {
+      log.error("checkIfMRRExist", e.message);
+    }
+  }
+
+  /**
    * Check transaction Already Exist
    *@param {number} options.mrrId - Internal Id of the Return Request
    *@param {string} options.searchType - Transaction Type
@@ -632,6 +671,9 @@ define([
             amount,
             expDate,
             serialLotNumber,
+            fullPartial,
+            partialCount,
+            priceLevel,
           } = itemInfo;
           poRec.selectNewLine({
             sublistId: "item",
@@ -678,6 +720,25 @@ define([
               sublistId: "item",
               fieldId: "amount",
               value: amount ? amount : 0,
+            });
+
+          fullPartial &&
+            poRec.setCurrentSublistValue({
+              sublistId: "item",
+              fieldId: "custcol_kod_fullpartial",
+              value: fullPartial,
+            });
+          partialCount &&
+            poRec.setCurrentSublistValue({
+              sublistId: "item",
+              fieldId: "custcol_kd_partialcount",
+              value: partialCount,
+            });
+          priceLevel &&
+            poRec.setCurrentSublistValue({
+              sublistId: "item",
+              fieldId: "custcol_rxrs_price_level",
+              value: priceLevel,
             });
           try {
             const subRec = poRec.getCurrentSublistSubrecord({
@@ -1129,6 +1190,16 @@ define([
           search.createColumn({
             name: "custrecord_cs_lotnum",
           }),
+          search.createColumn({
+            name: "custrecord_cs_full_partial_package",
+          }),
+
+          search.createColumn({
+            name: "custrecord_scanpartialcount",
+          }),
+          search.createColumn({
+            name: "custrecord_scanpricelevel",
+          }),
         ],
       });
       if (pharmaProcessing) {
@@ -1199,6 +1270,9 @@ define([
           amount: amount,
           expDate: result.getText("custrecord_cs_expiration_date"),
           serialLotNumber: result.getValue("custrecord_cs_lotnum"),
+          fullPartial: result.getValue("custrecord_cs_full_partial_package"),
+          partialCount: result.getValue("custrecord_scanpartialcount"),
+          priceLevel: result.getValue("custrecord_scanpricelevel"),
         });
         return true;
       });
@@ -2191,6 +2265,7 @@ define([
         id: vbId,
         isDynamic: false,
       });
+
       const vendorId = vbRec.getValue("entity");
       let mrrId = vbRec.getValue("custbody_kd_master_return_id");
       if (vendorId == TOPCO_VENDOR) {
@@ -2199,7 +2274,11 @@ define([
           fieldId: "tranid",
           value: poId,
         });
-        dueDate = rxrs_util.setBillDueDate(new Date());
+        dueDate = rxrs_util.setBillDueDate({
+          date: new Date(),
+          isTopCo: true,
+          monthsToAdd: 3,
+        });
         vbRec.setValue({
           fieldId: "duedate",
           value: dueDate,
@@ -2215,6 +2294,23 @@ define([
           values: { postingperiod: postingPeriod },
         });
       } else {
+        vbRec = removeVBLine({
+          vbRec: vbRec,
+          finalPaymentSchedule: finalPaymentSchedule,
+          updateLine: false,
+        });
+
+        let vbId = vbRec.save({ ignoreMandatoryFields: true });
+        vbRec = record.load({
+          type: record.Type.VENDOR_BILL,
+          id: vbId,
+          isDynamic: false,
+        });
+        // return record.submitFields({
+        //   type: record.Type.VENDOR_BILL,
+        //   id: vbId,
+        //   values: { postingperiod: postingPeriod },
+        // });
         vbRec.setValue({
           fieldId: "tranid",
           value: mrrId + "_" + options.finalPaymentSchedule,
@@ -2228,6 +2324,7 @@ define([
           updateLine: false,
           finalPaymentSchedule: finalPaymentSchedule,
         });
+
         if (vbRec2 && finalPaymentSchedule === 12) {
           vbId = addBillProcessingFee({
             vbRecId: vbRec2.save({ ignoreMandatoryFields: true }),
@@ -3131,7 +3228,6 @@ define([
     let { finalPaymentSchedule, vbRec } = options;
     log.audit("removeVBLine", finalPaymentSchedule);
     let lineCount = vbRec.getLineCount("item");
-    //  log.audit("lineCount", lineCount);
     if (lineCount === 1) {
       return vbRec.id;
     }
@@ -3142,8 +3238,15 @@ define([
           fieldId: "custcol_kd_pymt_sched",
           line: i,
         });
+        let itemType = vbRec.getSublistValue({
+          sublistId: "item",
+          fieldId: "itemtype",
+          line: i,
+        });
         log.audit("VB Line info ", { i, paymentSched, finalPaymentSchedule });
-        if (paymentSched == finalPaymentSchedule) continue;
+
+        if (paymentSched == finalPaymentSchedule || itemType != "InvtPart")
+          continue;
         log.audit("removing Line " + i, paymentSched);
         vbRec.removeLine({
           sublistId: "item",
@@ -3166,21 +3269,21 @@ define([
    * @param {object}options.rec
    */
   function removeBillCreditLine(options) {
-    let { pharmaProcessing, rec } = options;
+    let { pharmaProcessing, newRec } = options;
     log.audit("removeBillCreditLine", pharmaProcessing);
 
     let totalAmount = 0;
     let nonInventoryItemCount = 0;
     let serviceFeeLine = 0;
     try {
-      for (let i = 0; i < rec.getLineCount("item"); i++) {
-        let pharmaProcessingSublistVal = rec.getSublistValue({
+      for (let i = 0; i < newRec.getLineCount("item"); i++) {
+        let pharmaProcessingSublistVal = newRec.getSublistValue({
           sublistId: "item",
           fieldId: "custcol_kod_rqstprocesing",
           line: i,
         });
 
-        let itemType = rec.getSublistValue({
+        let itemType = newRec.getSublistValue({
           sublistId: "item",
           fieldId: "itemtype",
           line: i,
@@ -3193,7 +3296,7 @@ define([
         });
         if (itemType == "NonInvtPart") {
           nonInventoryItemCount += 1;
-          rec.removeLine({
+          newRec.removeLine({
             sublistId: "item",
             line: i,
           });
@@ -3202,13 +3305,13 @@ define([
           pharmaProcessingSublistVal == pharmaProcessing ||
           pharmaProcessingSublistVal == ""
         ) {
-          rec.removeLine({
+          newRec.removeLine({
             sublistId: "item",
             line: i,
           });
           log.audit("removing Line " + i);
         } else {
-          let amount = rec.getSublistValue({
+          let amount = newRec.getSublistValue({
             sublistId: "item",
             fieldId: "amount",
             line: i,
@@ -3220,14 +3323,14 @@ define([
           log.audit("serviceFeeLine", { serviceFeeLine, amount, totalAmount });
         }
       }
-      let lineCount = rec.getLineCount("item");
+      let lineCount = newRec.getLineCount("item");
 
       log.audit("nonInventoryLineIndex", {
         lineCount,
         totalAmount,
       });
       const SERVICE_FEE_ADJUSTMENT_ITEM = 917;
-      let serviceFeeIndex = rec.findSublistLineWithValue({
+      let serviceFeeIndex = newRec.findSublistLineWithValue({
         sublistId: "item",
         fieldId: "item",
         value: SERVICE_FEE_ADJUSTMENT_ITEM,
@@ -3238,20 +3341,20 @@ define([
       } else {
         serviceFeeLineFinal = serviceFeeIndex;
       }
-      rec.setSublistValue({
+      newRec.setSublistValue({
         sublistId: "item",
         fieldId: "item",
         line: serviceFeeLineFinal,
         value: SERVICE_FEE_ADJUSTMENT_ITEM, //Service Fee - Adjustment Item
       });
       const adjustmentFee = Number(totalAmount) * 0.055;
-      rec.setSublistValue({
+      newRec.setSublistValue({
         sublistId: "item",
         fieldId: "rate",
         line: serviceFeeLineFinal,
         value: adjustmentFee, //Service Fee - Adjustment Item
       });
-      rec.setSublistValue({
+      newRec.setSublistValue({
         sublistId: "item",
         fieldId: "amount",
         line: serviceFeeLineFinal,
@@ -3264,7 +3367,7 @@ define([
       });
       removeBillCreditLine(options);
     }
-    return rec;
+    return newRec;
   }
 
   /**
@@ -4075,6 +4178,7 @@ define([
    */
   function createMasterReturnRequest(options) {
     log.audit("createMasterReturnRequest", options);
+    let returnMessage = {};
     const folderId = 7246;
     let {
       OrderId,
@@ -4095,9 +4199,19 @@ define([
       const mrrRec = record.create({
         type: "customrecord_kod_masterreturn",
       });
+      let mrrName = CustomerNumber + "-" + BoxNumber;
+      let existingInternalId = checkIfMRRExist({ mrrName: mrrName });
+      log.audit("existing Internal Id", existingInternalId);
+      if (existingInternalId) {
+        let msg = `Master Return Id ${mrrName} has been already created. Netsuite Internal Id ${existingInternalId}`;
+
+        returnMessage.status = "failed";
+        returnMessage.errorMessage = msg;
+        return returnMessage;
+      }
       mrrRec.setValue({
         fieldId: "name",
-        value: CustomerNumber + "-" + BoxNumber,
+        value: mrrName,
       });
       mrrRec.setValue({
         fieldId: "custrecord_mrrentity",
@@ -4201,8 +4315,17 @@ define([
         });
       }
       log.audit("mrrId", mrrId);
+      if (mrrId) {
+        returnMessage.status = "success";
+        returnMessage.id = mrrName;
+        returnMessage.netsuiteId = mrrId;
+      }
+      return returnMessage;
     } catch (e) {
       log.error("createMasterReturnRequest", e.message);
+      returnMessage.status = "failed";
+      returnMessage.errorMessage = e.message;
+      return returnMessage;
     }
   }
 

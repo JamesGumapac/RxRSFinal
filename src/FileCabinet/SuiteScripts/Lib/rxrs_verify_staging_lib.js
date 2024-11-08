@@ -111,6 +111,10 @@ define([
       sort: search.Sort.ASC,
       label: "item id",
     }),
+    search.createColumn({
+      name: "custrecord_wac_amount",
+      label: "WAC AMOUNT",
+    }),
   ];
   const RETURNCOVERLETTERCOLUMNSFINALYPAYMENTSCHED = [
     search.createColumn({
@@ -302,6 +306,12 @@ define([
         updateDisplayType: "DISABLED",
       },
       {
+        id: "custpage_wac_amount",
+        type: "TEXT",
+        label: "wac amount",
+        updateDisplayType: "INLINE",
+      },
+      {
         id: "custpage_qty",
         type: "TEXT",
         label: "QTY",
@@ -330,7 +340,9 @@ define([
         type: "TEXT",
         label: "Manuf Id",
         updateDisplayType: "HIDDEN",
-      }, // {
+      },
+
+      // {
       //   id: "custpage_settononreturnable",
       //   type: "CHECKBOX",
       //   label: "Change Pharma Processing",
@@ -421,6 +433,12 @@ define([
         id: "custpage_in_date",
         type: "TEXT",
         label: "In Date",
+        updateDisplayType: "INLINE",
+      },
+      {
+        id: "custpage_wac_amount",
+        type: "TEXT",
+        label: "wac amount",
         updateDisplayType: "INLINE",
       },
     ],
@@ -771,7 +789,7 @@ define([
          */
 
         try {
-          if (manufMaximumAmount >= currentAmount) {
+          if (manufMaximumAmount >= currentAmount || manufMaximumAmount == 0) {
             let holder = [];
 
             returnableScanList.forEach((ret) => {
@@ -1104,6 +1122,7 @@ define([
    * @return {number|Date|string|Array|boolean|*}
    */
   function getNonReturnableeFeeAmount(rclId) {
+    log.audit("getNonReturnableeFeeAmount", rclId);
     let nonReturnableAmount = 0;
     try {
       let rclRec = record.load({
@@ -1163,6 +1182,7 @@ define([
       allPaymentSched,
       edit,
     } = options;
+    inDated = inDated == false ? "F" : "T";
     let nonReturnableFeeAmount;
     let orginalNonReturnableFeeAmount;
     if (initialSplitpaymentPage) {
@@ -1225,6 +1245,15 @@ define([
             }),
           );
         }
+        if (inDated) {
+          filters.push(
+            search.createFilter({
+              name: "custrecord_scanindated",
+              operator: "is",
+              values: inDated,
+            }),
+          );
+        }
 
         if (isVerifyStaging == true && isEmpty(paymentSchedId)) {
           manufacturer &&
@@ -1262,16 +1291,6 @@ define([
               name: "custrecord_cs__mfgprocessing",
               operator: "anyof",
               values: 2,
-            }),
-          );
-        }
-
-        if (inDated) {
-          filters.push(
-            search.createFilter({
-              name: "custrecord_scanindated",
-              operator: "is",
-              values: inDated,
             }),
           );
         }
@@ -1316,23 +1335,31 @@ define([
           itemScanList.push({
             internalId: result.id,
             verified: verified,
-            ndc: `<a href=${ndcLink}>${ndcName}</a>`,
-            description: result.getValue(column[2]),
-            manufacturer: result.getValue(column[3]),
-            dateCreated: result.getValue(column[4]),
-            serialLotNumber: result.getValue(column[5]),
-            fullPartialPackage: result.getText(column[6]),
-            expirationDate: result.getValue(column[7]),
-            mfgProcessing: result.getText(column[8]),
-            pharmaProcessing: result.getText(column[9]),
+            ndc: `<a href=${ndcLink + "&cf=156&e=T"}>${ndcName}</a>`,
+            description: result.getValue({
+              name: "salesdescription",
+              join: "CUSTRECORD_CS_RETURN_REQ_SCAN_ITEM",
+            }),
+            manufacturer: result.getText("custrecord_cs_item_manufacturer"),
+            dateCreated: result.getValue("created"),
+            serialLotNumber: result.getValue("custrecord_cs_lotnum"),
+            fullPartialPackage: result.getText(
+              "custrecord_cs_full_partial_package",
+            ),
+            expirationDate: result.getValue("custrecord_cs_expiration_date"),
+            mfgProcessing: result.getText("custrecord_cs__mfgprocessing"),
+            pharmaProcessing: result.getText("custrecord_cs__rqstprocesing"),
             amount: amount || 0,
+            wacAmount: result.getValue("custrecord_wac_amount"),
             qty: qty,
             inDate: result.getValue("custrecord_ret_start_date"),
             bagTagLabel: bagTagLabel
               ? `<a href ="${bagLabelURL}" target="_blank">${bagTagLabel}</a>`
               : " ",
             itemId: itemId,
-            manufId: getManufactuerId(result.getValue(column[3])),
+            manufId: getManufactuerId(
+              result.getValue("custrecord_cs_item_manufacturer"),
+            ),
           });
           return true;
         } else {
@@ -1861,6 +1888,12 @@ define([
             name: "custrecord_scanpatienvial",
             label: "Patient Vial",
           }),
+          search.createColumn({
+            name: "custrecord_itemscan_needles_sharpcont",
+          }),
+          search.createColumn({
+            name: "custrecord_itemscan_aero_combustible",
+          }),
         ],
       });
       let column = customrecord_cs_item_ret_scanSearchObj.columns;
@@ -1887,19 +1920,32 @@ define([
         log.audit("bagTagLabel des", bagTagLabel);
         returnList.push(result.id);
         hazardousList.push({
-          internalId: result.getValue(column[1]),
+          internalId: result.getValue("internalid"),
           verified: verified,
-          ndc: `<a href =${ndcLink}> ${ndcName} </a>`,
-          description: result.getValue(column[3]),
-          manufacturer: result.getValue(column[4]),
-          serialLotNumber: result.getValue(column[5]),
-          originalLotNumber: result.getValue(column[6]),
-          fullPartialPackage: result.getText(column[7]),
-          quantity: result.getValue(column[8]),
-          partialCount: result.getValue(column[9]),
-          expirationDate: result.getValue(column[10]),
-          pharmaProcessing: result.getText(column[11]),
-          mfgProcessing: result.getText(column[12]),
+          aerosol:
+            result.getValue("custrecord_itemscan_aero_combustible") == true
+              ? "T"
+              : "F",
+          sharp:
+            result.getValue("custrecord_itemscan_needles_sharpcont") == true
+              ? "T"
+              : "F",
+          ndc: `<a href =${ndcLink + "&cf=156&e=T"}> ${ndcName} </a>`,
+          description: result.getValue({
+            join: "CUSTRECORD_CS_RETURN_REQ_SCAN_ITEM",
+            name: "itemid",
+          }),
+          manufacturer: result.getValue("custrecord_scanmanufacturer"),
+          serialLotNumber: result.getValue("custrecord_scanmanufacturer"),
+          originalLotNumber: result.getValue("custrecord_cs_lotnum"),
+          fullPartialPackage: result.getText(
+            "custrecord_cs_full_partial_package",
+          ),
+          quantity: result.getValue("custrecord_cs_qty"),
+          partialCount: result.getValue("custrecord_scanpartialcount"),
+          expirationDate: result.getValue("custrecord_cs_expiration_date"),
+          pharmaProcessing: result.getText("custrecord_cs__rqstprocesing"),
+          mfgProcessing: result.getText("custrecord_cs__mfgprocessing"),
           bagTagLabel: bagTagLabel
             ? `<a href ="${bagLabelURL}" target="_blank">${bagTagLabel}</a>`
             : null,
@@ -1997,6 +2043,12 @@ define([
       customrecord_returnprocedureSearchObj.run().each(function (result) {
         maxSOAmount = result.getValue("custrecord_psmaxvalue");
       });
+
+      if (maxSOAmount < 1) {
+        maxSOAmount = 0;
+      }
+      log.emergency("maxSoAmount", maxSOAmount);
+
       return maxSOAmount;
     } catch (e) {
       log.error("getManufMaxSoAmount", e.message);
@@ -2242,7 +2294,7 @@ define([
       }
 
       sublistFields.forEach((attri) => {
-        if (attri.id == "custpage_aerosol" || attri.id == "custpage_sharp") {
+        if (attri.id == "test") {
           log.emergency("not pushing aro");
         } else {
           fieldName.push(attri.id);
@@ -2289,17 +2341,12 @@ define([
    * @return {number} returns the In days of the Item return Scan
    */
   function getIndays(irsId) {
+    log.audit("getIndays", irsId);
     try {
       let inDays;
       var customrecord_cs_item_ret_scanSearchObj = search.create({
         type: "customrecord_cs_item_ret_scan",
-        filters: [
-          ["custrecord_scanindate", "isnotempty", ""],
-          "AND",
-          ["internalid", "anyof", irsId],
-          "AND",
-          ["custrecord_cs__rqstprocesing", "anyof", "2", "3"],
-        ],
+        filters: [["internalid", "anyof", irsId]],
         columns: [
           search.createColumn({
             name: "custrecord_cs_return_req_scan_item",

@@ -227,6 +227,12 @@ define([
           binNumberField.isDisabled = false;
           binCategoryField.isDisabled = false;
           returnToField.isDisabled = false;
+          if (isEmpty(binCategory)) {
+            suitelet.setValue({
+              fieldId: "custpage_bin",
+              value: " ",
+            });
+          }
         } else {
           suitelet.setValue({
             fieldId: "custpage_bincategory",
@@ -423,6 +429,11 @@ define([
           fieldId: "custpage_patientvial",
           line: i,
         });
+        const wacAmount = suitelet.getSublistValue({
+          sublistId: RETURNABLESUBLIST,
+          fieldId: "custpage_wac_amount",
+          line: i,
+        });
         if (prevBag.length <= 96) {
           prevBag = null;
           itemWithoutBag += 1;
@@ -439,6 +450,7 @@ define([
                 returnItemScanIds.push({
                   id: internalId,
                   amount: amount || 0,
+                  wacAmount: wacAmount || 0,
                   itemId: itemId,
                   prevBag: prevBag,
                   indate: indate,
@@ -448,6 +460,7 @@ define([
               returnItemScanIds.push({
                 id: internalId,
                 amount: amount || 0,
+                wacAmount: wacAmount || 0,
                 itemId: itemId,
                 prevBag: prevBag,
                 indate: indate,
@@ -462,6 +475,7 @@ define([
                 returnItemScanIds.push({
                   id: internalId,
                   amount: amount || 0,
+                  wacAmount: wacAmount || 0,
                   itemId: itemId,
                   prevBag: prevBag,
                   isAerosol: isAerosol,
@@ -473,6 +487,7 @@ define([
                 returnItemScanIds.push({
                   id: internalId,
                   amount: amount || 0,
+                  wacAmount: wacAmount || 0,
                   itemId: itemId,
                   prevBag: prevBag,
                   indate: indate,
@@ -489,6 +504,7 @@ define([
               returnItemScanIds.push({
                 id: internalId,
                 amount: amount || 0,
+                wacAmount: wacAmount || 0,
                 itemId: itemId,
                 prevBag: prevBag,
               });
@@ -498,6 +514,7 @@ define([
             tempHolder.push({
               id: internalId,
               amount: amount || 0,
+              wacAmount: wacAmount || 0,
               itemId: itemId,
               prevBag: prevBag,
               indate: indate,
@@ -524,21 +541,21 @@ define([
             message:
               "NO ITEM TO PROCESS. All ITEM IS ALREADY ASSIGNED TO A BAG",
           });
-          if (
-            returnItemScanIds.length <= 0 &&
-            allBagTheSame == true &&
-            category == RRCATEGORY.RXOTC
-          ) {
-            m.show({
-              duration: 2000,
-            });
-
-            return;
-          } else {
-            alert("ASSIGNING ALL ITEM TO NEW BAG");
-            returnItemScanIds = tempHolder;
-            exitingBagId = null;
-          }
+          // if (
+          //   returnItemScanIds.length <= 0 &&
+          //   allBagTheSame == true &&
+          //   category == RRCATEGORY.RXOTC
+          // ) {
+          //   m.show({
+          //     duration: 2000,
+          //   });
+          //
+          //   return;
+          // } else {
+          alert("ASSIGNING ALL ITEM TO NEW BAG");
+          returnItemScanIds = tempHolder;
+          exitingBagId = null;
+          // }
           break;
         case "InDated":
           if (manualBin == true) {

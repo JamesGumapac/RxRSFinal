@@ -48,7 +48,7 @@ define(["N/record", "N/search", "../rxrs_util"] /**
       });
       const rrStatus = rrRec.getValue("transtatus");
       const mrrId = rrRec.getValue("custbody_kd_master_return_id");
-      const isPackageReceived = rec.getValue("custrecord_ispackrecvd");
+      const isPackageReceived = rec.getValue("custrecord_packstatus");
       log.debug("RR Details", { rrId, rrStatus, isPackageReceived });
 
       if (

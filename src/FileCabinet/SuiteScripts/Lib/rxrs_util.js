@@ -27,16 +27,19 @@ define([
   });
 
   const priceLevel = [
-    { priceName: "Mfg ERV (SysCalc)", column: "price4" },
-    { priceName: "Non-Returnable", column: "price7" },
-    { priceName: "Non-scannable", column: "price11" },
-    { priceName: "Pharma - Credit (ERV SysCalc)", column: "price10" },
-    { priceName: "Pharma - Credit (UP SysCalc)", column: "price9" },
-    { priceName: "Pharma - Credit (input)", column: "price8" },
-    { priceName: "Unit Price (input)", column: "price2" },
-    { priceName: "Online Price", column: "price5" },
+    { priceName: "ERV : GOVERNMENT", column: "price15" },
+    { priceName: "ERV-CONFIGURED", column: "price14" },
+    { priceName: "M-CONFIGURED", column: "price8" },
+    { priceName: "MANUAL INPUT", column: "price12" },
+    { priceName: "MFG ERV", column: "price12" },
+    { priceName: "TOPCO RETURN VALUE", column: "price2" },
+    { priceName: "U-CONFIGURED : EMES", column: "price18" },
+    { priceName: "U-CONFIGURED : MKRX", column: "price7" },
+    { priceName: "U-CONFIGURED : RXR", column: "price16" },
+    { priceName: "WHOLESALE ACQUISITION COST", column: "price17" },
+
     {
-      priceName: "Wholesale Acquisition Price " + '"WAC"' + " (input)",
+      priceName: "BASE PRICE",
       column: "baseprice",
     },
   ];
@@ -652,6 +655,7 @@ define([
    * @return {number} return rate of the selected price level of the item
    */
   function getItemRate(options) {
+    log.audit("getItemRate", options);
     try {
       let column = "";
       let rate;
@@ -798,6 +802,7 @@ define([
    * @param {string} name
    * */
   function getPeriodId(name) {
+    log.audit("getPeriodId", name);
     let periodId;
     try {
       const accountingperiodSearchObj = search.create({
@@ -815,13 +820,31 @@ define([
     }
   }
 
-  function setBillDueDate(date) {
-    let tempDate = addMonths(date, 3);
-    const daysDifference = getDaysBetween(tempDate, new Date());
-    if (daysDifference >= 90) {
-      return tempDate;
-    } else {
-      return addMonths(new Date(), 4);
+  /**
+   * Set the bill due date
+   * @param options.date
+   * @param {number}options.monthsToAdd
+   * @param options.isTopCo
+   * @returns {Date}
+   */
+  function setBillDueDate(options) {
+    log.audit("setBillDueDate", options);
+    let { isTopCo, monthsToAdd, date } = options;
+    try {
+      let tempDate = addMonths(date, Number(monthsToAdd));
+      log.audit("tempDate", tempDate);
+      const daysDifference = getDaysBetween(tempDate, new Date());
+      if (isTopCo == true) {
+        if (daysDifference >= 90) {
+          return tempDate;
+        } else {
+          return addMonths(new Date(), 4);
+        }
+      } else {
+        return tempDate;
+      }
+    } catch (e) {
+      log.error("setBillDueDate", e.message);
     }
   }
 
@@ -956,7 +979,9 @@ define([
         author: -5,
         recipients: getWareHouseEmployeeRole(),
         subject: "Manuf Processing or Bin has been changed ",
-        body: `<table style="padding: 2px">
+        body: `
+<p> <a href="https://6816904-sb1.app.netsuite.com/app/common/search/searchresults.nl?searchid=1031&saverun=T&whence="> Report Link</a> </p>
+<table style="padding: 2px">
   <tr>
    <td>Item</td>
    <td>Return Request</td>
@@ -1110,6 +1135,7 @@ define([
     getItemRate,
     getPeriodId,
     getReturnRequestType,
+    generateRedirectLink,
     moveFolderToDone,
     getWareHouseEmployeeRole,
     mrrStatus,

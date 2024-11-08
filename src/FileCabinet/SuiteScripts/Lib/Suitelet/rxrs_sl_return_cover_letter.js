@@ -330,6 +330,7 @@ define([
             isVerifyStaging: true,
             finalPaymentSched: finalPaymentSched,
             returnableFee: returnableFee,
+            rclId: 21,
           });
 
           rxrs_vs_util.createReturnableSublist({
@@ -364,6 +365,7 @@ define([
         }
 
         if (returnList) {
+          log.audit("Return List", returnList);
           /**
            * If splitpayment in the line column of the suitelet is click the action below will execute
            */
@@ -477,6 +479,7 @@ define([
         /**
          * If the user clicks the Split Payment action column
          */
+        log.emergency("SplitPayment", paymentId);
         try {
           let itemsReturnScan = rxrs_vs_util.getReturnableItemScan({
             mrrId: mrrId,
@@ -485,11 +488,14 @@ define([
             finalPaymentSched: finalPaymentSched,
             initialSplitpaymentPage: initialSplitpaymentPage,
           });
+          log.emergency("Split", itemsReturnScan);
+
           updateFinalPayment({
             itemsReturnScan: itemsReturnScan,
-            paymentId: +paymentId,
+            paymentId: paymentId,
             isUpdated: true,
           });
+
           // if (isUpdated) {
           //   let billIds = rxrs_tran_util.getAllBills(mrrId);
           //   log.emergency("billIds", billIds);
@@ -527,13 +533,18 @@ define([
    * @param {boolean}options.isUpdated - Update PAYMENT SCHEDULE UPDATED field
    */
   function updateFinalPayment(options) {
+    const functionName = "updateFinalPayment :";
     try {
+      log.audit(functionName, options);
       let { itemsReturnScan, paymentId, isUpdated } = options;
       let itemLength = itemsReturnScan.length;
       itemsReturnScan.forEach((item) => {
-        record.submitFields.promise({
+        let { internalId } = item;
+        log.emergency(functionName + "item 1", { internalId, paymentId });
+
+        record.submitFields({
           type: "customrecord_cs_item_ret_scan",
-          id: item.internalId,
+          id: internalId,
           values: {
             custrecord_final_payment_schedule: +paymentId,
             custrecord_payment_schedule_updated: isUpdated,

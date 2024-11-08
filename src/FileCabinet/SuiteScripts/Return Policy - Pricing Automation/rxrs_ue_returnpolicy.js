@@ -96,7 +96,7 @@ define([
     handicapEndDate.setMonth(expirationDate.getMonth() + outDays);
 
     /* Compute systemDate (current date) - Format current date to display
-                                                                                                                                               only date, month, and year */
+                                                                                                                                                   only date, month, and year */
     const systemDate = new Date();
 
     // Display the computed dates (optional)
@@ -602,10 +602,13 @@ define([
               bagId: bagLabel,
             });
           }
+
           util.sendEmailMFGProcessingIsUpdated({
             newRec: currentRecord,
             oldBag: currentBagAssignment,
             newBag: bagLabel,
+            oldBin: currentRecord.getText("custrecord_previous_bin"),
+            newBin: currentRecord.getText("custrecord_itemscanbin"),
           });
         } catch (e) {
           log.error("Assigning new bag", e.message);

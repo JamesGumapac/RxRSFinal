@@ -482,15 +482,15 @@ define([
                */
 
               //Check if the purchase order is fully billed/Closed
-              // let isBilled = tranlib.checkIfTransAlreadyExist({
-              //   mrrId: mrrId,
-              //   searchType: "PurchOrd",
-              //   status: "PurchOrd:G",
-              // });
-              // let isPOExist = tranlib.checkIfTransAlreadyExist({
-              //   mrrId: mrrId,
-              //   searchType: "PurchOrd",
-              // });
+              let isBilled = tranlib.checkIfTransAlreadyExist({
+                mrrId: mrrId,
+                searchType: "PurchOrd",
+                status: "PurchOrd:G",
+              });
+              let isPOExist = tranlib.checkIfTransAlreadyExist({
+                mrrId: mrrId,
+                searchType: "PurchOrd",
+              });
               log.debug("create Bill Button", { isPOExist, isBilled });
 
               if (isPOExist && !isBilled) {

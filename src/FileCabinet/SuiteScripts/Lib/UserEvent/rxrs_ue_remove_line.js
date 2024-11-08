@@ -23,6 +23,7 @@ define(["../rxrs_transaction_lib"], (rxrs_tran_lib) => {
    * @since 2015.2
    */
   const beforeSubmit = (scriptContext) => {
+    log.audit("removing line");
     try {
       const rec = scriptContext.newRecord;
       const finalPaymentSchedule = rec.getValue("custbody_kodpaymentsched");

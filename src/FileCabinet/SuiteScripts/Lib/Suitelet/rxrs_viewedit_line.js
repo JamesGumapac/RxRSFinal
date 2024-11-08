@@ -339,10 +339,14 @@ define([
    * @param {boolean}options.isUpdated - Update PAYMENT SCHEDULE UPDATED field
    */
   function updateFinalPayment(options) {
+    const functionName = "updateFinalPayment : ";
+    log.audit("updateFinalPayment", options);
     try {
       let { itemsReturnScan, paymentId, isUpdated } = options;
       let itemLength = itemsReturnScan.length;
+      log.audit(functionName + "itemLength", itemLength);
       itemsReturnScan.forEach((item) => {
+        log.audit(functionName + "irs", item);
         record.submitFields.promise({
           type: "customrecord_cs_item_ret_scan",
           id: item.internalId,

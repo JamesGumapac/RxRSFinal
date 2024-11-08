@@ -106,6 +106,7 @@ define([
     let binCategory = options.params.binCategory;
     let manualBin = options.params.manualBin;
     let returnTo = options.params.returnTo;
+
     try {
       paramManufacturer = paramManufacturer.includes("_")
         ? paramManufacturer.replaceAll("_", "&")
@@ -455,7 +456,15 @@ define([
             displayType: "DISABLED",
           });
         let binCategoryList = [];
-
+        let binField = form
+          .addField({
+            id: "custpage_bin",
+            label: "Bin",
+            type: serverWidget.FieldType.SELECT,
+          })
+          .updateDisplayType({
+            displayType: "DISABLED",
+          });
         if (category) {
           switch (paramSelectionType) {
             case "Returnable":
@@ -464,6 +473,7 @@ define([
                 value: 2,
               });
               binSearchParams.category = category;
+
               if (category != util.RRCATEGORY.RXOTC) {
                 binSearchParams.forControlItems = true;
                 let returnToFields = form.addField({
@@ -512,6 +522,16 @@ define([
               } else {
                 binSearchParams.manufId = manufId;
                 binSearchParams.specificBin = true;
+                binSearchParams.binCategory = 2;
+                let outBoundBinResult =
+                  bag.getBinPutAwayLocation(binSearchParams);
+                log.audit("outBoundBin", { outBoundBinResult, binCategory });
+                if (outBoundBinResult.length == 1 && manualBin !== true) {
+                  binField.addSelectOption({
+                    text: outBoundBinResult[0].text,
+                    value: outBoundBinResult[0].value,
+                  });
+                }
               }
 
               break;
@@ -553,15 +573,6 @@ define([
           });
         }
 
-        let binField = form
-          .addField({
-            id: "custpage_bin",
-            label: "Bin",
-            type: serverWidget.FieldType.SELECT,
-          })
-          .updateDisplayType({
-            displayType: "DISABLED",
-          });
         if (binCategory) {
           binSearchParams.binCategory = binCategory;
           binCategoryField.defaultValue = binCategory;

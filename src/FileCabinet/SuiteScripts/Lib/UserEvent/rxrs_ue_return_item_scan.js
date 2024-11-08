@@ -58,6 +58,7 @@ define([
       "custrecord_cs_full_partial_package",
     ];
     try {
+      if (context.type !== "edit") return;
       if (
         util.checkIfThereIsUpdate({
           oldRec: oldRec,
@@ -76,6 +77,13 @@ define([
           rrId: rec.getValue("custrecord_cs_ret_req_scan_rrid"),
           itemScanId: rec.id,
           binId: rec.getValue("custrecord_itemscanbin"),
+        });
+      }
+      if (rec.getValue("custrecord_isc_overriderate") == true) {
+        const MANUALINPUT = 12;
+        rec.setValue({
+          fieldId: "custrecord_scanpricelevel",
+          value: MANUALINPUT,
         });
       }
     } catch (e) {
@@ -124,20 +132,43 @@ define([
         log.error("Reloading the RR", e.message);
       }
       const newRecBin = rec.getValue("custrecord_itemscanbin");
-      const oldRecBin = rec.getValue("custrecord_itemscanbin");
+      const oldRecBin = oldRec.getValue("custrecord_itemscanbin");
       const RETURNABLE = 2;
       const NONRETURNABLE = 1;
       const ADJUSTMENTITEM = 917;
       /**
        * Send Email when new bin is assigned
        */
-      util.sendEmailMFGProcessingIsUpdated({
-        newRec: rec,
-        oldBag: rec.getValue("custrecord_prev_bag_assignement"),
-        newBag: rec.getValue("custrecord_scanbagtaglabel"),
-        oldBin: rec.getText("custrecord_previous_bin"),
-        newBin: rec.getText("custrecord_itemscanbin"),
-      });
+      if (context.type == "edit") {
+        const bagId = rec.getValue("custrecord_scanbagtaglabel");
+        if (newRecBin != oldRecBin) {
+          util.sendEmailMFGProcessingIsUpdated({
+            newRec: rec,
+            oldBag: rec.getValue("custrecord_prev_bag_assignement"),
+            newBag: bagId,
+            oldBin: rec.getText("custrecord_previous_bin"),
+            newBin: rec.getText("custrecord_itemscanbin"),
+          });
+        }
+
+        if (bagId) {
+          log.audit("reloading bag");
+          let functionSLURL = url.resolveScript({
+            scriptId: "customscript_sl_cs_custom_function",
+            deploymentId: "customdeploy_sl_cs_custom_function",
+            returnExternalUrl: true,
+            params: {
+              action: "reload",
+              id: bagId,
+              type: "customrecord_kd_taglabel",
+            },
+          });
+          let response = https.post({
+            url: functionSLURL,
+          });
+        }
+      }
+
       /**
        * Update processing of the PO and Bill if there's changes in
        */
@@ -383,39 +414,41 @@ define([
         //   }
         // }
       }
-
-      let inDays = rxrs_util.getIndays(rec.id);
-      let isDefault = Math.sign(inDays) == -1;
-      let paymentSchedId =
-        isDefault == true
-          ? rxrsPayment_lib.getPaymentSched(Math.abs(inDays))
-          : 12;
-      log.audit("InDays and Payment Sched", {
-        inDays,
-        paymentSchedId,
-        isDefault,
-      });
-      if (paymentSchedId && isDefault === true) {
-        irsRec.setValue({
-          fieldId: "custrecord_scan_paymentschedule",
-          value: +paymentSchedId,
-        });
-        irsRec.setValue({
-          fieldId: "custrecord_final_payment_schedule",
-          value: DEFAULT,
-        });
-        irsRec.setValue({
-          fieldId: "custrecord_scanindated",
-          value: true,
-        });
-      } else {
-        log.audit("Setting indated to false", rec.id);
-        irsRec.setValue({
-          fieldId: "custrecord_scanindated",
-          value: false,
-        });
-      }
       let isIndate = irsRec.getValue("custrecord_scanindated");
+      if (isIndate == true) {
+        let inDays = rxrs_util.getIndays(rec.id);
+        let isDefault = Math.sign(inDays) == -1;
+        let paymentSchedId =
+          isDefault == true
+            ? rxrsPayment_lib.getPaymentSched(Math.abs(inDays))
+            : 12;
+        log.audit("InDays and Payment Sched", {
+          inDays,
+          paymentSchedId,
+          isDefault,
+        });
+        if (paymentSchedId && isDefault === true) {
+          irsRec.setValue({
+            fieldId: "custrecord_scan_paymentschedule",
+            value: +paymentSchedId,
+          });
+
+          irsRec.setValue({
+            fieldId: "custrecord_scanindated",
+            value: true,
+          });
+        }
+      } else {
+      }
+
+      // else {
+      //   log.audit("Setting indated to false", rec.id);
+      //   irsRec.setValue({
+      //     fieldId: "custrecord_scanindated",
+      //     value: false,
+      //   });
+      // }
+
       let pharmaProcessing = irsRec.getValue("custrecord_cs__rqstprocesing");
 
       if (

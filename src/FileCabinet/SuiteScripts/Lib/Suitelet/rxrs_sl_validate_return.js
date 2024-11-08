@@ -50,7 +50,7 @@ define([
         let bag = [];
         log.debug("returnScanList", returnScanList);
         curAmount = returnScanList.reduce(function (acc, obj) {
-          return acc + obj.amount;
+          return acc + obj.wacAmount;
         }, 0);
         let bags = [];
 
@@ -59,7 +59,7 @@ define([
         switch (returnType) {
           case "Returnable":
             const sortByAmount = returnScanList.sort(
-              (a, b) => parseFloat(a.amount) - parseFloat(b.amount),
+              (a, b) => parseFloat(a.wacAmount) - parseFloat(b.wacAmount),
             );
 
             if (maximumAmount == 0) {
@@ -393,24 +393,7 @@ define([
                 }
               }
             }
-            //   log.audit("existing  bag");
-            // if (exitingBagId) {
-            //   bags.push(exitingBagId);
-            // } else {
-            //   log.error("creating destruction bag");
-            //   for (let i = 0; i < numberOfBags; i++) {
-            //     bags.push(
-            //       rxrsBagUtil.createBin({
-            //         mrrId: +mrrid,
-            //         entity: entity,
-            //         manufId: manufId,
-            //         rrId: rrId,
-            //         mfgProcessing: mfgProcessing,
-            //         binNumber: binNumber,
-            //       }),
-            //     );
-            //   }
-            // }
+
             break;
         }
 

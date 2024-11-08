@@ -44,8 +44,12 @@ define([
           category = 1;
         } else if (binName.includes("OB") == true) {
           category = 2;
-        } else if (binName.includes("CON") == true) {
-          category = 3;
+        }
+        if (binName.includes("CON") == true) {
+          newRecord.setValue({
+            fieldId: "custrecord_bin_control_item",
+            value: true,
+          });
         }
         if (category != null) {
           newRecord.setValue({
@@ -65,12 +69,7 @@ define([
         /**
          * If no manuf assigned to manufacturer field removes a specific bin category
          */
-        // if (newManuf.length < 1) {
-        //   newRecord.setValue({
-        //     fieldId: "custrecord_specific_bin",
-        //     value: false,
-        //   });
-        // }
+
         if (oldManuf !== newManuf) {
           const missingValues = oldManuf.filter(
             (value) => !newManuf.includes(value),
@@ -104,12 +103,6 @@ define([
               });
             });
           }
-        }
-        if (newRecord.getValue("custrecord_bin_split") == true) {
-          newRecord.setValue({
-            fieldId: "isinactive",
-            value: true,
-          });
         }
       }
 

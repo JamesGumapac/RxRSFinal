@@ -29,6 +29,7 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib", "./rxrs_util"], /**
       const binRec = record.create({
         type: "customrecord_kd_taglabel",
       });
+
       binRec.setValue({
         fieldId: "custrecord_kd_mrr_link",
         value: mrrId,
@@ -57,10 +58,11 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib", "./rxrs_util"], /**
           fieldId: "custrecord_tagentity",
           value: entity,
         });
-
-      return binRec.save({
+      let bagId = binRec.save({
         ignoreMandatoryFields: true,
       });
+
+      return bagId;
     } catch (e) {
       log.error("createBin", e.message);
     }
@@ -98,32 +100,6 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib", "./rxrs_util"], /**
           value: prevBag,
         });
       if (binNumber) {
-        // let rsLookup = search.lookupFields({
-        //   type: "bin",
-        //   id: binNumber,
-        //   columns: ["custrecord_bincategory"],
-        // });
-        // let newBinField, oldBinField;
-        // let binCategory = rsLookup.custrecord_bincategory[0].value;
-        // switch (+binCategory) {
-        //   case 1:
-        //     newBinField = "custrecord_irs_inbound_bin";
-        //     oldBinField = "custrecord_irs_prev_inbound_bin";
-        //     break;
-        //   case 2:
-        //     newBinField = "custrecord_irs_outbound_bin";
-        //     oldBinField = "custrecord_irs_prev_outbound_bin";
-        //     break;
-        //   case 3:
-        //     newBinField = "custrecord_irs_control_bin";
-        //     oldBinField = "custrecord_irs_prev_control_bin";
-        //     break;
-        //   case 4:
-        //     newBinField = "custrecord_irs_desctruction_bin";
-        //     oldBinField = "custrecord_irs_prev_desctruct_bin";
-        // }
-        //
-        // log.audit(" bin values ", { binCategory, field: newBinField });
         const prevBin = bagRec.getValue("custrecord_itemscanbin");
         if (prevBin) {
           bagRec.setValue({
@@ -131,10 +107,7 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib", "./rxrs_util"], /**
             value: prevBin,
           });
         }
-        // bagRec.setValue({
-        //   fieldId: newBinField,
-        //   value: binNumber,
-        // });
+
         bagRec.setValue({
           fieldId: "custrecord_itemscanbin",
           value: binNumber,
@@ -157,20 +130,7 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib", "./rxrs_util"], /**
           fieldId: "custrecord_is_verified",
           value: isVerify,
         });
-      const manufId = bagRec.getValue("custrecord_kd_mfgname");
-      log.debug("manufId", manufId);
-      const currentAmount = bagRec.getValue("custrecord_bag_amount");
-      if (manufId) {
-        const maxValue = vs_lib.getManufMaxSoAmount(manufId);
-        bagRec.setValue({
-          fieldId: "custrecord_manuf_max_so_amount",
-          value: maxValue,
-        });
-        bagRec.setValue({
-          fieldId: "custrecord_remaining_amount",
-          value: maxValue - currentAmount,
-        });
-      }
+
       let updatedId = bagRec.save({
         ignoreMandatoryFields: true,
       });
@@ -196,16 +156,15 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib", "./rxrs_util"], /**
         filters: [["custrecord_scanbagtaglabel", "anyof", bagId]],
         columns: [
           search.createColumn({
-            name: "custrecord_irc_total_amount",
+            name: "custrecord_wac_amount",
             summary: "SUM",
-            label: "Amount ",
+            label: "Wac Amount",
           }),
         ],
       });
-
       customrecord_cs_item_ret_scanSearchObj.run().each(function (result) {
         amount = result.getValue({
-          name: "custrecord_irc_total_amount",
+          name: "custrecord_wac_amount",
           summary: "SUM",
         });
       });
