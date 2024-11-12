@@ -81,7 +81,7 @@ define([
       log.debug("fileSearch", fileSearch);
       return fileSearch[0].id;
     } catch (e) {
-      log.error("getFileId", e.message);
+      log.error("getFileId", { error: e.message, file: fileName });
     }
   }
 

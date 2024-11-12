@@ -391,6 +391,10 @@ define([
                     });
                   }
                 }
+              } else {
+                context.response.write(
+                  "ERROR: " + "NO AVAILABLE BINS FOR CONTROL CATEGORY",
+                );
               }
             }
 

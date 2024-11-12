@@ -87,88 +87,6 @@ define([
     }
   }
 
-  window.onload = function () {
-    //considering there aren't any hashes in the urls already
-  };
-
-  function updateIRS() {
-    alert("SavingChanges");
-    handleButtonClick("Please Wait..");
-    let count = 0;
-    try {
-      let rec = currentRecord.get();
-      let paymentSublistCount = rec.getLineCount({
-        sublistId: RETURNABLESUBLIST,
-      });
-
-      for (let i = 0; i < paymentSublistCount; i++) {
-        let setToNonReturnble = rec.getSublistValue({
-          sublistId: RETURNABLESUBLIST,
-          fieldId: "custpage_settononreturnable",
-          line: i,
-        });
-        if (setToNonReturnble == false) continue;
-        count += 1;
-        let id = rec.getSublistValue({
-          sublistId: RETURNABLESUBLIST,
-          fieldId: "custpage_internalid",
-          line: i,
-        });
-
-        let nonReturnableReason = rec.getSublistValue({
-          sublistId: RETURNABLESUBLIST,
-          fieldId: "custpage_nonreturnable_reason",
-          line: i,
-        });
-
-        const amount = rec.getSublistValue({
-          sublistId: RETURNABLESUBLIST,
-          fieldId: "custpage_amount",
-          line: i,
-        });
-        let values = [
-          {
-            fieldId: "custrecord_cs_cb_or_non_ret_reason",
-            value: true,
-          },
-          {
-            fieldId: "custrecord_scannonreturnreason",
-            value: nonReturnableReason,
-          },
-          { fieldId: "custrecord_cs__rqstprocesing", value: 1 },
-          {
-            fieldId: "custrecord_irc_total_amount",
-            value: amount,
-          },
-        ];
-        let params = {
-          action: "updateRecordHeader",
-          type: "customrecord_cs_item_ret_scan",
-          id: id,
-          values: JSON.stringify(values),
-        };
-        console.table(params);
-        let stSuiteletUrl = url.resolveScript({
-          scriptId: "customscript_sl_cs_custom_function",
-          deploymentId: "customdeploy_sl_cs_custom_function",
-          returnExternalUrl: false,
-          params: params,
-        });
-        let response = https.post({
-          url: stSuiteletUrl,
-        });
-      }
-    } catch (e) {
-      console.error("updateIRS" + e.message);
-    }
-
-    setTimeout(function () {
-      jQuery("body").loadingModal("destroy");
-      window.onbeforeunload = null;
-      location.reload();
-    }, 5000 + count);
-  }
-
   /**
    * Function to be executed when field is changed.
    *
@@ -281,6 +199,106 @@ define([
   }
 
   /**
+   * Function to be executed when field is slaved.
+   *
+   * @param {Object} scriptContext
+   * @param {Record} scriptContext.currentRecord - Current form record
+   * @param {string} scriptContext.sublistId - Sublist name
+   * @param {string} scriptContext.fieldId - Field name
+   *
+   * @since 2015.2
+   */
+  function postSourcing(scriptContext) {}
+
+  /**
+   * Function to be executed after sublist is inserted, removed, or edited.
+   *
+   * @param {Object} scriptContext
+   * @param {Record} scriptContext.currentRecord - Current form record
+   * @param {string} scriptContext.sublistId - Sublist name
+   *
+   * @since 2015.2
+   */
+  function sublistChanged(scriptContext) {}
+
+  /**
+   * Function to be executed after line is selected.
+   *
+   * @param {Object} scriptContext
+   * @param {Record} scriptContext.currentRecord - Current form record
+   * @param {string} scriptContext.sublistId - Sublist name
+   *
+   * @since 2015.2
+   */
+  function lineInit(scriptContext) {}
+
+  /**
+   * Validation function to be executed when field is changed.
+   *
+   * @param {Object} scriptContext
+   * @param {Record} scriptContext.currentRecord - Current form record
+   * @param {string} scriptContext.sublistId - Sublist name
+   * @param {string} scriptContext.fieldId - Field name
+   * @param {number} scriptContext.lineNum - Line number. Will be undefined if not a sublist or matrix field
+   * @param {number} scriptContext.columnNum - Line number. Will be undefined if not a matrix field
+   *
+   * @returns {boolean} Return true if field is valid
+   *
+   * @since 2015.2
+   */
+  function validateField(scriptContext) {}
+
+  /**
+   * Validation function to be executed when sublist line is committed.
+   *
+   * @param {Object} scriptContext
+   * @param {Record} scriptContext.currentRecord - Current form record
+   * @param {string} scriptContext.sublistId - Sublist name
+   *
+   * @returns {boolean} Return true if sublist line is valid
+   *
+   * @since 2015.2
+   */
+  function validateLine(scriptContext) {}
+
+  /**
+   * Validation function to be executed when sublist line is inserted.
+   *
+   * @param {Object} scriptContext
+   * @param {Record} scriptContext.currentRecord - Current form record
+   * @param {string} scriptContext.sublistId - Sublist name
+   *
+   * @returns {boolean} Return true if sublist line is valid
+   *
+   * @since 2015.2
+   */
+  function validateInsert(scriptContext) {}
+
+  /**
+   * Validation function to be executed when record is deleted.
+   *
+   * @param {Object} scriptContext
+   * @param {Record} scriptContext.currentRecord - Current form record
+   * @param {string} scriptContext.sublistId - Sublist name
+   *
+   * @returns {boolean} Return true if sublist line is valid
+   *
+   * @since 2015.2
+   */
+  function validateDelete(scriptContext) {}
+
+  /**
+   * Validation function to be executed when record is saved.
+   *
+   * @param {Object} scriptContext
+   * @param {Record} scriptContext.currentRecord - Current form record
+   * @returns {boolean} Return true if record is valid
+   *
+   * @since 2015.2
+   */
+  function saveRecord(scriptContext) {}
+
+  /**
    * Return to returnable page group by Manufacturer
    */
   function backToReturnable() {
@@ -311,26 +329,6 @@ define([
     });
     window.ischanged = false;
     window.open(stSuiteletUrl, "_self");
-  }
-
-  function removeURLParameter(url, parameter) {
-    //prefer to use l.search if you have a location/link object
-    var urlparts = url.split("?");
-    if (urlparts.length >= 2) {
-      var prefix = encodeURIComponent(parameter) + "=";
-      var pars = urlparts[1].split(/[&;]/g);
-
-      //reverse iteration as may be destructive
-      for (var i = pars.length; i-- > 0; ) {
-        //idiom for string.startsWith
-        if (pars[i].lastIndexOf(prefix, 0) !== -1) {
-          pars.splice(i, 1);
-        }
-      }
-
-      return urlparts[0] + (pars.length > 0 ? "?" + pars.join("&") : "");
-    }
-    return url;
   }
 
   function verify() {
@@ -529,11 +527,14 @@ define([
             allBagTheSame == true &&
             category == RRCATEGORY.RXOTC
           ) {
-            m.show({
-              duration: 2000,
-            });
-
-            return;
+            // m.show({
+            //   duration: 2000,
+            // });
+            //
+            // return;
+            alert("ASSIGNING ALL ITEM TO NEW BAG");
+            returnItemScanIds = tempHolder;
+            exitingBagId = null;
           } else {
             alert("ASSIGNING ALL ITEM TO NEW BAG");
             returnItemScanIds = tempHolder;
@@ -662,6 +663,23 @@ define([
     }
   }
 
+  function handleButtonClick(str) {
+    try {
+      jQuery("body").loadingModal({
+        position: "auto",
+        text: str
+          ? str
+          : "Updating Verify Status and Creating Bag Label. Please wait...",
+        color: "#fff",
+        opacity: "0.7",
+        backgroundColor: "rgb(220,220,220)",
+        animation: "doubleBounce",
+      });
+    } catch (e) {
+      console.error("handleButtonClick", e.message);
+    }
+  }
+
   function getPreviousBag(prevBag) {
     prevBag = prevBag.split("&");
     prevBag = prevBag[1]; // get the id from the URL
@@ -683,309 +701,6 @@ define([
     m.show({
       duration: 2000,
     });
-  }
-
-  /**
-   * Mark and Unmark the Sublist
-   * @param {string} value
-   */
-  function markAll(value) {
-    const SUBLIST = "custpage_items_sublist";
-    let curRec = currentRecord.get();
-    for (let i = 0; i < curRec.getLineCount(SUBLIST); i++) {
-      curRec.selectLine({
-        sublistId: SUBLIST,
-        line: i,
-      });
-      curRec.setCurrentSublistValue({
-        sublistId: SUBLIST,
-        fieldId: "custpage_select",
-        value: JSON.parse(value),
-      });
-      if (value == "false" || value == false)
-        curRec.setCurrentSublistValue({
-          sublistId: SUBLIST,
-          fieldId: "custpage_form222_ref",
-          value: " ",
-        });
-      curRec.commitLine(SUBLIST);
-    }
-  }
-
-  function isEmpty(stValue) {
-    return (
-      stValue === " " ||
-      stValue === "" ||
-      stValue == null ||
-      false ||
-      (stValue.constructor === Array && stValue.length == 0) ||
-      (stValue.constructor === Object &&
-        (function (v) {
-          for (var k in v) return false;
-          return true;
-        })(stValue))
-    );
-  }
-
-  /**
-   * Post URL request
-   * @param {string} options.URL Suitelet URL
-   *
-   */
-  function postURL(options) {
-    let { URL } = options;
-    try {
-      setTimeout(function () {
-        let response = https.post({
-          url: URL,
-        });
-        if (response) {
-          console.log(response);
-          jQuery("body").loadingModal("destroy");
-          if (response.body.includes("ERROR")) {
-            let m = message.create({
-              type: message.Type.ERROR,
-              title: "ERROR",
-              message: response.body,
-            });
-            m.show(10000);
-          } else {
-            let m = message.create({
-              type: message.Type.CONFIRMATION,
-              title: "SUCCESS",
-              message: response.body,
-            });
-            m.show(10000);
-            setTimeout(function () {
-              location.reload();
-            }, 2000);
-          }
-        }
-      }, 100);
-    } catch (e) {
-      console.error("postURL", e.message);
-    }
-  }
-
-  function updateSO222Form() {
-    try {
-      jQuery("body").loadingModal({
-        position: "auto",
-        text: "Updating Sales Order. Please wait...",
-        color: "#fff",
-        opacity: "0.7",
-        backgroundColor: "rgb(220,220,220)",
-        animation: "wave",
-      });
-    } catch (e) {
-      console.error("handleButtonClick", e.message);
-    }
-  }
-
-  function handleButtonClick(str) {
-    try {
-      jQuery("body").loadingModal({
-        position: "auto",
-        text: str
-          ? str
-          : "Updating Verify Status and Creating Bag Label. Please wait...",
-        color: "#fff",
-        opacity: "0.7",
-        backgroundColor: "rgb(220,220,220)",
-        animation: "doubleBounce",
-      });
-    } catch (e) {
-      console.error("handleButtonClick", e.message);
-    }
-  }
-
-  function getCertainField(options) {
-    console.table(options);
-    let { type, id, columns } = options;
-    try {
-      const tranSearch = search.lookupFields({
-        type: type,
-        id: id,
-        columns: [columns],
-      });
-      let vbStatus = tranSearch[columns][0].value;
-      return JSON.stringify(vbStatus);
-    } catch (e) {
-      log.error("getTransactionStatus", e.message);
-    }
-  }
-
-  /**
-   * Create Payment Record and Assign it to item return scan
-   * @param {number} options.mrrId Master Return Id
-   * @param {number} options.billId Bill Id
-   */
-  function createPayment(options) {
-    console.table(options);
-    const curRec = currentRecord.get();
-    const billStatus = curRec.getValue("custpage_bill_status");
-
-    let { mrrId, billId } = options;
-    try {
-      console.log("billstatus " + billStatus);
-      if (billStatus == "paidInFull") {
-        alert(
-          "Cannot change payment schedule, related bill record is already paid in full",
-        );
-        return;
-      }
-      let internalIds = [];
-      let rec = currentRecord.get();
-
-      let newPaymentId = rec.getValue("custpage_payment_name");
-      let paymentSublistCount = rec.getLineCount({
-        sublistId: RETURNABLESUBLIST,
-      });
-      for (let i = 0; i < paymentSublistCount; i++) {
-        if (
-          rec.getSublistValue({
-            sublistId: RETURNABLESUBLIST,
-            fieldId: "custpage_verified",
-            line: i,
-          }) !== true
-        )
-          continue;
-        let internalId = rec.getSublistValue({
-          sublistId: RETURNABLESUBLIST,
-          fieldId: "custpage_internalid",
-          line: i,
-        });
-        internalIds.push(internalId);
-      }
-      console.log(internalIds.length);
-      if (internalIds.length == 0) {
-        alert("Please select item");
-        return;
-      }
-
-      let returnList = JSON.stringify(internalIds.join("_"));
-
-      let rclSuiteletURL = url.resolveScript({
-        scriptId: "customscript_sl_return_cover_letter",
-        deploymentId: "customdeploy_sl_return_cover_letter",
-        returnExternalUrl: false,
-        params: {
-          mrrId: mrrId,
-          isReload: true,
-          inDated: true,
-          isVerifyStaging: false,
-          returnList: returnList,
-          createdPaymentId: newPaymentId,
-          title: "In-Dated Inventory",
-          finalPaymentSched: false,
-          initialSplitpaymentPage: false,
-        },
-      });
-
-      if (billId) {
-        let params = {
-          billId: billId,
-          newPaymentId: newPaymentId,
-          action: "deleteBill",
-          mrrId: mrrId,
-        };
-
-        let functionSLURL = url.resolveScript({
-          scriptId: "customscript_sl_cs_custom_function",
-          deploymentId: "customdeploy_sl_cs_custom_function",
-          returnExternalUrl: false,
-          params: params,
-        });
-
-        postURL({ URL: functionSLURL });
-      }
-
-      window.open(`${rclSuiteletURL}`, "_self");
-    } catch (e) {
-      console.error("createPayment" + e.message);
-    }
-  }
-
-  function updateSO222FormReference(soId) {
-    try {
-      let soDetails = {};
-      soDetails.soId = soId;
-      soDetails.soItemToUpdate = [];
-      const SUBLIST = "custpage_items_sublist";
-      try {
-        for (
-          let i = 0;
-          i < suitelet.getLineCount("custpage_items_sublist");
-          i++
-        ) {
-          let isSelected = suitelet.getSublistValue({
-            sublistId: SUBLIST,
-            fieldId: "custpage_select",
-            line: i,
-          });
-          if (isSelected !== true) continue;
-
-          let lineUniqueKey = suitelet.getSublistValue({
-            sublistId: SUBLIST,
-            fieldId: "custpage_linekey",
-            line: i,
-          });
-          let form222Number = suitelet.getSublistValue({
-            sublistId: SUBLIST,
-            fieldId: "custpage_form222_ref",
-            line: i,
-          });
-          if (form222Number) {
-            soDetails.soItemToUpdate.push({
-              lineUniqueKey: lineUniqueKey,
-              form222Number: form222Number,
-            });
-          }
-        }
-
-        let m = message.create({
-          type: message.Type.WARNING,
-          title: "WARNING",
-          message: "NO ITEM TO PROCESS",
-        });
-        if (soDetails.soItemToUpdate.length <= 0) {
-          m.show({
-            duration: 2000,
-          });
-          return;
-        }
-
-        let params = {
-          soDetails: JSON.stringify(soDetails),
-          action: "updateSOItem222FormReference",
-          isReload: true,
-        };
-
-        updateSO222Form();
-        let stSuiteletUrl = url.resolveScript({
-          scriptId: "customscript_sl_cs_custom_function",
-          deploymentId: "customdeploy_sl_cs_custom_function",
-          params: params,
-        });
-        postURL({ URL: stSuiteletUrl });
-        setTimeout(function () {
-          let rclSuiteletURL = url.resolveScript({
-            scriptId: "customscript_rxrs_sl_add_222_form_ref",
-            deploymentId: "customdeploy_rxrs_sl_add_222_form_ref",
-            returnExternalUrl: false,
-            params: {
-              isReload: true,
-            },
-          });
-          window.ischanged = false;
-          window.open(`${rclSuiteletURL}`, "_self");
-        }, 2000);
-      } catch (e) {
-        console.error("updateSO222FormReference", e.message);
-      }
-    } catch (e) {
-      console.error("updateSO222FormReference", e.message);
-    }
   }
 
   function update222FormReference() {
@@ -1022,20 +737,11 @@ define([
     }
   }
 
-  function destroyModal() {
-    jQuery("#_loading_dialog").dialog("destroy");
-  }
-
   return {
     pageInit: pageInit,
     fieldChanged: fieldChanged,
     verify: verify,
-    backToReturnable: backToReturnable,
-    showMessage: showMessage,
-    createPayment: createPayment,
-    markAll: markAll,
     update222FormReference: update222FormReference,
-    updateSO222FormReference: updateSO222FormReference,
-    updateIRS: updateIRS,
+    backToReturnable: backToReturnable,
   };
 });

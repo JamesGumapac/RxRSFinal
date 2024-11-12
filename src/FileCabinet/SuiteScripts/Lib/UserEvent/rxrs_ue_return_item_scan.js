@@ -439,6 +439,10 @@ define([
           });
         }
       } else {
+        irsRec.setValue({
+          fieldId: "custrecord_ret_start_date",
+          value: "",
+        });
       }
 
       // else {

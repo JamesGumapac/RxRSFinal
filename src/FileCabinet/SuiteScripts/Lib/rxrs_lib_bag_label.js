@@ -687,6 +687,15 @@ define(["N/record", "N/search", "./rxrs_verify_staging_lib", "./rxrs_util"], /**
           );
         }
       }
+      if (forHazardous == "false") {
+        binSearchObj.filters.push(
+          search.createFilter({
+            name: "custrecord_bin_hazmat",
+            operator: "is",
+            values: false,
+          }),
+        );
+      }
       if (generalBin == true) {
         binSearchObj.filters.push(
           search.createFilter({

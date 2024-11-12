@@ -1983,6 +1983,7 @@ define([
    * @returns {number}
    */
   function getFileId(fileName) {
+    log.audit("getFileId", fileName);
     try {
       const fileSearch = search
         .create({
@@ -1993,7 +1994,7 @@ define([
         .getRange({ start: 0, end: 1 });
       return fileSearch[0].id;
     } catch (e) {
-      log.error("getFileId", e.message);
+      log.error("getFileId", { error: e.message, filename: fileName });
     }
   }
 
@@ -2128,11 +2129,11 @@ define([
         finalPaymentSched,
         csName,
       } = options;
-      let ClientScriptName = "rxrs_cs_verify_staging.js";
+      let ClientScriptName = 35951;
       if (csName) {
         ClientScriptName = "rxrs_cs_viewedit_line.js";
       }
-      form.clientScriptFileId = getFileId(ClientScriptName);
+      form.clientScriptFileId = 35951; // getFileId(ClientScriptName);
       let sublist;
       sublist = form.addSublist({
         id: "custpage_items_sublist",
@@ -2270,7 +2271,7 @@ define([
       let form = options.form;
       let sublistFields = options.sublistFields;
       let value = options.value;
-      let scriptId = getFileId("rxrs_cs_verify_staging.js");
+      let scriptId = 35951; // getFileId("rxrs_cs_verify_staging.js");
       form.clientScriptFileId = scriptId;
       let sublist;
       sublist = form.addSublist({

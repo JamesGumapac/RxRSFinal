@@ -4470,6 +4470,49 @@ define([
     }
   }
 
+  /**
+   * Get return request pending review per customer
+   * @param options.entityId Internal id of the customer
+   * @returns {*[]} array of the return request.
+   */
+  function getReturnRequestPendingReview(options) {
+    let res = [];
+    try {
+      let { entityId } = options;
+      const transactionSearchObj = search.create({
+        type: "transaction",
+        settings: [{ name: "consolidationtype", value: "ACCTTYPE" }],
+        filters: [
+          ["type", "anyof", "CuTrPrch106", "CuTrSale102"],
+          "AND",
+          ["status", "anyof", "CuTrPrch106:A", "CuTrSale102:A"],
+          "AND",
+          ["name", "anyof", entityId],
+          "AND",
+          ["mainline", "is", "T"],
+        ],
+        columns: [
+          search.createColumn({
+            name: "custbody_kd_rr_category",
+            label: "Category",
+          }),
+          search.createColumn({ name: "type", label: "Type" }),
+        ],
+      });
+      transactionSearchObj.run().each(function (result) {
+        res.push({
+          id: result.id,
+          category: result.getValue("custbody_kd_rr_category"),
+          type: result.getValue("type"),
+        });
+        return true;
+      });
+      return res;
+    } catch (e) {
+      log.error("getReturnRequestPendingReview", e.message);
+    }
+  }
+
   return {
     addAccruedPurchaseItem: addAccruedPurchaseItem,
     addAcrruedAmountBasedonTransaction: addAcrruedAmountBasedonTransaction,
@@ -4487,6 +4530,7 @@ define([
     createMasterReturnRequest: createMasterReturnRequest,
     createPayment: createPayment,
     createPO: createPO,
+    getReturnRequestPendingReview,
     createVendorCredit: createVendorCredit,
     deleteTransaction: deleteTransaction,
     getAllBills: getAllBills,

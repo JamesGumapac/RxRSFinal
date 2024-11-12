@@ -64,9 +64,7 @@ define([
         title: "Return Order Verification",
         hideNavBar: true,
       });
-      form.clientScriptFileId = rxrs_vs_util.getFileId(
-        "rxrs_cs_verifystaging.js",
-      );
+      form.clientScriptFileId = 35951;
 
       form = createHeaderFields({ form, params });
       return form;
@@ -152,19 +150,19 @@ define([
         }
       }
 
-      let htmlFileId = rxrs_vs_util.getFileId("SL_loading_html.html"); // HTML file for loading animation
-      if (htmlFileId) {
-        const dialogHtmlField = form.addField({
-          id: "custpage_jqueryui_loading_dialog",
-          type: serverWidget.FieldType.INLINEHTML,
-          label: "Dialog HTML Field",
-        });
-        dialogHtmlField.defaultValue = file
-          .load({
-            id: htmlFileId,
-          })
-          .getContents();
-      }
+      // let htmlFileId = rxrs_vs_util.getFileId("SL_loading_html.html"); // HTML file for loading animation
+      // if (htmlFileId) {
+      //   const dialogHtmlField = form.addField({
+      //     id: "custpage_jqueryui_loading_dialog",
+      //     type: serverWidget.FieldType.INLINEHTML,
+      //     label: "Dialog HTML Field",
+      //   });
+      //   dialogHtmlField.defaultValue = file
+      //     .load({
+      //       id: htmlFileId,
+      //     })
+      //     .getContents();
+      // }
       if (mrrId) {
         //ADD MRR FIELD LINK
 
@@ -545,12 +543,9 @@ define([
                 category == util.RRCATEGORY.C2 ||
                 category == util.RRCATEGORY.C3TO5
               ) {
-                const DESTRUCTIONBIN = 4;
                 binSearchParams.forControlItems = true;
                 binSearchParams.forHazardous = paramIsHazardous;
                 binSearchParams.productCategory = category;
-                binSearchParams.generalBin = true;
-                binSearchParams.binCategory = DESTRUCTIONBIN;
                 let outBoundBinResult =
                   bag.getBinPutAwayLocation(binSearchParams);
                 log.audit("outBoundBin", { outBoundBinResult, binCategory });
@@ -610,10 +605,10 @@ define([
           }
         }
       }
-      return form;
     } catch (e) {
       log.error("createHeaderFields", e.message);
     }
+    return form;
   };
 
   /**

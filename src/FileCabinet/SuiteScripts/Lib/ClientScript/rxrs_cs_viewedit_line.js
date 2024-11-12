@@ -50,9 +50,11 @@ define([
    * @since 2015.2
    */
   function pageInit(scriptContext) {
-    suitelet = scriptContext.currentRecord;
+    suitelet = currentRecord.get();
+
     let arrTemp = window.location.href.split("?");
     urlParams = new URLSearchParams(arrTemp[1]);
+    console.table("urlparams", urlParams);
     initialPaymentName = suitelet.getValue("custpage_payment_name");
     if (window.location.href.indexOf("isReload") != -1) {
       let isReload = urlParams.get("isReload");
@@ -238,6 +240,8 @@ define([
    * @since 2015.2
    */
   function fieldChanged(scriptContext) {
+    suitelet = currentRecord.get();
+    alert(suitelet);
     console.log(scriptContext.fieldId);
     console.log(scriptContext.sublistId);
     let params = {};
@@ -481,6 +485,8 @@ define([
 
   function updateFromCatalog() {
     try {
+      suitelet = currentRecord.get();
+      alert(JSON.stringify(suitelet));
       let selectedIRS = [];
 
       for (let i = 0; i < suitelet.getLineCount(SUBLIST); i++) {
@@ -668,8 +674,6 @@ define([
   }
 
   return {
-    pageInit: pageInit,
-    fieldChanged: fieldChanged,
     showMessage: showMessage,
     markAll: markAll,
     submitAll: submitAll,
