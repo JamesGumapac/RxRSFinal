@@ -2,10 +2,10 @@
  * @NApiVersion 2.1
  * @NScriptType MapReduceScript
  */
-define(["N/record", "N/search", "N/runtime"] /**
+define(["N/record", "N/search", "N/runtime", "../rxrs_util"] /**
  * @param{record} record
  * @param{search} search
- */, (record, search, runtime) => {
+ */, (record, search, runtime, util) => {
   /**
    * Defines the function that is executed at the beginning of the map/reduce process and generates the input data.
    * @param {Object} inputContext
@@ -62,39 +62,73 @@ define(["N/record", "N/search", "N/runtime"] /**
    * @since 2015.2
    */
   const reduce = (reduceContext) => {
+    const reduceObj = JSON.parse(reduceContext.values);
+    log.audit("reduce", reduceObj);
     try {
       let licenseFieldText = getParameters().licenseField;
       // log.audit("reduce", JSON.parse(reduceContext.values));
       let updatedEntityId;
+      if (getParameters().createTasks == true) {
+        log.audit("Creating Tasks");
+        if (licenseFieldText.includes("stae")) {
+          let existingTasks = util.getLicenseTask({
+            licenseType: "STATE",
+            entityId: reduceObj.id,
+            entityName: reduceObj.name,
+          });
 
-      if (licenseFieldText.includes("stae")) {
-        log.audit("Updating State");
-        const reduceObj = JSON.parse(reduceContext.values);
-        updatedEntityId = record.submitFields({
-          type: reduceObj.recType.toLowerCase(),
-          id: reduceObj.id,
-          values: {
-            custentity_kd_stae_license_expired: true,
-          },
-        });
-        log.audit("Updated State License Entity ", {
-          updatedEntityId,
-          licenseFieldText,
-        });
+          if (existingTasks == null) {
+            log.audit("existing Tasks", existingTasks);
+            util.createLicenseTask({
+              entityId: reduceObj.id,
+              title: "STATE LICENSE EXPIRED for " + reduceObj.name,
+              entityName: reduceObj.name,
+            });
+          }
+        } else {
+          let existingTasks = util.getLicenseTask({
+            licenseType: "DEA",
+            entityId: reduceObj.id,
+          });
+          log.audit("existing Tasks", existingTasks);
+          if (existingTasks == null) {
+            util.createLicenseTask({
+              entityId: reduceObj.id,
+              title: "DEA LICENSE EXPIRED for " + reduceObj.name,
+              entityName: reduceObj.name,
+            });
+          }
+        }
       } else {
-        const reduceObj = JSON.parse(reduceContext.values);
-        log.audit("Updating DEA");
-        updatedEntityId = record.submitFields({
-          type: reduceObj.recType.toLowerCase(),
-          id: reduceObj.id,
-          values: {
-            custentity_kd_license_expired: true,
-          },
-        });
-        log.audit("Updated DEA License Entity ", {
-          updatedEntityId,
-          licenseFieldText,
-        });
+        if (licenseFieldText.includes("stae")) {
+          log.audit("Updating State");
+
+          updatedEntityId = record.submitFields({
+            type: reduceObj.recType.toLowerCase(),
+            id: reduceObj.id,
+            values: {
+              custentity_kd_stae_license_expired: true,
+            },
+          });
+          log.audit("Updated State License Entity ", {
+            updatedEntityId,
+            licenseFieldText,
+          });
+        } else {
+          const reduceObj = JSON.parse(reduceContext.values);
+          log.audit("Updating DEA");
+          updatedEntityId = record.submitFields({
+            type: reduceObj.recType.toLowerCase(),
+            id: reduceObj.id,
+            values: {
+              custentity_kd_license_expired: true,
+            },
+          });
+          log.audit("Updated DEA License Entity ", {
+            updatedEntityId,
+            licenseFieldText,
+          });
+        }
       }
     } catch (e) {
       log.error("reduce", e.message);
@@ -131,13 +165,16 @@ define(["N/record", "N/search", "N/runtime"] /**
   function getExpiredEntity(options) {
     log.audit("getExpiredEntity", options);
     try {
+      let createTask = getParameters().createTasks == true ? "T" : "F";
       let finalRes = [];
       const entitySearch = search.create({
         type: "entity",
         filters: [
           [options.licenseDate, "onorbefore", "today"],
           "AND",
-          [options.licenseField, "is", "F"],
+          [options.licenseField, "is", createTask],
+          "AND",
+          ["internalidnumber", "equalto", "5515"],
         ],
         columns: [
           search.createColumn({
@@ -161,10 +198,12 @@ define(["N/record", "N/search", "N/runtime"] /**
             formula: "{type}",
             label: "Formula (Text)",
           }),
+          search.createColumn({ name: "altname", label: "Name" }),
         ],
       });
       const searchResultCount = entitySearch.runPaged().count;
       log.audit("getExpiredEntity searchResultCount", searchResultCount);
+
       if (searchResultCount == 0) return;
       if (searchResultCount > 4000) {
         const searchObj = entitySearch.runPaged({
@@ -194,6 +233,9 @@ define(["N/record", "N/search", "N/runtime"] /**
                 name: "formulatext",
                 formula: "{type}",
               });
+              const name = result.getValue({
+                name: "altname",
+              });
               resultObj.push({
                 id: id,
                 dateExp: dateExp,
@@ -201,6 +243,7 @@ define(["N/record", "N/search", "N/runtime"] /**
                 isExpired: isExpired,
                 stateLicenseisExpired: stateLicenseisExpired,
                 recType: recType,
+                name: name,
               });
               return true;
             });
@@ -209,7 +252,7 @@ define(["N/record", "N/search", "N/runtime"] /**
         return finalRes.flat(1);
       } else {
         let resultObj = [];
-        entitySearch.run().forEach(function (result) {
+        entitySearch.run().each(function (result) {
           const id = result.id;
           const dateExp = result.getValue({
             name: "custentity_kd_license_exp_date",
@@ -227,6 +270,9 @@ define(["N/record", "N/search", "N/runtime"] /**
             name: "formulatext",
             formula: "{type}",
           });
+          const name = result.getValue({
+            name: "altname",
+          });
           resultObj.push({
             id: id,
             dateExp: dateExp,
@@ -234,6 +280,7 @@ define(["N/record", "N/search", "N/runtime"] /**
             isExpired: isExpired,
             stateLicenseisExpired: stateLicenseisExpired,
             recType: recType,
+            name: name,
           });
           return true;
         });
@@ -248,9 +295,13 @@ define(["N/record", "N/search", "N/runtime"] /**
     let license = runtime.getCurrentScript().getParameter({
       name: "custscript_rxrs_license_field",
     });
+    let createTasks = runtime.getCurrentScript().getParameter({
+      name: "custscript_rxrs_create_tasks",
+    });
     return {
       licenseDate: license.split(",")[0],
       licenseField: license.split(",")[1],
+      createTasks: createTasks,
     };
   }
 

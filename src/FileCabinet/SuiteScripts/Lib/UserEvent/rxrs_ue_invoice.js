@@ -16,6 +16,7 @@ define(["../rxrs_transaction_lib", "N/ui/serverWidget"], (
    * @since 2015.2
    */
   const beforeLoad = (context) => {
+    log.audit("context.type", context.type);
     const curRec = context.newRecord;
     let src;
 

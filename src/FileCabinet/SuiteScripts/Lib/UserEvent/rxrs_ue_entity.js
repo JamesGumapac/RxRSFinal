@@ -28,7 +28,8 @@ define(["N/record", "N/search", "../rxrs_transaction_lib", "../rxrs_util"] /**
   const beforeSubmit = (scriptContext) => {
     try {
       let newRec = scriptContext.newRecord;
-      let DEAExpired = newRec.getValue("custentity_dea_license_required");
+
+      let DEAExpired = newRec.getValue("custentity_kd_license_expired");
       let stateLincesedExpired = newRec.getValue(
         "custentity_kd_license_expired",
       );
@@ -75,7 +76,70 @@ define(["N/record", "N/search", "../rxrs_transaction_lib", "../rxrs_util"] /**
    * @param {string} scriptContext.type - Trigger type; use values from the context.UserEventType enum
    * @since 2015.2
    */
-  const afterSubmit = (scriptContext) => {};
+  const afterSubmit = (scriptContext) => {
+    let { newRecord, oldRecord } = scriptContext;
+
+    try {
+      const newDeaLicenseExpired = newRecord.getValue(
+        "custentity_kd_license_expired",
+      );
+      const oldDeaLicenseExpired = oldRecord.getValue(
+        "custentity_kd_license_expired",
+      );
+      const oldStateLicenseExpired = oldRecord.getValue(
+        "custentity_kd_stae_license_expired",
+      );
+      const newStateLicenseExpired = newRecord.getValue(
+        "custentity_kd_stae_license_expired",
+      );
+      log.audit("License Values", {
+        newDeaLicenseExpired,
+        oldDeaLicenseExpired,
+        newStateLicenseExpired,
+        oldStateLicenseExpired,
+      });
+      if (newDeaLicenseExpired == false) {
+        if (newDeaLicenseExpired !== oldDeaLicenseExpired) {
+          let taskId = util.getLicenseTask({
+            licenseType: "DEA",
+            entityId: newRecord.id,
+            isCompleted: false,
+          });
+          if (taskId) {
+            log.audit("completing task", taskId);
+            record.submitFields({
+              type: record.Type.TASK,
+              id: taskId,
+              values: {
+                status: "COMPLETE",
+              },
+            });
+          }
+        }
+      }
+      if (newStateLicenseExpired == false) {
+        if (newStateLicenseExpired !== oldStateLicenseExpired) {
+          let taskId = util.getLicenseTask({
+            licenseType: "STATE",
+            entityId: newRecord.id,
+            isCompleted: false,
+          });
+          if (taskId) {
+            log.audit("completing task", taskId);
+            record.submitFields({
+              type: record.Type.TASK,
+              id: taskId,
+              values: {
+                status: "COMPLETE",
+              },
+            });
+          }
+        }
+      }
+    } catch (e) {
+      log.error("afterSubmit", e.message);
+    }
+  };
 
   return { beforeLoad, beforeSubmit, afterSubmit };
 });

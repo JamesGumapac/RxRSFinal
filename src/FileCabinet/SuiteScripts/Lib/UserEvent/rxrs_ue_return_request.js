@@ -97,7 +97,22 @@ define([
       log.debug("afterSubmit", { mrrId, status });
       switch (status) {
         case util.rrStatus.Approved:
-          tranlib.checkIfReturnRequuestIsApproved(mrrId);
+          const approvedCount = tranlib.getMrrReturnRequestCount({
+            mrrId: mrrId,
+            status: "APPROVED",
+          });
+          const totalCount = tranlib.getMrrReturnRequestCount({ mrrId: mrrId });
+          log.audit("RR Count", { approvedCount, totalCount });
+          if (approvedCount == totalCount) {
+            record.submitFields({
+              type: "customrecord_kod_masterreturn",
+              id: mrrId,
+              values: {
+                custrecord_kod_mr_status: util.mrrStatus.Approved,
+              },
+            });
+          }
+          break;
       }
     } catch (e) {
       log.error("afterSubmit", e.message);

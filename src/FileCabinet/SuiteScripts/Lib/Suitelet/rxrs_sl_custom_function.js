@@ -277,6 +277,9 @@ define([
               }),
             );
             break;
+          case "createInventoryAdjustment":
+            tranLib.createInventoryAdjustment(params);
+            break;
         }
       } catch (e) {
         context.response.writeLine("ERROR:" + e.message);

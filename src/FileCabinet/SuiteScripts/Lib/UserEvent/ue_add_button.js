@@ -88,6 +88,19 @@ define([
                 label: "Verify Items",
                 functionName: `openSuitelet(${JSON.stringify(paramsRR)})`,
               });
+              let approveParams = {
+                rrId: id,
+                mrrId: rrMrrId,
+                action: "createInventoryAdjustment",
+              };
+
+              context.form.addButton({
+                id: "custpage_approve",
+                label: "Approve",
+                functionName: `createTransaction(${JSON.stringify(
+                  approveParams,
+                )})`,
+              });
             }
             if (rrSaleStatus == rxrs_util.rrStatus.C2Kittobemailed) {
               let generateLabelURL = url.resolveScript({
@@ -535,7 +548,11 @@ define([
             const mrrRec = context.newRecord;
             const MAILIN = 2;
             const serviceType = mrrRec.getValue("custrecord_service_type");
-
+            const playnSelectionType = mrrRec.getValue(
+              "custrecord_mrrplanselectiontype",
+            );
+            const GOVERNMENT = 11;
+            const DESTRUCTION = 5;
             let generateLabelURL = url.resolveScript({
               scriptId: "customscript_rxrs_sl_generate_label",
               deploymentId: "customdeploy_rxrs_sl_generate_label",
@@ -596,13 +613,19 @@ define([
               url: viewEditSuiteletUrl,
               action: "fullWindow",
             };
-            context.form.addButton({
-              id: "custpage_viewedit_line",
-              label: "View Edit Line",
-              functionName: `openSuitelet(${JSON.stringify(
-                mrrViewEditLineURL,
-              )})`,
-            });
+            if (
+              playnSelectionType != GOVERNMENT ||
+              planSelectionType !== DESTRUCTION
+            ) {
+              context.form.addButton({
+                id: "custpage_viewedit_line",
+                label: "View Edit Line",
+                functionName: `openSuitelet(${JSON.stringify(
+                  mrrViewEditLineURL,
+                )})`,
+              });
+            }
+
             break;
         }
       }

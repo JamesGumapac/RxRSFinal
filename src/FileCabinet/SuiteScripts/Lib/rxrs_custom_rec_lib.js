@@ -75,7 +75,7 @@ define([
         filters: [["custrecord_invoice_applied", "anyof", invId]],
         columns: [
           search.createColumn({
-            name: "id",
+            name: "internalid",
             sort: search.Sort.ASC,
             label: "ID",
           }),
@@ -652,10 +652,11 @@ define([
               fieldId: "custrecord_credit_memo_id",
               value: cmParentId,
             });
-            cmChildRec.setValue({
-              fieldId: "custrecord_government",
-              value: isGovernment,
-            });
+            isGovernment &&
+              cmChildRec.setValue({
+                fieldId: "custrecord_government",
+                value: isGovernment,
+              });
             cmChildRec.setValue({
               fieldId: "custrecord_cm_lineuniquekey",
               value: lineUniqueKey,
@@ -676,11 +677,11 @@ define([
             if (isGovernment == true) {
               cmChildRec.setValue({
                 fieldId: "custrecord_cmline_gross_amount",
-                value: amountApplied / 0.15,
+                value: amountApplied, /// 0.15,
               });
               cmChildRec.setValue({
                 fieldId: "custrecord_cmline_gross_unit_price",
-                value: unitPrice / 0.15,
+                value: unitPrice, /// 0.15,
               });
             }
           } catch (e) {

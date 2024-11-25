@@ -316,7 +316,7 @@ define([
       type: "employee",
       filters: [["custentity_def_task_assignee_for_exp_lic", "is", "T"]],
     });
-    var searchResultCount = employeeSearchObj.runPaged().count;
+    const searchResultCount = employeeSearchObj.runPaged().count;
     log.debug("employeeSearchObj result count", searchResultCount);
     employeeSearchObj.run().each(function (result) {
       empId = result.id;
@@ -414,6 +414,73 @@ define([
         value: options.rrId,
       });
       log.debug("task id ", taskRec.save());
+    } catch (e) {
+      log.error("createTask", e.message);
+    }
+  };
+  /**
+   * Create Tasks
+   * @param options.title - Title of the Tasks
+   * @param options.entityId - Associated Entity (Vendor/Customer Pharmacy)
+   * @param options.entityName - Entity Name
+   * @return the internal id of the created tasks
+   */
+  const createLicenseTask = (options) => {
+    let { title, entityId, entityName } = options;
+    try {
+      const assignee = getDefaultTaskAssignee();
+      let companyName = "";
+      log.debug("Create Tasks Params", options);
+      const taskRec = record.create({
+        type: record.Type.TASK,
+      });
+      taskRec.setValue({
+        fieldId: "customform",
+        value: 158, //RXRS | License Update Request Task Form
+      });
+      taskRec.setValue({
+        fieldId: "title",
+        value: title,
+      });
+      taskRec.setValue({
+        fieldId: "message",
+        value: title,
+      });
+      taskRec.setValue({
+        fieldId: "assigned",
+        value: assignee,
+      });
+      taskRec.setValue({
+        fieldId: "company",
+        value: entityId,
+      });
+      taskRec.setValue({
+        fieldId: "sendemail",
+        value: true,
+      });
+      let dueDate = addDaysToDate({ date: new Date(), days: 1 });
+      log.audit("dueDate", dueDate);
+      if (new Date(dueDate).getDay() == 6) {
+        dueDate = addDaysToDate({ date: new Date(), days: 2 });
+      }
+      taskRec.setValue({
+        fieldId: "duedate",
+        value: new Date(dueDate),
+      });
+      let taskId = taskRec.save();
+      log.debug("task id ", taskId);
+      let entityLink = `<a href ="${generateRedirectLink({
+        type: getEntityType(entityId),
+        id: entityId,
+      })}">${entityName}</a>`;
+      email.send({
+        author: assignee,
+        recipients: assignee,
+        subject: title,
+        body: title + ` for ${entityLink}`,
+      });
+
+      return taskId;
     } catch (e) {
       log.error("createTask", e.message);
     }
@@ -1118,6 +1185,49 @@ define([
     }
   }
 
+  /**
+   * Get the assigned tasks for expirition
+   * @param options.licenseType - values accepted "DEA" or "STATE"
+   * @param options.entityId - Vendor or Customer Internal Id
+   * @param options.isCompleted - Set to true
+   * @return the internal id of the Tasks
+   */
+  function getLicenseTask(options) {
+    log.audit("getLicenseTask", options);
+    let Id = null;
+    let { licenseType, entityId, isCompleted } = options;
+    let keyWords = licenseType == "DEA" ? "DEA Expired" : "STATE License";
+    log.audit("keywords", keyWords);
+    try {
+      const taskSearchObj = search.create({
+        type: "task",
+        filters: [
+          ["company", "anyof", entityId],
+          "AND",
+          ["title", "haskeywords", keyWords],
+        ],
+      });
+      if (isCompleted == false) {
+        taskSearchObj.filters.push(
+          search.createFilter({
+            name: "status",
+            operator: "anyof",
+            values: ["PROGRESS", "NOTSTART"],
+          }),
+        );
+      }
+
+      const searchResultCount = taskSearchObj.runPaged().count;
+      log.debug("taskSearchObj result count", searchResultCount);
+      taskSearchObj.run().each(function (result) {
+        Id = result.id;
+      });
+      return Id;
+    } catch (e) {
+      log.error("getLicenseTask", e.message);
+    }
+  }
+
   return {
     addDaysToDate,
     checkInstanceInstnaceMR,
@@ -1125,6 +1235,7 @@ define([
     createReturnPackages,
     createReturnRequest,
     createTask,
+    createLicenseTask,
     formatDate,
     groupByDate,
     generateRRPODocumentNumber,
@@ -1152,6 +1263,7 @@ define([
     checkIfThereIsUpdate,
     removeDuplicates,
     removeEmptyArrays,
+    getLicenseTask,
     SERVICETYPE,
   };
 });

@@ -392,9 +392,31 @@ define([
                   }
                 }
               } else {
-                context.response.write(
-                  "ERROR: " + "NO AVAILABLE BINS FOR CONTROL CATEGORY",
-                );
+                if (binNumber) {
+                  let bagTagId = rxrsBagUtil.createBin({
+                    mrrId: mrrid,
+                    entity: entity,
+                    manufId: manufId,
+                    rrId: rrId,
+                    mfgProcessing: mfgProcessing,
+                    binNumber: binNumber,
+                  });
+                  log.audit("Destruction", { bagTagId });
+                  if (bagTagId) {
+                    returnScanList.forEach(function (item) {
+                      log.audit("item", item);
+                      rxrsBagUtil.updateBagLabel({
+                        ids: item.id,
+                        isVerify: JSON.parse(isVerify),
+                        bagId: bagTagId,
+                        prevBag: item.prevBag
+                          ? getPreviousBag(item.prevBag)
+                          : null,
+                        binNumber: binNumber,
+                      });
+                    });
+                  }
+                }
               }
             }
 

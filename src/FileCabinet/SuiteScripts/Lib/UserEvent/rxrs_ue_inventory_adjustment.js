@@ -2,7 +2,10 @@
  * @NApiVersion 2.1
  * @NScriptType UserEventScript
  */
-define([], () => {
+define(["N/record", "N/search"] /**
+ * @param{record} record
+ * @param{search} search
+ */, (record, search) => {
   /**
    * Defines the function definition that is executed before record is loaded.
    * @param {Object} scriptContext
@@ -23,42 +26,8 @@ define([], () => {
    * @since 2015.2
    */
   const beforeSubmit = (scriptContext) => {
-    const RETURNABLE = 2;
-    const NONRETURNABLE = 1;
-    const rec = scriptContext.newRecord;
-    // const rec = record.load({
-    //   type: record.Type.PURCHASE_ORDER,
-    //   id: curRec.id,
-    // });
     try {
-      for (let i = 0; i < rec.getLineCount("item"); i++) {
-        const mfgProcessing = rec.getSublistValue({
-          sublistId: "item",
-          fieldId: "custcol_kod_mfgprocessing",
-          line: i,
-        });
-        const pharmaProcessing = rec.getSublistValue({
-          sublistId: "item",
-          fieldId: "custcol_kod_rqstprocesing",
-          line: i,
-        });
-        log.debug("processing", {
-          line: i,
-          pharma: pharmaProcessing,
-          mfg: mfgProcessing,
-        });
-        if (
-          pharmaProcessing == NteONRETURNABLE &&
-          mfgProcessing == NONRETURNABLE
-        ) {
-          rec.setSublistValue({
-            sublistId: "item",
-            fieldId: "amount",
-            line: i,
-            value: 0,
-          });
-        }
-      }
+      let { newRecord, type } = scriptContext;
     } catch (e) {
       log.error("beforeSubmit", e.message);
     }

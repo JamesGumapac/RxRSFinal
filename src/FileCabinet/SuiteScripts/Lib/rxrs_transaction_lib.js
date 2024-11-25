@@ -209,7 +209,18 @@ define([
       }
 
       items.forEach((IRFields) => {
+        const RETURNABLE = 2;
+        const NONRETURNABLE = 1;
         log.audit("addInventoryAdjustmentLine line", IRFields);
+        let estimatedUnitCost = IRFields.amount;
+        if (
+          IRFields.pharmaProcessing == NONRETURNABLE &&
+          IRFields.mfgProcessing &&
+          NONRETURNABLE
+        ) {
+          estimatedUnitCost = 0;
+        }
+        log.audit("estimated Unit Cost", estimatedUnitCost);
         inventoryAdjRec.selectNewLine({
           sublistId: "inventory",
         });
@@ -230,7 +241,13 @@ define([
             fieldId: "adjustqtyby",
             value: +IRFields.quantity,
           });
-        +IRFields.amount &&
+        // +IRFields.amount &&
+        //   inventoryAdjRec.setCurrentSublistValue({
+        //     sublistId: "inventory",
+        //     fieldId: "unitcost",
+        //     value: +IRFields.amount,
+        //   });
+        estimatedUnitCost &&
           inventoryAdjRec.setCurrentSublistValue({
             sublistId: "inventory",
             fieldId: "unitcost",
@@ -259,13 +276,21 @@ define([
             fieldId: "receiptinventorynumber",
             value: IRFields.serialLotNumber,
           });
-        let expDate = new Date(IRFields.expDate);
-        expDate &&
+        if (IRFields.expDate !== null) {
+          let expDate = new Date(IRFields.expDate);
           subrec.setCurrentSublistValue({
             sublistId: "inventoryassignment",
             fieldId: "expirationdate",
             value: expDate,
           });
+        }
+        if (IRFields.binNumber) {
+          subrec.setCurrentSublistValue({
+            sublistId: "inventoryassignment",
+            fieldId: "binnumber",
+            value: IRFields.binNumber,
+          });
+        }
 
         subrec.commitLine({
           sublistId: "inventoryassignment",
@@ -495,7 +520,7 @@ define([
             type: "customrecord_kod_masterreturn",
             id: options,
             values: {
-              custrecord_kod_mr_status: rxrs_util.mrrStatus.WaitingForApproval,
+              custrecord_kod_mr_status: rxrs_util.mrrStatus.Approved,
             },
           });
         }
@@ -674,11 +699,12 @@ define([
             fullPartial,
             partialCount,
             priceLevel,
+            binNumber,
           } = itemInfo;
           poRec.selectNewLine({
             sublistId: "item",
           });
-          let toBinNumber = 230;
+
           item &&
             poRec.setCurrentSublistValue({
               sublistId: "item",
@@ -751,7 +777,7 @@ define([
                 quantity: quantity,
                 serialLotNumber: serialLotNumber,
                 expirationDate: expDate,
-                toBinNumber: toBinNumber,
+                toBinNumber: binNumber,
               });
             }
           } catch (e) {
@@ -1200,6 +1226,9 @@ define([
           search.createColumn({
             name: "custrecord_scanpricelevel",
           }),
+          search.createColumn({
+            name: "custrecord_itemscanbin",
+          }),
         ],
       });
       if (pharmaProcessing) {
@@ -1273,6 +1302,7 @@ define([
           fullPartial: result.getValue("custrecord_cs_full_partial_package"),
           partialCount: result.getValue("custrecord_scanpartialcount"),
           priceLevel: result.getValue("custrecord_scanpricelevel"),
+          binNumber: result.getValue("custrecord_itemscanbin"),
         });
         return true;
       });
@@ -4513,6 +4543,80 @@ define([
     }
   }
 
+  /**
+   * Get the Return Request of MRR based on Status
+   * @param options.mrrId - MasterReturn Id
+   * @param options.status - Set to APPROVED for approved return request only
+   * @param options.type - values accepted PO or SALES
+   * @return count
+   */
+  function getMrrReturnRequestCount(options) {
+    log.audit("getMrrReturnRequestCount", options);
+    let { status, mrrId, type } = options;
+    try {
+      const transactionSearchObj = search.create({
+        type: "transaction",
+        settings: [{ name: "consolidationtype", value: "ACCTTYPE" }],
+        filters: [
+          ["custbody_kd_master_return_id", "anyof", mrrId],
+          "AND",
+          ["mainline", "is", "T"],
+          "AND",
+          ["type", "anyof", "CuTrSale102", "CuTrPrch106"],
+        ],
+        columns: [
+          search.createColumn({
+            name: "tranid",
+            label: "Document Number",
+          }),
+          search.createColumn({ name: "statusref", label: "Status" }),
+        ],
+      });
+      if (status == "APPROVED") {
+        transactionSearchObj.filters.push(
+          search.createFilter({
+            name: "status",
+            operator: "anyof",
+            values: ["CuTrSale102:I", "CuTrPrch106:I"],
+          }),
+        );
+      }
+      return transactionSearchObj.runPaged().count;
+    } catch (e) {
+      log.error("getMrrReturnRequestCount", e.message);
+    }
+  }
+
+  /**
+   * Get the Transaction type based on internal id
+   * @param options.id Internal Id of the transaction
+   * @return Type of the transaction
+   */
+  function getTransactionType(options) {
+    log.audit("getTransactionType", options);
+    let { id } = options;
+    let type = null;
+    try {
+      const transactionSearchObj = search.create({
+        type: "transaction",
+        settings: [{ name: "consolidationtype", value: "ACCTTYPE" }],
+        filters: [
+          ["internalidnumber", "equalto", id],
+          "AND",
+          ["mainline", "is", "T"],
+        ],
+        columns: [search.createColumn({ name: "type", label: "Type" })],
+      });
+
+      transactionSearchObj.run().each(function (result) {
+        type = result.getText("type");
+      });
+      return type;
+    } catch (e) {
+      log.error("getTransactionType", e.message);
+    }
+  }
+
   return {
     addAccruedPurchaseItem: addAccruedPurchaseItem,
     addAcrruedAmountBasedonTransaction: addAcrruedAmountBasedonTransaction,
@@ -4530,7 +4634,6 @@ define([
     createMasterReturnRequest: createMasterReturnRequest,
     createPayment: createPayment,
     createPO: createPO,
-    getReturnRequestPendingReview,
     createVendorCredit: createVendorCredit,
     deleteTransaction: deleteTransaction,
     getAllBills: getAllBills,
@@ -4541,9 +4644,12 @@ define([
     getInvoiceLineCountWithCmPayment: getInvoiceLineCountWithCmPayment,
     getItemTransactionLine: getItemTransactionLine,
     getMasterReturnReturnRequest: getMasterReturnReturnRequest,
+    getMrrReturnRequestCount: getMrrReturnRequestCount,
     getPaymentSum: getPaymentSum,
+    getReturnRequestPendingReview,
     getReturnRequestPerCategory: getReturnRequestPerCategory,
     getSalesTransactionLine: getSalesTransactionLine,
+    getTransactionType: getTransactionType,
     removeBillCreditLine: removeBillCreditLine,
     removeCMFromInvoiceLine: removeCMFromInvoiceLine,
     removeVBLine: removeVBLine,

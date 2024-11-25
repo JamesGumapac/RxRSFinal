@@ -58,6 +58,9 @@ define([
       "custrecord_cs_full_partial_package",
     ];
     try {
+      if (context.type == "create") {
+        rxrs_customRec.updateIRSPrice(rec);
+      }
       if (context.type !== "edit") return;
       if (
         util.checkIfThereIsUpdate({
@@ -101,6 +104,7 @@ define([
       const DEFAULT = 12;
       const rec = context.newRecord;
       const oldRec = context.oldRecord;
+      let returnRequestId;
       log.audit("rec", rec, oldRec);
       const rrId = rec.getValue("custrecord_cs_ret_req_scan_rrid");
       try {
@@ -474,20 +478,39 @@ define([
           value: true,
         });
       }
+      returnRequestId = irsRec.getValue("custrecord_cs_ret_req_scan_rrid");
       irsRec.save({
         ignoreMandatoryFields: true,
       });
-      // record.submitFields.promise({
-      //   type: "customrecord_kd_taglabel",
-      //   id: irsRec.getValue("custrecord_prev_bag_assignement"),
-      //   values: {
-      //     custrecord_is_inactive: true,
-      //   },
-      // });
+
+      updataeReturnRequestStatus({ returnRequestId: returnRequestId });
     } catch (e) {
       log.error("afterSubmit", e.message);
     }
   };
+
+  function updataeReturnRequestStatus(options) {
+    log.audit("updataeReturnRequestStatus", options);
+    let { returnRequestId } = options;
+    try {
+      const rrRec = record.load({
+        type: util.getReturnRequestType(returnRequestId),
+        id: returnRequestId,
+      });
+      const rrStatus = rrRec.getValue("transtatus");
+      if (rrStatus == util.rrStatus.ReceivedPendingProcessing) {
+        rrRec.setValue({
+          fieldId: "transtatus",
+          value: util.rrStatus.Processing,
+        });
+      }
+      rrRec.save({
+        ignoreMandatoryFields: true,
+      });
+    } catch (e) {
+      log.error("updataeReturnRequestStatus", e.message);
+    }
+  }
 
   function isEmpty(stValue) {
     return (

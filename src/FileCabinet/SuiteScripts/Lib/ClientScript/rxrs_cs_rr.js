@@ -188,6 +188,13 @@ define(["N/currentRecord", "N/url", "N/https", "N/ui/message"], /**
             returnableFee: returnableFee,
           };
           break;
+        case "createInventoryAdjustment": {
+          params = {
+            rrId: rrId,
+            mrrId: mrrId,
+            action: "createInventoryAdjustment",
+          };
+        }
       }
 
       let functionSLURL = url.resolveScript({
