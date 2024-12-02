@@ -2067,6 +2067,7 @@ define([
    * @param {number}options.cmLinesCountWithPayment
    * @param {string}options.paymentId
    * @param {number}options.cmAmount
+   * @param {nummber}options.planSelectionType
    * Return the internal Id of the created custom payment
    */
   function createPayment(options) {
@@ -2076,6 +2077,7 @@ define([
       partiallyPaid: 4,
       fullyPaid: 5,
     };
+    const GOVERNMENT = 11;
     let invoiceUpdateStatus;
 
     let params = JSON.parse(options);
@@ -2111,44 +2113,107 @@ define([
             fieldId: "custbody_payment_invoice_link",
             value: invoiceId,
           });
+        const planSelectionType = paymentRec.getValue({
+          fieldId: "custbody_pi_plan_type",
+        });
+
         cmId &&
           paymentRec.setValue({
             fieldId: "custbody_credit_memos",
             value: cmId,
           });
-        paymentRec.selectNewLine({
-          sublistId: "line",
-        });
-        paymentRec.setCurrentSublistValue({
-          sublistId: "line",
-          fieldId: "account",
-          value: ACCOUNT.Undeposited_Funds,
-        });
-        log.debug("paymentamount", paymentAmount);
-        paymentRec.setCurrentSublistValue({
-          sublistId: "line",
-          fieldId: "debit",
-          value: paymentAmount,
-        });
-        paymentRec.commitLine({
-          sublistId: "line",
-        });
-        paymentRec.selectNewLine({
-          sublistId: "line",
-        });
-        paymentRec.setCurrentSublistValue({
-          sublistId: "line",
-          fieldId: "account",
-          value: ACCOUNT.Unapplied_Credits,
-        });
-        paymentRec.setCurrentSublistValue({
-          sublistId: "line",
-          fieldId: "credit",
-          value: paymentAmount,
-        });
-        paymentRec.commitLine({
-          sublistId: "line",
-        });
+        if (planSelectionType == GOVERNMENT) {
+          paymentRec.selectNewLine({
+            sublistId: "line",
+          });
+          paymentRec.setCurrentSublistValue({
+            sublistId: "line",
+            fieldId: "account",
+            value: ACCOUNT.Undeposited_Funds,
+          });
+          log.debug("paymentamount debit", (paymentAmount / 0.15).toFixed(2));
+          paymentRec.setCurrentSublistValue({
+            sublistId: "line",
+            fieldId: "debit",
+            value: (paymentAmount / 0.15).toFixed(2),
+          });
+          paymentRec.commitLine({
+            sublistId: "line",
+          });
+          paymentRec.selectNewLine({
+            sublistId: "line",
+          });
+          paymentRec.setCurrentSublistValue({
+            sublistId: "line",
+            fieldId: "account",
+            value: ACCOUNT.Unapplied_Credits,
+          });
+          log.debug("paymentamount credit", paymentAmount);
+          paymentRec.setCurrentSublistValue({
+            sublistId: "line",
+            fieldId: "credit",
+            value: paymentAmount,
+          });
+          paymentRec.commitLine({
+            sublistId: "line",
+          });
+          paymentRec.selectNewLine({
+            sublistId: "line",
+          });
+          paymentRec.setCurrentSublistValue({
+            sublistId: "line",
+            fieldId: "account",
+            value: ACCOUNT.Undeposited_Funds,
+          });
+          log.debug(
+            "paymentamount credit",
+            (paymentAmount / 0.15 - paymentAmount).toFixed(2),
+          );
+          paymentRec.setCurrentSublistValue({
+            sublistId: "line",
+            fieldId: "credit",
+            value: (paymentAmount / 0.15 - paymentAmount).toFixed(2),
+          });
+          paymentRec.commitLine({
+            sublistId: "line",
+          });
+          log.debug("payment rec", paymentRec);
+        } else {
+          paymentRec.selectNewLine({
+            sublistId: "line",
+          });
+          paymentRec.setCurrentSublistValue({
+            sublistId: "line",
+            fieldId: "account",
+            value: ACCOUNT.Undeposited_Funds,
+          });
+          log.debug("paymentamount", paymentAmount);
+          paymentRec.setCurrentSublistValue({
+            sublistId: "line",
+            fieldId: "debit",
+            value: paymentAmount,
+          });
+          paymentRec.commitLine({
+            sublistId: "line",
+          });
+          paymentRec.selectNewLine({
+            sublistId: "line",
+          });
+          paymentRec.setCurrentSublistValue({
+            sublistId: "line",
+            fieldId: "account",
+            value: ACCOUNT.Unapplied_Credits,
+          });
+          paymentRec.setCurrentSublistValue({
+            sublistId: "line",
+            fieldId: "credit",
+            value: paymentAmount,
+          });
+          paymentRec.commitLine({
+            sublistId: "line",
+          });
+        }
+
         paymentId = paymentRec.save({
           ignoreMandatoryFields: true,
         });
@@ -4618,6 +4683,7 @@ define([
   }
 
   return {
+    ACCOUNT: ACCOUNT,
     addAccruedPurchaseItem: addAccruedPurchaseItem,
     addAcrruedAmountBasedonTransaction: addAcrruedAmountBasedonTransaction,
     addBillProcessingFee: addBillProcessingFee,

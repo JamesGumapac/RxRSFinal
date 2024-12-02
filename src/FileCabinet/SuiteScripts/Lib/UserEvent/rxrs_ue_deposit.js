@@ -74,13 +74,13 @@ define(["N/record", "N/search", "../rxrs_transaction_lib"] /**
           newRecord.setSublistValue({
             sublistId: "cashback",
             fieldId: "account",
-            value: 940, //11260 Unapplied Credit
+            value: tranlib.ACCOUNT.Undeposited_Funds,
             line: 0,
           });
           newRecord.setSublistValue({
             sublistId: "cashback",
             fieldId: "amount",
-            value: cashBackAmount,
+            value: cashBackAmount * 0.85,
             line: 0,
           });
         }

@@ -5,7 +5,7 @@
 define(["../rxrs_transaction_lib", "../rxrs_custom_rec_lib", "N/record"], (
   tran_lib,
   customLib,
-  record
+  record,
 ) => {
   /**
    * Defines the function definition that is executed before record is loaded.
@@ -29,13 +29,13 @@ define(["../rxrs_transaction_lib", "../rxrs_custom_rec_lib", "N/record"], (
   const beforeSubmit = (scriptContext) => {
     try {
       const rec = scriptContext.newRecord;
-      if (rec.getValue("custrecord_is_government") == true) {
-        const amount = rec.getValue("custrecord_amount");
-        rec.setValue({
-          fieldId: "custrecord_gross_credit_received",
-          value: amount / 0.15,
-        });
-      }
+      // if (rec.getValue("custrecord_is_government") == true) {
+      //   const amount = rec.getValue("custrecord_amount");
+      //   rec.setValue({
+      //     fieldId: "custrecord_gross_credit_received",
+      //     value: amount / 0.15,
+      //   });
+      // }
     } catch (e) {
       log.error("beforeSubmit", e.message);
     }
@@ -65,7 +65,7 @@ define(["../rxrs_transaction_lib", "../rxrs_custom_rec_lib", "N/record"], (
         value: result.total,
       });
       const packingSlipAmount = curRec.getValue(
-        "custrecord_packing_slip_amount"
+        "custrecord_packing_slip_amount",
       );
 
       log.audit("amount", { oldAmount, newTotal: result.total });
