@@ -4567,8 +4567,9 @@ define([
 
   /**
    * Get return request pending review per customer
-   * @param options.entityId Internal id of the customer
-   * @returns {*[]} array of the return request.
+   * @param {Object} options - The options object containing the entityId of the customer
+   * @param {Number} options.entityId - Internal id of the customer
+   * @returns {Object[]} - Array of return request objects with id, category, and type properties
    */
   function getReturnRequestPendingReview(options) {
     let res = [];
@@ -4609,11 +4610,12 @@ define([
   }
 
   /**
-   * Get the Return Request of MRR based on Status
-   * @param options.mrrId - MasterReturn Id
-   * @param options.status - Set to APPROVED for approved return request only
-   * @param options.type - values accepted PO or SALES
-   * @return count
+   * Get the Return Request count of MRR based on Status
+   * @param {Object} options - The options object containing the following properties:
+   * @param {string} options.mrrId - The MasterReturn Id
+   * @param {string} options.status - Set to 'APPROVED' for approved return request only
+   * @param {string} options.type - The type of transaction, accepted values are 'PO' or 'SALES'
+   * @return {number} - The count of return requests based on the specified criteria
    */
   function getMrrReturnRequestCount(options) {
     log.audit("getMrrReturnRequestCount", options);
@@ -4653,9 +4655,12 @@ define([
   }
 
   /**
-   * Get the Transaction type based on internal id
-   * @param options.id Internal Id of the transaction
-   * @return Type of the transaction
+   * Retrieves the transaction type based on the provided options.
+   *
+   * @param {Object} options - The options object containing the transaction ID.
+   * @param {string} options.id - The internal ID of the transaction to retrieve the type for.
+   *
+   * @return {string|null} The transaction type of the specified transaction ID, or null if an error occurs.
    */
   function getTransactionType(options) {
     log.audit("getTransactionType", options);
