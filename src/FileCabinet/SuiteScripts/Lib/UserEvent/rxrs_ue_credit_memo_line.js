@@ -27,16 +27,16 @@ define(["N/record", "N/search"], /**
    */
   const beforeSubmit = (scriptContext) => {
     const rec = scriptContext.newRecord;
-    // if (rec.getValue("custrecord_government") == true) {
-    //   rec.setValue({
-    //     fieldId: "custrecord_cmline_gross_unit_price",
-    //     value: rec.getValue("custrecord_cm_unit_price") / 0.15,
-    //   });
-    //   rec.setValue({
-    //     fieldId: "custrecord_cmline_gross_amount",
-    //     value: rec.getValue("custrecord_cm_amount_applied") / 0.15,
-    //   });
-    // }
+    if (rec.getValue("custrecord_government") == true) {
+      rec.setValue({
+        fieldId: "custrecord_cmline_gross_unit_price",
+        value: rec.getValue("custrecord_cm_unit_price") / 0.15,
+      });
+      rec.setValue({
+        fieldId: "custrecord_cmline_gross_amount",
+        value: rec.getValue("custrecord_cm_amount_applied") / 0.15,
+      });
+    }
   };
 
   /**

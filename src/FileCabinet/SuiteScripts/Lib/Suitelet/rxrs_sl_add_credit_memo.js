@@ -34,7 +34,7 @@ define([
   cache,
   file,
   record,
-  redirect
+  redirect,
 ) => {
   /**
    * Defines the Suitelet script trigger point.
@@ -200,7 +200,7 @@ define([
       });
 
       form.clientScriptFileId = rxrs_util.getFileId(
-        "rxrs_cs_credit_memo_sl.js"
+        "rxrs_cs_credit_memo_sl.js",
       );
 
       const invoiceId = (form
@@ -243,6 +243,7 @@ define([
       if (soLine) {
         numOfRes = soLine.length ? soLine.length : 0;
       }
+      log.emergency("SO Line", soLine);
       let sublistFields = rxrs_sl_module.ADDCREDITMEMOSUBLIST;
       rxrs_sl_module.createSublist({
         form: form,

@@ -425,7 +425,7 @@ define([
         filters: [["custrecord_invoice_applied", "anyof", invId]],
         columns: [
           search.createColumn({
-            name: "custrecord_amount",
+            name: "custrecord_gross_credit_received",
             summary: "SUM",
             label: "Amount",
           }),
@@ -434,7 +434,7 @@ define([
 
       customrecord_creditmemoSearchObj.run().each(function (result) {
         total = result.getValue({
-          name: "custrecord_amount",
+          name: "custrecord_gross_credit_received",
           summary: "SUM",
         });
       });
@@ -460,7 +460,7 @@ define([
         filters: [["custrecord_credit_memo_id", "anyof", cmId]],
         columns: [
           search.createColumn({
-            name: "custrecord_cm_amount_applied",
+            name: "custrecord_cmline_gross_amount",
             summary: "SUM",
             label: "Amount Applied",
           }),
@@ -475,7 +475,7 @@ define([
         .run()
         .each(function (result) {
           total = result.getValue({
-            name: "custrecord_cm_amount_applied",
+            name: "custrecord_cmline_gross_amount",
             summary: "SUM",
           });
           lineCount = result.getValue({

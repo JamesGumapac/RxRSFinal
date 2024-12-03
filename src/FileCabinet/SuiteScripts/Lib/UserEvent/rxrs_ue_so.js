@@ -203,6 +203,7 @@ define([
           fieldId: "custbody_fulfillmenttype",
           value: returnProcedureInfo.custrecord_fulfillmenttype,
         });
+
       rxrs_tran_lib.setPartialAmount(currentRecord);
     } catch (e) {
       log.error("beforeSubmit", e.message);

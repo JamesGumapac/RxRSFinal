@@ -47,63 +47,65 @@ define(["N/record", "N/search"], /**
     let { currentRecord, fieldId, sublistId } = scriptContext;
     try {
       console.log(fieldId);
-      if (fieldId == "csegmanufacturer") {
-        let manufId = currentRecord.getValue("csegmanufacturer");
-        if (!manufId) return;
+      switch (fieldId) {
+        case "csegmanufacturer":
+          let manufId = currentRecord.getValue("csegmanufacturer");
+          if (!manufId) return;
 
-        let returnProcedureInfo = getManufReturnProcedure(manufId);
-        log.debug("returnProcedureInfo: ", returnProcedureInfo);
-        currentRecord.setValue({
-          fieldId: "custbody_rxrs_manuf_return_procedure",
-          value: returnProcedureInfo.id,
-        });
-        let rma_type;
-        if (returnProcedureInfo.custrecord_psauthtypec2) {
-          rma_type = returnProcedureInfo.custrecord_psauthtypec2;
+          let returnProcedureInfo = getManufReturnProcedure(manufId);
+          log.debug("returnProcedureInfo: ", returnProcedureInfo);
           currentRecord.setValue({
-            fieldId: "custbody_kd_rr_category",
-            value: CATEGORY.C2,
+            fieldId: "custbody_rxrs_manuf_return_procedure",
+            value: returnProcedureInfo.id,
           });
-        }
-        if (returnProcedureInfo.custrecord_psauthtypec35) {
-          rma_type = returnProcedureInfo.custrecord_psauthtypec35;
-          currentRecord.setValue({
-            fieldId: "custbody_kd_rr_category",
-            value: CATEGORY.C3_5,
-          });
-        }
-        if (returnProcedureInfo.custrecord_psauthtyperx) {
-          rma_type = returnProcedureInfo.custrecord_psauthtyperx;
-          currentRecord.setValue({
-            fieldId: "custbody_kd_rr_category",
-            value: CATEGORY.RX,
-          });
-        }
-        log.debug("rma_type", rma_type);
-        if (rma_type == RMATYPE.Manual) {
-          currentRecord.setValue({
-            fieldId: "custbody_kd_rma_type",
-            value: 1,
-          });
-        } else {
-          currentRecord.setValue({
-            fieldId: "custbody_kd_rma_type",
-            value: 2,
-          });
-        }
-        let authorizationEmail =
-          returnProcedureInfo.custrecord_psauthemail ||
-          returnProcedureInfo.custrecord_psaltpodemail;
-        authorizationEmail &&
-          currentRecord.setValue({
-            fieldId: "custbody_rma_authorization_email",
-            value: authorizationEmail,
-          });
-        returnProcedureInfo.custrecord_fulfillmenttype &&
-          currentRecord.setValue({
-            fieldId: "custbody_fulfillmenttype",
-            value: returnProcedureInfo.custrecord_fulfillmenttype,
-          });
+          let rma_type;
+          if (returnProcedureInfo.custrecord_psauthtypec2) {
+            rma_type = returnProcedureInfo.custrecord_psauthtypec2;
+            currentRecord.setValue({
+              fieldId: "custbody_kd_rr_category",
+              value: CATEGORY.C2,
+            });
+          }
+          if (returnProcedureInfo.custrecord_psauthtypec35) {
+            rma_type = returnProcedureInfo.custrecord_psauthtypec35;
+            currentRecord.setValue({
+              fieldId: "custbody_kd_rr_category",
+              value: CATEGORY.C3_5,
+            });
+          }
+          if (returnProcedureInfo.custrecord_psauthtyperx) {
+            rma_type = returnProcedureInfo.custrecord_psauthtyperx;
+            currentRecord.setValue({
+              fieldId: "custbody_kd_rr_category",
+              value: CATEGORY.RX,
+            });
+          }
+          log.debug("rma_type", rma_type);
+          if (rma_type == RMATYPE.Manual) {
+            currentRecord.setValue({
+              fieldId: "custbody_kd_rma_type",
+              value: 1,
+            });
+          } else {
+            currentRecord.setValue({
+              fieldId: "custbody_kd_rma_type",
+              value: 2,
+            });
+          }
+          let authorizationEmail =
+            returnProcedureInfo.custrecord_psauthemail ||
+            returnProcedureInfo.custrecord_psaltpodemail;
+          authorizationEmail &&
+            currentRecord.setValue({
+              fieldId: "custbody_rma_authorization_email",
+              value: authorizationEmail,
+            });
+          returnProcedureInfo.custrecord_fulfillmenttype &&
+            currentRecord.setValue({
+              fieldId: "custbody_fulfillmenttype",
+              value: returnProcedureInfo.custrecord_fulfillmenttype,
+            });
+          break;
       }
     } catch (e) {
       log.error("fieldChanged", e.message);
@@ -303,35 +305,35 @@ define(["N/record", "N/search"], /**
           custrecord_psauthtypec2: result.getValue("custrecord_psauthtypec2"),
           custrecord_psauthtypec35: result.getValue("custrecord_psauthtypec35"),
           custrecord_psauthrequiredrordestruction: result.getValue(
-            "custrecord_psauthrequiredrordestruction"
+            "custrecord_psauthrequiredrordestruction",
           ),
           custrecord_psauthtyperx: result.getValue("custrecord_psauthtyperx"),
           custrecord_psisbatchallowed: result.getValue(
-            "custrecord_psisbatchallowed"
+            "custrecord_psisbatchallowed",
           ),
           custrecord_psminmaxrequired: result.getValue(
-            "custrecord_psminmaxrequired"
+            "custrecord_psminmaxrequired",
           ),
           custrecord_psincludebrandproducts: result.getValue(
-            "custrecord_psincludebrandproducts"
+            "custrecord_psincludebrandproducts",
           ),
           custrecord_psmaxvalue: result.getValue("custrecord_psmaxvalue"),
           custrecord_psminprice: result.getValue("custrecord_psminprice"),
           custrecord_psminvalue: result.getValue("custrecord_psminvalue"),
           custrecord_psnrproc: result.getValue("custrecord_psnrproc"),
           custrecord_psauthsendproofofdestruction: result.getValue(
-            "custrecord_psauthsendproofofdestruction"
+            "custrecord_psauthsendproofofdestruction",
           ),
           custrecord_showpharmacynameonps: result.getValue(
-            "custrecord_showpharmacynameonps"
+            "custrecord_showpharmacynameonps",
           ),
           custrecord_psauthemail: result.getValue("custrecord_psauthemail"),
           custrecord_psaltpodemail: result.getValue("custrecord_psaltpodemail"),
           custrecord_fulfillmenttype: result.getValue(
-            "custrecord_fulfillmenttype"
+            "custrecord_fulfillmenttype",
           ),
           custrecord_returnprocmanufacturer: result.getValue(
-            "custrecord_returnprocmanufacturer"
+            "custrecord_returnprocmanufacturer",
           ),
         });
         return true;

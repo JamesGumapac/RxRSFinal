@@ -904,9 +904,10 @@ define([
   }
 
   /**
-   * Set the partial amount of the transaction if
-   * @param {object} rec
-   * @return  Object with modified amount
+   * Sets partial amount on each line item in a record based on custom fields.
+   *
+   * @param  rec - The NetSuite record object to process.
+   * @return  rec - The updated record with partial amounts set on line items.
    */
   function setPartialAmount(rec) {
     try {
@@ -918,40 +919,55 @@ define([
           line: i,
         });
         log.audit("Setting Partial Amount", isPartial);
-        if (isPartial == 1) continue; // If full qty count skip
-        const partialCount = rec.getSublistValue({
-          sublistId: "item",
-          fieldId: "custcol_kd_partialcount",
-          line: i,
-        });
-        const packageSize = rec.getSublistValue({
-          sublistId: "item",
-          fieldId: "custcol_package_size",
-          line: i,
-        });
-        const rate = rec.getSublistValue({
-          sublistId: "item",
-          fieldId: "rate",
-          line: i,
-        });
-        const qty = rec.getSublistValue({
-          sublistId: "item",
-          fieldId: "quantity",
-          line: i,
-        });
+        if (isPartial == 1) {
+          rec.setSublistValue({
+            sublistId: "item",
+            fieldId: "custcol_kd_partialcount",
+            value: 0,
+            line: i,
+          });
+        } else {
+          const partialCount = rec.getSublistValue({
+            sublistId: "item",
+            fieldId: "custcol_kd_partialcount",
+            line: i,
+          });
+          const packageSize = rec.getSublistValue({
+            sublistId: "item",
+            fieldId: "custcol_package_size",
+            line: i,
+          });
+          const rate = rec.getSublistValue({
+            sublistId: "item",
+            fieldId: "rate",
+            line: i,
+          });
+          const qty = rec.getSublistValue({
+            sublistId: "item",
+            fieldId: "quantity",
+            line: i,
+          });
 
-        let newAmount = qty * (partialCount / packageSize) * rate;
-        log.audit("setPartialAmount", {
-          partialAmount: newAmount.toFixed(2),
-          line: i,
-        });
-        rec.setSublistValue({
-          sublistId: "item",
-          fieldId: "amount",
-          line: i,
-          value: newAmount.toFixed(2),
-        });
+          let newAmount = qty * (partialCount / packageSize) * rate;
+          log.audit("setPartialAmount", {
+            partialAmount: newAmount.toFixed(2),
+            line: i,
+          });
+          rec.setSublistValue({
+            sublistId: "item",
+            fieldId: "quantity",
+            value: 1,
+            line: i,
+          });
+          rec.setSublistValue({
+            sublistId: "item",
+            fieldId: "amount",
+            line: i,
+            value: newAmount.toFixed(2),
+          });
+        }
       }
+
       return rec;
     } catch (e) {
       log.error("setPartialAmount", e.message);
@@ -1684,10 +1700,10 @@ define([
             packageSize: packageSize,
             quantity: quantity,
             partialQuantity: partialQuantity,
-            rate: rate,
-            amount: amount,
-            unitPrice: unitPrice,
-            amountPaid: amountPaid,
+            rate: rate.toFixed(2),
+            amount: amount.toFixed(2),
+            unitPrice: unitPrice.toFixed(2),
+            amountPaid: amountPaid.toFixed(2),
             creditMemoReference: creditMemoReference,
             creditMemoParent: creditMemoParent,
           });
@@ -1707,10 +1723,10 @@ define([
             packageSize: packageSize,
             quantity: quantity,
             partialQuantity: partialQuantity,
-            rate: rate,
-            amount: amount,
-            unitPrice: unitPrice,
-            amountPaid: amountPaid,
+            rate: rate.toFixed(2),
+            amount: amount.toFixed(2),
+            unitPrice: unitPrice.toFixed(2),
+            amountPaid: amountPaid.toFixed(2),
             creditMemoReference: creditMemoReference,
             creditMemoParent: creditMemoParent,
           });
@@ -1765,6 +1781,10 @@ define([
         fieldId: "tobeemailed",
         value: false,
       });
+      objRecord.setValue({
+        fieldId: "discountitem",
+        value: "",
+      });
 
       for (let i = 0; i < objRecord.getLineCount("item"); i++) {
         objRecord.removeLine({
@@ -1801,23 +1821,23 @@ define([
 
       if (!isEmpty(creditAdjustmentAmount)) {
         try {
-          objRecord.selectLine({
-            sublistId: "item",
-            line: 1,
-          });
-          objRecord.setCurrentSublistValue({
-            sublistId: "item",
-            fieldId: "item",
-            value: creditAdjustmentItem,
-          });
-          objRecord.setCurrentSublistValue({
-            sublistId: "item",
-            fieldId: "amount",
-            value: creditAdjustmentAmount,
-          });
-          objRecord.commitLine({
-            sublistId: "item",
-          });
+          // objRecord.selectLine({
+          //   sublistId: "item",
+          //   line: 1,
+          // });
+          // objRecord.setCurrentSublistValue({
+          //   sublistId: "item",
+          //   fieldId: "item",
+          //   value: creditAdjustmentItem,
+          // });
+          // objRecord.setCurrentSublistValue({
+          //   sublistId: "item",
+          //   fieldId: "amount",
+          //   value: creditAdjustmentAmount,
+          // });
+          // objRecord.commitLine({
+          //   sublistId: "item",
+          // });
         } catch (e) {
           log.error("Entering CreditAdjumentAccount", e.message);
         }
@@ -2131,11 +2151,11 @@ define([
             fieldId: "account",
             value: ACCOUNT.Undeposited_Funds,
           });
-          log.debug("paymentamount debit", (paymentAmount / 0.15).toFixed(2));
+          log.debug("paymentamount debit", paymentAmount.toFixed(2));
           paymentRec.setCurrentSublistValue({
             sublistId: "line",
             fieldId: "debit",
-            value: (paymentAmount / 0.15).toFixed(2),
+            value: paymentAmount.toFixed(2),
           });
           paymentRec.commitLine({
             sublistId: "line",
@@ -2152,7 +2172,7 @@ define([
           paymentRec.setCurrentSublistValue({
             sublistId: "line",
             fieldId: "credit",
-            value: paymentAmount,
+            value: (paymentAmount * 0.15).toFixed(2),
           });
           paymentRec.commitLine({
             sublistId: "line",
@@ -2165,14 +2185,11 @@ define([
             fieldId: "account",
             value: ACCOUNT.Undeposited_Funds,
           });
-          log.debug(
-            "paymentamount credit",
-            (paymentAmount / 0.15 - paymentAmount).toFixed(2),
-          );
+          log.debug("paymentamount credit", (paymentAmount * 0.85).toFixed(2));
           paymentRec.setCurrentSublistValue({
             sublistId: "line",
             fieldId: "credit",
-            value: (paymentAmount / 0.15 - paymentAmount).toFixed(2),
+            value: (paymentAmount * 0.85).toFixed(2),
           });
           paymentRec.commitLine({
             sublistId: "line",
