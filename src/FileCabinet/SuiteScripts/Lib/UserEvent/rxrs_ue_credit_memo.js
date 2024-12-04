@@ -29,13 +29,16 @@ define(["../rxrs_transaction_lib", "../rxrs_custom_rec_lib", "N/record"], (
   const beforeSubmit = (scriptContext) => {
     try {
       const rec = scriptContext.newRecord;
-      // if (rec.getValue("custrecord_is_government") == true) {
-      //   const amount = rec.getValue("custrecord_amount");
-      //   rec.setValue({
-      //     fieldId: "custrecord_gross_credit_received",
-      //     value: amount / 0.15,
-      //   });
-      // }
+      if (rec.getValue("custrecord_is_government") == true) {
+        const grossCreditReceived = rec.getValue(
+          "custrecord_gross_credit_received",
+        );
+        log.audit("amount", grossCreditReceived * 0.15);
+        rec.setValue({
+          fieldId: "custrecord_amount",
+          value: grossCreditReceived * 0.15,
+        });
+      }
     } catch (e) {
       log.error("beforeSubmit", e.message);
     }
@@ -59,7 +62,11 @@ define(["../rxrs_transaction_lib", "../rxrs_custom_rec_lib", "N/record"], (
       });
       const result = customLib.getCMParentInfo(rec.id);
       log.audit("result", result);
+      let total = result.total;
       const oldAmount = curRec.getValue("custrecord_amount");
+      if (rec.getValue("custrecord_is_government") == true) {
+        total *= 0.15;
+      }
       curRec.setValue({
         fieldId: "custrecord_amount",
         value: result.total,
@@ -68,17 +75,18 @@ define(["../rxrs_transaction_lib", "../rxrs_custom_rec_lib", "N/record"], (
         "custrecord_packing_slip_amount",
       );
 
-      log.audit("amount", { oldAmount, newTotal: result.total });
-      //  if (Number(oldAmount) == Number(result.total)) return;
+      log.audit("amount", { packingSlipAmount, total });
+      if (Number(oldAmount) == Number(result.total)) return;
       let nsCMId = curRec.getValue("custrecord_ns_cm_id");
-      creditAdjustmentAmount = Number(packingSlipAmount) - Number(result.total);
+      creditAdjustmentAmount =
+        Number(packingSlipAmount).toFixed(2) - Number(total).toFixed(2);
       log.audit("nsCMId", nsCMId);
       if (nsCMId == "") {
         try {
           const NSCmId = tran_lib.createCreditMemoFromInv({
             invId: curRec.getValue("custrecord_invoice_applied"),
             cmId: curRec.id,
-            amount: result.total,
+            amount: total,
             itemId: 923, // Credit Received
             creditType: 2,
             creditAdjustmentAmount: creditAdjustmentAmount,
@@ -102,7 +110,7 @@ define(["../rxrs_transaction_lib", "../rxrs_custom_rec_lib", "N/record"], (
           const NSCmId = tran_lib.createCreditMemoFromInv({
             invId: curRec.getValue("custrecord_invoice_applied"),
             cmId: curRec.id,
-            amount: result.total,
+            amount: total,
             itemId: 923, // Credit Received
             creditAdjustmentAmount: creditAdjustmentAmount,
             creditAdjustmentItem: 925,

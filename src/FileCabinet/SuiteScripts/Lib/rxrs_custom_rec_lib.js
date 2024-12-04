@@ -298,11 +298,12 @@ define([
         amount &&
           cmRec.setValue({
             fieldId: "custrecord_gross_credit_received",
-            value: (amount / 0.15).toFixed(2),
+            value: amount / 0.15,
           });
+        amount *= 0.15;
         packingSlipAmount *= 0.15;
       }
-
+      log.audit("amount", amount);
       isGovernment &&
         cmRec.setValue({
           fieldId: "custrecord_is_government",

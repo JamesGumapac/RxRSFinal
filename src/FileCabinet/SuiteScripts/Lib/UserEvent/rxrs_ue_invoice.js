@@ -54,43 +54,7 @@ define(["../rxrs_transaction_lib", "N/ui/serverWidget", "N/search"], (
    * @param {string} scriptContext.type - Trigger type; use values from the context.UserEventType enum
    * @since 2015.2
    */
-  const beforeSubmit = (scriptContext) => {
-    let rec = scriptContext.newRecord;
-    let planSelectionType;
-    try {
-      if (scriptContext.type == "create") {
-        const irsId = rec.getSublistValue({
-          sublistId: "item",
-          fieldId: "custcol_item_scan",
-          line: 0,
-        });
-        if (irsId) {
-          let irsSearch = search.lookupFields({
-            type: "customrecord_cs_item_ret_scan",
-            id: irsId,
-            columns: ["custrecord_irs_plan_selection_type"],
-          });
-          planSelectionType =
-            irsSearch.custrecord_irs_plan_selection_type[0].value;
-          log.audit("res", planSelectionType);
-          if (planSelectionType) {
-            rec.setValue({
-              fieldId: "custbody_plan_type",
-              value: planSelectionType,
-            });
-          }
-        }
-      }
-
-      // if (planSelectionType == 11) {
-      //   // GOVERNMENT
-      //   rec = rxrs_tran_lib.setERVDiscountPrice(rec);
-      // }
-      rxrs_tran_lib.setPartialAmount(rec);
-    } catch (e) {
-      log.error("beforeSubmit", e.message);
-    }
-  };
+  const beforeSubmit = (scriptContext) => {};
 
   /**
    * Defines the function definition that is executed after record is submitted.

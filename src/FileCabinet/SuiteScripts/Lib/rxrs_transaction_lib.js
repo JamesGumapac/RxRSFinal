@@ -867,32 +867,32 @@ define([
             sublistId: "item",
             fieldId: "price",
             line: i,
-            value: 15, // ERV DISCOUNT
+            value: 14, // ERV DISCOUNT
           });
-          const amount = rec.getSublistValue({
-            sublistId: "item",
-            fieldId: "amount",
-            line: i,
-          });
-          const rate = rec.getSublistValue({
-            sublistId: "item",
-            fieldId: "rate",
-            line: i,
-          });
-          const ervAmount = amount / 0.15;
-          const ervRate = rate / 0.15;
-          rec.setSublistValue({
-            sublistId: "item",
-            fieldId: "custcol_full_amount",
-            line: i,
-            value: ervAmount, // ERV DISCOUNT
-          });
-          rec.setSublistValue({
-            sublistId: "item",
-            fieldId: "custcol_full_unit_price",
-            line: i,
-            value: ervRate, // ERV DISCOUNT
-          });
+          // const amount = rec.getSublistValue({
+          //   sublistId: "item",
+          //   fieldId: "amount",
+          //   line: i,
+          // });
+          // const rate = rec.getSublistValue({
+          //   sublistId: "item",
+          //   fieldId: "rate",
+          //   line: i,
+          // });
+          // const ervAmount = amount / 0.15;
+          // const ervRate = rate / 0.15;
+          // rec.setSublistValue({
+          //   sublistId: "item",
+          //   fieldId: "custcol_full_amount",
+          //   line: i,
+          //   value: ervAmount, // ERV DISCOUNT
+          // });
+          // rec.setSublistValue({
+          //   sublistId: "item",
+          //   fieldId: "custcol_full_unit_price",
+          //   line: i,
+          //   value: ervRate, // ERV DISCOUNT
+          // });
         } catch (e) {
           log.error("Setting ERV Amount", e.message);
         }
@@ -1676,10 +1676,10 @@ define([
         log.audit("isgovernemt", isGoverment);
 
         if (isGoverment == true) {
-          unitPrice /= 0.15;
-          amountPaid /= 0.15;
-          rate /= 0.15;
-          amount /= 0.15;
+          // unitPrice /= 0.15;
+          // amountPaid /= 0.15;
+          // rate /= 0.15;
+          // amount /= 0.15;
         }
         log.emergency("creditMemoReference", isEmpty(creditMemoReference));
         log.emergency("condition: " + isEdit, JSON.parse(isEdit) == true);
@@ -1725,8 +1725,8 @@ define([
             partialQuantity: partialQuantity,
             rate: rate.toFixed(2),
             amount: amount.toFixed(2),
-            unitPrice: unitPrice.toFixed(2),
-            amountPaid: amountPaid.toFixed(2),
+            unitPrice: unitPrice,
+            amountPaid: amountPaid,
             creditMemoReference: creditMemoReference,
             creditMemoParent: creditMemoParent,
           });
@@ -1819,25 +1819,25 @@ define([
         sublistId: "item",
       });
 
-      if (!isEmpty(creditAdjustmentAmount)) {
+      if (creditAdjustmentAmount > 0) {
         try {
-          // objRecord.selectLine({
-          //   sublistId: "item",
-          //   line: 1,
-          // });
-          // objRecord.setCurrentSublistValue({
-          //   sublistId: "item",
-          //   fieldId: "item",
-          //   value: creditAdjustmentItem,
-          // });
-          // objRecord.setCurrentSublistValue({
-          //   sublistId: "item",
-          //   fieldId: "amount",
-          //   value: creditAdjustmentAmount,
-          // });
-          // objRecord.commitLine({
-          //   sublistId: "item",
-          // });
+          objRecord.selectLine({
+            sublistId: "item",
+            line: 1,
+          });
+          objRecord.setCurrentSublistValue({
+            sublistId: "item",
+            fieldId: "item",
+            value: creditAdjustmentItem,
+          });
+          objRecord.setCurrentSublistValue({
+            sublistId: "item",
+            fieldId: "amount",
+            value: creditAdjustmentAmount,
+          });
+          objRecord.commitLine({
+            sublistId: "item",
+          });
         } catch (e) {
           log.error("Entering CreditAdjumentAccount", e.message);
         }
@@ -1853,7 +1853,6 @@ define([
         fieldId: "internalid",
         value: invId,
       });
-
       objRecord.selectLine({
         sublistId: "apply",
         line: 0,
@@ -1873,7 +1872,8 @@ define([
           fieldId: "apply",
         }),
       );
-      if (invIndex !== 0) {
+      log.audit("invoice index", invIndex);
+      if (invIndex !== -1) {
         log.audit("Invoice index", invIndex);
         objRecord.selectLine({
           sublistId: "apply",
