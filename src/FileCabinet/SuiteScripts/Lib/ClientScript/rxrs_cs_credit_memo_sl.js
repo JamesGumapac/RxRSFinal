@@ -621,6 +621,7 @@ define([
             line: i,
           });
           if (isGovernment == true) {
+            total = packingSlipAmountTotal * 0.15;
             unitPrice *= 0.15;
             amountApplied *= 0.15;
           }

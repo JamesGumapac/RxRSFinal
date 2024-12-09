@@ -4704,9 +4704,51 @@ define([
     }
   }
 
+  /**
+   * Retrieves a transaction by its external ID and optional type.
+   *
+   * @param {Object} options - The options object containing the externalId and type of the transaction to retrieve.
+   * @param {string} options.externalId - The external ID of the transaction to search for.
+   * @param {string} [options.type] - The optional type of the transaction to filter by.
+   * @returns {void}
+   */
+  function getTransactionByExternalId(options) {
+    log.audit("getTransactionByExternalId", options);
+    let { externalId, type } = options;
+    let id;
+    try {
+      const tranSearchObj = search.create({
+        type: "invoice",
+        settings: [{ name: "consolidationtype", value: "ACCTTYPE" }],
+        filters: [
+          ["numbertext", "is", externalId],
+          "AND",
+          ["mainline", "is", "T"],
+        ],
+      });
+      if (type) {
+        tranSearchObj.filters.push(
+          search.createFilter({
+            name: "type",
+            operator: "anyof",
+            values: type,
+          }),
+        );
+      }
+
+      tranSearchObj.run().each(function (result) {
+        id = result.id;
+      });
+      return id;
+    } catch (e) {
+      log.error("getTransactionByExternalId", e.message);
+    }
+  }
+
   return {
     ACCOUNT: ACCOUNT,
     addAccruedPurchaseItem: addAccruedPurchaseItem,
+    getTransactionByExternalId: getTransactionByExternalId,
     addAcrruedAmountBasedonTransaction: addAcrruedAmountBasedonTransaction,
     addBillProcessingFee: addBillProcessingFee,
     checkExistingPayment: checkExistingPayment,

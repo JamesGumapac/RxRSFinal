@@ -67,26 +67,31 @@ define(["../rxrs_transaction_lib", "../rxrs_custom_rec_lib", "N/record"], (
       if (rec.getValue("custrecord_is_government") == true) {
         total *= 0.15;
       }
-      curRec.setValue({
-        fieldId: "custrecord_amount",
-        value: result.total,
-      });
       const packingSlipAmount = curRec.getValue(
         "custrecord_packing_slip_amount",
       );
-
+      curRec.setValue({
+        fieldId: "custrecord_amount",
+        value: packingSlipAmount,
+      });
+      let grossCreditReceived = rec.getValue(
+        "custrecord_gross_credit_received",
+      );
       log.audit("amount", { packingSlipAmount, total });
       if (Number(oldAmount) == Number(result.total)) return;
       let nsCMId = curRec.getValue("custrecord_ns_cm_id");
       creditAdjustmentAmount =
-        Number(packingSlipAmount).toFixed(2) - Number(total).toFixed(2);
+        Number(packingSlipAmount).toFixed(2) -
+        roundToTwoDecimalPlaces(Number(grossCreditReceived) * 0.15);
       log.audit("nsCMId", nsCMId);
+      creditAdjustmentAmount =
+        creditAdjustmentAmount > 1 ? creditAdjustmentAmount : 0;
       if (nsCMId == "") {
         try {
           const NSCmId = tran_lib.createCreditMemoFromInv({
             invId: curRec.getValue("custrecord_invoice_applied"),
             cmId: curRec.id,
-            amount: total,
+            amount: packingSlipAmount,
             itemId: 923, // Credit Received
             creditType: 2,
             creditAdjustmentAmount: creditAdjustmentAmount,
@@ -110,7 +115,7 @@ define(["../rxrs_transaction_lib", "../rxrs_custom_rec_lib", "N/record"], (
           const NSCmId = tran_lib.createCreditMemoFromInv({
             invId: curRec.getValue("custrecord_invoice_applied"),
             cmId: curRec.id,
-            amount: total,
+            amount: packingSlipAmount,
             itemId: 923, // Credit Received
             creditAdjustmentAmount: creditAdjustmentAmount,
             creditAdjustmentItem: 925,
@@ -133,6 +138,10 @@ define(["../rxrs_transaction_lib", "../rxrs_custom_rec_lib", "N/record"], (
       log.error("afterSubmit", e.message);
     }
   };
+
+  function roundToTwoDecimalPlaces(number) {
+    return parseFloat(number.toFixed(2));
+  }
 
   return { beforeSubmit, afterSubmit };
 });
