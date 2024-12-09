@@ -35,23 +35,16 @@ define([
 
   /**
    * Look if there is already a custom credit memo created for the invoice
-   * @param invId
-   * @return {*} credit memo Id
+   * @param {string} CreditMemoNumber - The custom credit memo number to search for
+   * @return {*} The credit memo Id if found, otherwise undefined
    */
-  function lookForExistingCreditMemoRec(invId) {
+  function lookForExistingCreditMemoRec(CreditMemoNumber) {
     try {
+      log.audit("lookForExistingCreditMemoRec", CreditMemoNumber);
       let creditMemoId;
       const customrecord_creditmemoSearchObj = search.create({
         type: "customrecord_creditmemo",
-        filters: [["custrecord_invoice_applied", "anyof", invId]],
-        columns: [
-          search.createColumn({
-            name: "id",
-            sort: search.Sort.ASC,
-            label: "ID",
-          }),
-          search.createColumn({ name: "scriptid", label: "Script ID" }),
-        ],
+        filters: [["custrecord_creditmemonum", "is", CreditMemoNumber]],
       });
 
       customrecord_creditmemoSearchObj.run().each(function (result) {

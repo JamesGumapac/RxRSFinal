@@ -4745,6 +4745,53 @@ define([
     }
   }
 
+  /**
+   * Retrieves transaction line details based on provided options.
+   *
+   * @param {Object} options - The options object containing the following properties:
+   * @param {string} options.invId - The internal ID of the transaction to search for.
+   * @param {string} options.NDC - The NDC (National Drug Code) to search for within the transaction.
+   *
+   * @return {Object} An object containing the following properties:
+   * @return {number} amount - The amount associated with the transaction line.
+   * @return {string} lineUniqueKey - The unique key of the transaction line.
+   */
+  function getNDCTransactionLineDetails(options) {
+    log.audit("getNDCTransactionLineDetails", options);
+    let { invId, NDC } = options;
+    let returnObj = {};
+    try {
+      const transactionSearchObj = search.create({
+        type: "transaction",
+
+        filters: [
+          ["internalidnumber", "equalto", invId],
+          "AND",
+          ["custcol_kd_ndc", "contains", NDC],
+        ],
+        columns: [
+          search.createColumn({
+            name: "lineuniquekey",
+            label: "Line Unique Key",
+          }),
+          search.createColumn({ name: "amount", label: "Amount" }),
+          search.createColumn({ name: "custcol_kd_ndc", label: "NDC" }),
+        ],
+      });
+      const searchResultCount = transactionSearchObj.runPaged().count;
+
+      transactionSearchObj.run().each(function (result) {
+        returnObj = {
+          amount: result.getValue("amount"),
+          lineUniqueKey: result.getValue("lineuniquekey"),
+        };
+      });
+      return returnObj;
+    } catch (e) {
+      log.error("getNDCTransactionLineDetails", e.message);
+    }
+  }
+
   return {
     ACCOUNT: ACCOUNT,
     addAccruedPurchaseItem: addAccruedPurchaseItem,
@@ -4769,6 +4816,7 @@ define([
     getAllBills: getAllBills,
     getBillId: getBillId,
     getBillStatus: getBillStatus,
+    getNDCTransactionLineDetails: getNDCTransactionLineDetails,
     getCertainField: getCertainField,
     getInvoiceLineAmount: getInvoiceLineAmount,
     getInvoiceLineCountWithCmPayment: getInvoiceLineCountWithCmPayment,
