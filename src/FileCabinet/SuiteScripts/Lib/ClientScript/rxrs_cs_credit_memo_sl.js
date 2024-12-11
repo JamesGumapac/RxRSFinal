@@ -177,6 +177,9 @@ define([
   function fieldChanged(scriptContext) {
     try {
       console.log(scriptContext.fieldId);
+      if (scriptContext.fieldId == "custpage_file_upload") {
+        let file = currentRecord.getValue("custpage_file_upload");
+      }
       if (scriptContext.fieldId == "custpage_custom_amount") {
         //console.log("fieldChanged custpage_custom_amount");
         const customAmount = suitelet.getValue("custpage_custom_amount");
@@ -690,6 +693,13 @@ define([
             });
             return;
           }
+        } else {
+          if (parentParams.forCreation.cmLines.length <= 0) {
+            m.show({
+              duration: 2000,
+            });
+            return;
+          }
         }
 
         let cmParams = {
@@ -787,9 +797,23 @@ define([
     return newSearchParams ? `${path}?${newSearchParams}` : path;
   }
 
+  function uploadFile() {
+    let file = suitelet.getValue("custpage_file_upload");
+    if (!file) {
+      alert("No file to process");
+      return;
+    }
+
+    if (file.includes(".txt") == false) {
+      alert("Please upload .txt file only");
+    } else {
+    }
+  }
+
   return {
     pageInit: pageInit,
     fieldChanged: fieldChanged,
+    uploadFile: uploadFile,
     showMessage: showMessage,
     createCreditMemo: createCreditMemo,
     markAll: markAll,

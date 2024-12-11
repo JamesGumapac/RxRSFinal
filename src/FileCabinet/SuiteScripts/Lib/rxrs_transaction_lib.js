@@ -4715,7 +4715,8 @@ define([
   function getTransactionByExternalId(options) {
     log.audit("getTransactionByExternalId", options);
     let { externalId, type } = options;
-    let id;
+
+    let res = {};
     try {
       const tranSearchObj = search.create({
         type: "invoice",
@@ -4724,6 +4725,12 @@ define([
           ["numbertext", "is", externalId],
           "AND",
           ["mainline", "is", "T"],
+        ],
+        columns: [
+          search.createColumn({
+            name: "custbody_plan_type",
+            label: "Plan Selection Type",
+          }),
         ],
       });
       if (type) {
@@ -4737,9 +4744,11 @@ define([
       }
 
       tranSearchObj.run().each(function (result) {
-        id = result.id;
+        res.invId = result.id;
+        res.isGovernment =
+          result.getValue("custbody_plan_type") == 11 ? true : false;
       });
-      return id;
+      return res;
     } catch (e) {
       log.error("getTransactionByExternalId", e.message);
     }
@@ -4767,7 +4776,7 @@ define([
         filters: [
           ["internalidnumber", "equalto", invId],
           "AND",
-          ["custcol_kd_ndc", "contains", NDC],
+          ["formulatext: {item.itemid}", "is", NDC],
         ],
         columns: [
           search.createColumn({
@@ -4778,7 +4787,6 @@ define([
           search.createColumn({ name: "custcol_kd_ndc", label: "NDC" }),
         ],
       });
-      const searchResultCount = transactionSearchObj.runPaged().count;
 
       transactionSearchObj.run().each(function (result) {
         returnObj = {

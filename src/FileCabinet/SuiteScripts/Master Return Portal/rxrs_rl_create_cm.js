@@ -43,26 +43,43 @@ define([
    */
   const post = (requestBody) => {
     log.debug("requestparams", requestBody);
-    let packingSlipAmount = 0;
+
     try {
       if (requestBody.length > 0) {
         requestBody.forEach((obj) => {
           log.audit("obj", obj);
+          let packingSlipAmount = 0;
           let {
             Amount,
             CreditMemoNumber,
             DateReceived,
             DebitMemoNumbers,
             LineItems,
+            ServiceFee,
           } = obj;
-          let invId = tranlib.getTransactionByExternalId({
+          let res = tranlib.getTransactionByExternalId({
             externalId: DebitMemoNumbers,
             type: "CustInvc",
           });
+          log.audit("RES", res);
+          let { invId, isGovernment } = res;
           log.debug("invId", invId);
+          if (isGovernment == true) {
+            Amount = Number(Amount) * 0.15;
+            log.audit("Amount", Amount);
+          }
           if (invId) {
             let cmId =
               customreclib.lookForExistingCreditMemoRec(CreditMemoNumber);
+            let cmObj = {
+              amount: Amount,
+              creditMemoNumber: CreditMemoNumber,
+              dateIssued: DateReceived,
+              invoiceId: invId,
+              serviceFee: ServiceFee,
+              isGovernment: isGovernment,
+            };
+            log.audit("CMOBJ", cmObj);
             let cmLines = [];
             if (!cmId) {
               LineItems.forEach((line) => {
@@ -71,14 +88,32 @@ define([
                   NDC: NDC,
                   invId: invId,
                 });
+                if (isGovernment == true) {
+                  UnitPrice *= 0.15;
+                  ExtendedPrice *= 0.15;
+                }
                 let lineDetails = {
-                  unitPirce: UnitPrice,
+                  unitPrice: UnitPrice,
                   amountApplied: ExtendedPrice,
+                  cmLineId: " ",
+                  invId: invId,
                 };
                 packingSlipAmount += +resultObj.amount;
                 cmLines.push(Object.assign(lineDetails, resultObj));
               });
-              log.debug("CM Lines", { cmLines, packingSlipAmount });
+              cmObj.packingSlipAmount = packingSlipAmount;
+
+              log.debug("CM Lines", { cmObj });
+              let cmId = customreclib.createCreditMemoRec(cmObj);
+              log.audit("cmId", cmId);
+              if (cmId) {
+                customreclib.createCreditMemoLines({
+                  cmLines: cmLines,
+                  cmParentId: cmId,
+                  isGovernment: isGovernment,
+                  invId: invId,
+                });
+              }
               // let cmParams = {
               //   creditMemoNumber: CreditMemoNumber,
               //   amount,

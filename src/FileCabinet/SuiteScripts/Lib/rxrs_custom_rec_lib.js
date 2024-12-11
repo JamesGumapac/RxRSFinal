@@ -1597,6 +1597,7 @@ define([
     lookForExistingCreditMemoRec,
     getReturnToInfo,
     createCreditMemoRec,
+    createCreditMemoLines,
     deleteCreditMemo,
     getCMParentInfo,
     getCMLineCountWithAmount,

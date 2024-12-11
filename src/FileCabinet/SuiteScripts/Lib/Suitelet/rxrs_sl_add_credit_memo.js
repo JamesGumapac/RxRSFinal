@@ -262,6 +262,11 @@ define([
         label: "Save",
         functionName: `createCreditMemo(${JSON.stringify(createCMParam)})`,
       });
+      form.addButton({
+        id: "custpage_upload_file",
+        label: "Upload File",
+        functionName: `uploadFile()`,
+      });
 
       return form;
     } catch (e) {
