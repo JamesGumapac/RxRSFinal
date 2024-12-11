@@ -204,40 +204,6 @@ define([
           value: returnProcedureInfo.custrecord_fulfillmenttype,
         });
 
-      let planSelectionType;
-
-      if (context.type == "create") {
-        const irsId = currentRecord.getSublistValue({
-          sublistId: "item",
-          fieldId: "custcol_item_scan",
-          line: 0,
-        });
-        if (irsId) {
-          let irsSearch = search.lookupFields({
-            type: "customrecord_cs_item_ret_scan",
-            id: irsId,
-            columns: ["custrecord_irs_plan_selection_type"],
-          });
-          planSelectionType =
-            irsSearch.custrecord_irs_plan_selection_type[0].value;
-          log.audit("res", planSelectionType);
-          if (planSelectionType) {
-            currentRecord.setValue({
-              fieldId: "custbody_plan_type",
-              value: planSelectionType,
-            });
-          }
-        }
-      }
-
-      if (planSelectionType == 11) {
-        // GOVERNMENT
-        currentRecord.setValue({
-          fieldId: "discountitem",
-          value: 487142, //	Invoice Adjustment - Government Accounts
-        });
-        currentRecord = rxrs_tran_lib.setERVDiscountPrice(currentRecord);
-      }
       rxrs_tran_lib.setPartialAmount(currentRecord);
     } catch (e) {
       log.error("beforeSubmit", e.message);
