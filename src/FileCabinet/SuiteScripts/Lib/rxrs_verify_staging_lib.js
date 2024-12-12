@@ -2133,7 +2133,7 @@ define([
       if (csName) {
         ClientScriptName = "rxrs_cs_viewedit_line.js";
       }
-      form.clientScriptFileId = 35951; // getFileId(ClientScriptName);
+      form.clientScriptFileId = getFileId("rxrs_cs_verifystaging.js"); // 35951; // getFileId(ClientScriptName);
       let sublist;
       sublist = form.addSublist({
         id: "custpage_items_sublist",
@@ -2226,6 +2226,119 @@ define([
     }
   };
   /**
+   * It creates a returnable sublist on the form and populates it with the items that are passed in
+   * @param {object}options.form - The form object that we are adding the sublist to.
+   * @param {number}options.rrTranId - Return Request Id
+   * @param {object}options.sublistFields SublistFields
+   * @param {array} options.value
+   * @param {boolean} options.isMainReturnable
+   * @param {string} options.rrName
+   * @param {string} options.paramManufacturer
+   * @param {number} options.mrrId
+   * @param {string} options.rrType
+   * @param {string} options.inDate
+   * @param {string} options.title
+   * @param {boolean} options.finalPaymentSched
+   * @param {string} options.csName
+   * @returns  Updated Form.
+   */
+  const createReturnableSublistEditLine = (options) => {
+    try {
+      // log.debug("createReturnableSublist", options);
+
+      let fieldName = [];
+      let {
+        form,
+        rrTranId,
+        sublistFields,
+        value,
+        isMainReturnable,
+        rrName,
+        paramManufacturer,
+        mrrId,
+        rrType,
+        inDate,
+        title,
+        finalPaymentSched,
+        csName,
+      } = options;
+
+      let sublist;
+      sublist = form.addSublist({
+        id: "custpage_items_sublist",
+        type: serverWidget.SublistType.LIST,
+        label: title,
+      });
+
+      sublist.addButton({
+        id: "custpage_submitline",
+        label: "SUBMIT LAST MODIFIED LINE",
+        functionName: `submit()`,
+      });
+
+      sublistFields.forEach((attri) => {
+        // log.audit("attri", attri);
+
+        fieldName.push(attri.id);
+        if (attri.source) {
+          sublist.addField({
+            id: attri.id,
+            type: serverWidget.FieldType[attri.type],
+            label: attri.label,
+            source: attri.source,
+          });
+          if (attri.updateDisplayType) {
+            sublist.updateDisplayType({
+              displayType:
+                serverWidget.FieldDisplayType[attri.updateDisplayType],
+            });
+          }
+        } else {
+          sublist
+            .addField({
+              id: attri.id,
+              type: serverWidget.FieldType[attri.type],
+              label: attri.label,
+            })
+            .updateDisplayType({
+              displayType:
+                serverWidget.FieldDisplayType[attri.updateDisplayType],
+            });
+        }
+      });
+      let mainLineInfo = [];
+      value.forEach((val) => {
+        let value = Object.values(val);
+        let fieldInfo = [];
+        for (let i = 0; i < value.length; i++) {
+          if (isEmpty(fieldName[i])) continue;
+
+          if (inDate != true && fieldName[i] == "custpage_in_date") {
+            log.debug("val", [inDate, fieldName[i]]);
+          } else {
+            fieldInfo.push({
+              fieldId: fieldName[i],
+              value: value[i],
+            });
+          }
+        }
+        mainLineInfo.push(fieldInfo);
+      });
+
+      populateSublist({
+        sublist: sublist,
+        fieldInfo: mainLineInfo,
+        isMainReturnable: isMainReturnable,
+        isIndate: inDate,
+      });
+    } catch (e) {
+      log.error("createReturnableSublistEditLine", {
+        error: e.message,
+        params: options,
+      });
+    }
+  };
+  /**
    * Populate the returnable sublist
    * @param options.sublist
    * @param options.fieldInfo
@@ -2272,7 +2385,7 @@ define([
       let sublistFields = options.sublistFields;
       let value = options.value;
       let scriptId = 35951; // getFileId("rxrs_cs_verify_staging.js");
-      form.clientScriptFileId = scriptId;
+      form.clientScriptFileId = getFileId("rxrs_cs_verifystaging");
       let sublist;
       sublist = form.addSublist({
         id: "custpage_items_sublist",
@@ -2441,5 +2554,6 @@ define([
     getEntityFromMrr,
     getMrrIRSTotalAmount,
     SUBLISTFIELDS,
+    createReturnableSublistEditLine,
   };
 });

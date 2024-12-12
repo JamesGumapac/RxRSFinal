@@ -598,8 +598,8 @@ define([
             }
             //  let saveSearchURL = `/app/common/search/searchresults.nl?searchid=967&saverun=T&whence=&CUSTRECORD_IRS_MASTER_RETURN_REQUEST=${mrrRec.id}`;
             let viewEditSuiteletUrl = url.resolveScript({
-              scriptId: "customscript_sl_return_cover_letter",
-              deploymentId: "customdeploy_sl_return_cover_letter",
+              scriptId: "customscript_rxrs_sl_view_edit_line",
+              deploymentId: "customdeploy_rxrs_sl_view_edit_line",
               returnExternalUrl: false,
               params: {
                 paymentSchedText: "RO:" + mrrRec.getValue("name"),
@@ -617,13 +617,18 @@ define([
               playnSelectionType != GOVERNMENT ||
               planSelectionType !== DESTRUCTION
             ) {
-              context.form.addButton({
-                id: "custpage_viewedit_line",
-                label: "View Edit Line",
-                functionName: `openSuitelet(${JSON.stringify(
-                  mrrViewEditLineURL,
-                )})`,
-              });
+              if (
+                mrrRec.getValue("custrecord_kod_mr_status") ==
+                rxrs_util.mrrStatus.WaitingForApproval
+              ) {
+                context.form.addButton({
+                  id: "custpage_viewedit_line",
+                  label: "View Edit Line",
+                  functionName: `openSuitelet(${JSON.stringify(
+                    mrrViewEditLineURL,
+                  )})`,
+                });
+              }
             }
 
             break;

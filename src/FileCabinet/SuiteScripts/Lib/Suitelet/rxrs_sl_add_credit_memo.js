@@ -54,6 +54,42 @@ define([
         log.error("GET", e.message);
       }
     } else {
+      try {
+        let response;
+        let invoiceId = params.custpage_invoice_id;
+
+        const uploadedFile = context.request.files.custpage_file_upload;
+        log.emergency("Params", uploadedFile);
+        const newFile = file.create({
+          name: invoiceId + "_" + uploadedFile.name,
+          fileType: file.Type.PLAINTEXT, // Default file type, adjust as necessary
+          contents: uploadedFile.getContents(),
+          description: "Uploaded via Suitelet",
+          folder: 7293, // Optional: Specify a folder ID for the File Cabinet (if desired)
+        });
+
+        // Save the file to the File Cabinet
+        const fileId = newFile.save();
+        if (fileId) {
+          record.submitFields({
+            type: record.Type.INVOICE,
+            id: invoiceId,
+            values: {
+              custbody_credit_memo_file: fileId,
+            },
+          });
+          const cmFile = file.load({
+            id: fileId,
+          });
+          response = rxrs_custom_rec.createCreditMemoUpload({
+            requestBody: JSON.parse(cmFile.getContents()),
+          });
+        }
+
+        context.response.write(response);
+      } catch (e) {
+        log.error("POST", e.message);
+      }
     }
   };
 
@@ -183,7 +219,6 @@ define([
         type: serverWidget.FieldType.DATE,
       });
 
-      issuedOnField.isMandatory = true;
       const amountField = form
         .addField({
           id: "custpage_amount",
@@ -262,12 +297,10 @@ define([
         label: "Save",
         functionName: `createCreditMemo(${JSON.stringify(createCMParam)})`,
       });
-      form.addButton({
-        id: "custpage_upload_file",
-        label: "Upload File",
-        functionName: `uploadFile()`,
-      });
 
+      form.addSubmitButton({
+        label: "Upload File",
+      });
       return form;
     } catch (e) {
       log.error("createHeaderFields", e.message);

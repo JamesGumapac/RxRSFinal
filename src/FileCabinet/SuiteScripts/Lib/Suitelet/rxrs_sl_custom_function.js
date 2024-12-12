@@ -280,6 +280,10 @@ define([
           case "createInventoryAdjustment":
             tranLib.createInventoryAdjustment(params);
             break;
+
+          case "uploadCMFile":
+            log.audit("Params", params);
+            break;
         }
       } catch (e) {
         context.response.writeLine("ERROR:" + e.message);

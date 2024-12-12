@@ -10,6 +10,7 @@ define([
   "N/ui/message",
   "N/record",
   "N/https",
+  "N/file",
 ], /**
  * @param{runtime} runtime
  * @param{url} url
@@ -19,7 +20,7 @@ define([
  * @param https
  * @param rxrs_rcl_lib
  * @param tranlib
- */ function (runtime, url, currentRecord, message, record, https) {
+ */ function (runtime, url, currentRecord, message, record, https, file) {
   let suitelet = null;
   let lineCount = 0;
   let urlParams;
@@ -798,15 +799,70 @@ define([
   }
 
   function uploadFile() {
-    let file = suitelet.getValue("custpage_file_upload");
-    if (!file) {
+    let fileName = suitelet.getValue("custpage_file_upload");
+    if (!fileName) {
       alert("No file to process");
       return;
     }
 
-    if (file.includes(".txt") == false) {
+    if (fileName.includes(".txt") == false) {
       alert("Please upload .txt file only");
     } else {
+      const fileObj = file.create({
+        name: "test.txt",
+        fileType: file.Type.PLAINTEXT,
+        contents: fileName,
+      });
+
+      fileObj.folder = 30;
+      var fileId = fileObj.save();
+      // let uploadCMParams = {
+      //   file: file,
+      //   action: "uploadCMFile",
+      //   isReload: true,
+      // };
+      // handleButtonClick();
+      // let stSuiteletUrl = url.resolveScript({
+      //   scriptId: "customscript_sl_cs_custom_function",
+      //   deploymentId: "customdeploy_sl_cs_custom_function",
+      //   params: uploadCMParams,
+      // });
+      //
+      // let errorCount = postURL({ URL: stSuiteletUrl });
+      //
+      // setTimeout(function () {
+      //   opener.location.reload();
+      //   setTimeout(function () {
+      //     window.close();
+      //   }, 2000);
+      // }, 5000);
+    }
+  }
+
+  /**
+   * Validation function to be executed when record is saved.
+   *
+   * @param {Object} scriptContext
+   * @param {Record} scriptContext.currentRecord - Current form record
+   * @returns {boolean} Return true if record is valid
+   *
+   * @since 2015.2
+   */
+  function saveRecord(scriptContext) {
+    try {
+      let fileName = suitelet.getValue("custpage_file_upload");
+      if (!fileName) {
+        alert("No file to process");
+        return false;
+      }
+      if (fileName.includes(".txt") == false) {
+        alert("Please upload .txt file only");
+        return false;
+      } else {
+        return true;
+      }
+    } catch (e) {
+      console.error("saveRecord", e.message);
     }
   }
 
@@ -819,5 +875,6 @@ define([
     markAll: markAll,
     edit: edit,
     deleteCreditMemo: deleteCreditMemo,
+    saveRecord: saveRecord,
   };
 });

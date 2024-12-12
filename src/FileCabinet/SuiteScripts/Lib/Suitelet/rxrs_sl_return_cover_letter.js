@@ -66,10 +66,10 @@ define([
     try {
       log.debug("objClientParams", params);
       let title = "Return Cover Letter";
-      let csName = "rxrs_cs_verify_staging.js";
+      let csName = "rxrs_cs_split_payment.js";
       if (params.pageTitle) {
         title = params.pageTitle;
-        csName = "rxrs_cs_viewedit_line.js";
+        csName = "rxrs_cs_split_payment.js";
       }
       log.audit("displayFrom csname", csName);
       let form = serverWidget.createForm({

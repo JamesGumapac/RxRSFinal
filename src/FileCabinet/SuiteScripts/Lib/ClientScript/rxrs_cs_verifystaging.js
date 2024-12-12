@@ -757,11 +757,106 @@ define([
     }
   }
 
+  /**
+   * Create Payment Record and Assign it to item return scan
+   * @param {number} options.mrrId Master Return Id
+   * @param {number} options.billId Bill Id
+   */
+  function createPayment(options) {
+    console.table(options);
+    const curRec = currentRecord.get();
+    const billStatus = curRec.getValue("custpage_bill_status");
+
+    let { mrrId, billId } = options;
+    try {
+      console.log("billstatus " + billStatus);
+      if (billStatus) {
+        if (billStatus == "paidInFull") {
+          alert(
+            "Cannot change payment schedule, related bill record is already paid in full",
+          );
+          return;
+        }
+      }
+
+      let internalIds = [];
+      let rec = currentRecord.get();
+
+      let newPaymentId = rec.getValue("custpage_payment_name");
+      let paymentSublistCount = rec.getLineCount({
+        sublistId: RETURNABLESUBLIST,
+      });
+      for (let i = 0; i < paymentSublistCount; i++) {
+        if (
+          rec.getSublistValue({
+            sublistId: RETURNABLESUBLIST,
+            fieldId: "custpage_verified",
+            line: i,
+          }) !== true
+        )
+          continue;
+        let internalId = rec.getSublistValue({
+          sublistId: RETURNABLESUBLIST,
+          fieldId: "custpage_internalid",
+          line: i,
+        });
+        internalIds.push(internalId);
+      }
+      console.log(internalIds.length);
+      if (internalIds.length == 0) {
+        alert("Please select item");
+        return;
+      }
+
+      let returnList = JSON.stringify(internalIds.join("_"));
+
+      let rclSuiteletURL = url.resolveScript({
+        scriptId: "customscript_sl_return_cover_letter",
+        deploymentId: "customdeploy_sl_return_cover_letter",
+        returnExternalUrl: false,
+        params: {
+          mrrId: mrrId,
+          isReload: true,
+          inDated: true,
+          isVerifyStaging: false,
+          returnList: returnList,
+          createdPaymentId: newPaymentId,
+          title: "In-Dated Inventory",
+          finalPaymentSched: false,
+          initialSplitpaymentPage: false,
+        },
+      });
+
+      if (billId) {
+        let params = {
+          billId: billId,
+          newPaymentId: newPaymentId,
+          action: "deleteBill",
+          mrrId: mrrId,
+        };
+
+        let functionSLURL = url.resolveScript({
+          scriptId: "customscript_sl_cs_custom_function",
+          deploymentId: "customdeploy_sl_cs_custom_function",
+          returnExternalUrl: false,
+          params: params,
+        });
+
+        postURL({ URL: functionSLURL });
+      }
+
+      window.open(`${rclSuiteletURL}`, "_self");
+    } catch (e) {
+      console.error("createPayment" + e.message);
+    }
+  }
+
   return {
     pageInit: pageInit,
     fieldChanged: fieldChanged,
     verify: verify,
     update222FormReference: update222FormReference,
     backToReturnable: backToReturnable,
+    createPayment: createPayment,
   };
 });

@@ -15,12 +15,6 @@ define([], function () {
    */
   function pageInit(scriptContext) {
     alert("Test");
-    console.log("test");
-    log.audit("test");
-  }
-
-  function updateFromCatalog() {
-    alert("test");
   }
 
   /**
@@ -135,14 +129,18 @@ define([], function () {
    *
    * @since 2015.2
    */
-  function saveRecord(scriptContext) {
-    alert("saving");
-    console.log("test");
-  }
+  function saveRecord(scriptContext) {}
 
   return {
     pageInit: pageInit,
+    fieldChanged: fieldChanged,
+    postSourcing: postSourcing,
+    sublistChanged: sublistChanged,
+    lineInit: lineInit,
+    validateField: validateField,
+    validateLine: validateLine,
+    validateInsert: validateInsert,
+    validateDelete: validateDelete,
     saveRecord: saveRecord,
-    updateFromCatalog: updateFromCatalog,
   };
 });

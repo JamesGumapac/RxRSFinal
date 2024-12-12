@@ -1593,11 +1593,137 @@ define([
     }
   }
 
+  /**
+   * Creates credit memo upload based on provided options.
+   *
+   * @param {Object} options - The options for creating the credit memo upload.
+   *@param options.requestBody - The content file
+   * @return {void}
+   */
+  function createCreditMemoUpload(options) {
+    log.audit("createCreditMemoUpload", options);
+    let returnString = "";
+    let { requestBody } = options;
+    try {
+      if (requestBody.length > 0) {
+        requestBody.forEach((obj) => {
+          log.audit("obj", obj);
+          let packingSlipAmount = 0;
+          let {
+            Amount,
+            CreditMemoNumber,
+            DateReceived,
+            DebitMemoNumbers,
+            LineItems,
+            ServiceFee,
+          } = obj;
+          let res = tranlib.getTransactionByExternalId({
+            externalId: DebitMemoNumbers,
+            type: "CustInvc",
+          });
+          log.audit("RES", res);
+          let { invId, isGovernment } = res;
+          log.debug("invId", invId);
+          if (isGovernment == true) {
+            Amount = Number(Amount) * 0.15;
+            log.audit("Amount", Amount);
+          }
+          if (invId) {
+            let cmId = lookForExistingCreditMemoRec(CreditMemoNumber);
+            let cmObj = {
+              amount: Amount,
+              creditMemoNumber: CreditMemoNumber,
+              dateIssued: DateReceived,
+              invoiceId: invId,
+              serviceFee: ServiceFee,
+              isGovernment: isGovernment,
+            };
+            log.audit("CMOBJ", cmObj);
+            let cmLines = [];
+            if (!cmId) {
+              LineItems.forEach((line) => {
+                let { NDC, UnitPrice, Quantity, ExtendedPrice, IsValid } = line;
+                let resultObj = tranlib.getNDCTransactionLineDetails({
+                  NDC: NDC,
+                  invId: invId,
+                });
+                if (isGovernment == true) {
+                  UnitPrice *= 0.15;
+                  ExtendedPrice *= 0.15;
+                }
+                let lineDetails = {
+                  unitPrice: UnitPrice,
+                  amountApplied: ExtendedPrice,
+                  cmLineId: " ",
+                  invId: invId,
+                };
+                packingSlipAmount += +resultObj.amount;
+                cmLines.push(Object.assign(lineDetails, resultObj));
+              });
+              cmObj.packingSlipAmount = packingSlipAmount;
+
+              log.debug("CM Lines", { cmObj });
+              let cmId = createCreditMemoRec(cmObj);
+              log.audit("cmId", cmId);
+              if (cmId) {
+                createCreditMemoLines({
+                  cmLines: cmLines,
+                  cmParentId: cmId,
+                  isGovernment: isGovernment,
+                  invId: invId,
+                });
+                returnString = "Successfully created CM " + cmId;
+              }
+              // let cmParams = {
+              //   creditMemoNumber: CreditMemoNumber,
+              //   amount,
+              //   serviceFee,
+              //   saveWithoutReconcilingItems,
+              //   invoiceId,
+              //   dateIssued,
+              //   fileId,
+              //   cmId,
+              //   packingSlipAmount,
+              //   isGovernment,
+              // };
+              //const cmId = customreclib.createCreditMemoRec(forCreation);
+            } else {
+            }
+            // let { forUpdate, forCreation } = obj;
+            // if (forUpdate.length > 0) {
+            //   createCreditMemoLines({ cmLines: forUpdate });
+            // }
+            // if (forCreation.cmLines.length > 0) {
+            //   const cmId = createCreditMemoRec(forCreation);
+            //
+            //   if (cmId) {
+            //     createCreditMemoLines({
+            //       cmLines: forCreation.cmLines,
+            //       cmParentId: cmId,
+            //       isGovernment: forCreation.isGovernment,
+            //       invId: forCreation.invoiceId,
+            //     });
+            //   }
+            //   response.sucessMessage =
+            //     "Successfully Created Credit Memo ID: " + cmId;
+            // }
+          } else {
+            returnString = "ERROR: DEBIT MEMO NUMBER IS INCORRECT";
+          }
+        });
+      }
+      return returnString;
+    } catch (e) {
+      log.error("createCreditMemoUpload", e.message);
+    }
+  }
+
   return {
     lookForExistingCreditMemoRec,
     getReturnToInfo,
     createCreditMemoRec,
     createCreditMemoLines,
+    createCreditMemoUpload,
     deleteCreditMemo,
     getCMParentInfo,
     getCMLineCountWithAmount,
