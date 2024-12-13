@@ -89,7 +89,15 @@ define(["../rxrs_transaction_lib", "N/ui/serverWidget", "N/search"], (
         fieldId: "discountitem",
         value: 487142, //	Invoice Adjustment - Government Accounts
       });
+      newRecord.setValue({
+        fieldId: "192", //RXRS | MFG Invoice [Government]
+      });
       rxrs_tran_lib.setERVDiscountPrice(newRecord);
+    } else if (planSelectionType == 4) {
+      // quick cash
+      newRecord.setValue({
+        fieldId: "143", //RXRS | MFG Invoice [Government]
+      });
     }
   };
 

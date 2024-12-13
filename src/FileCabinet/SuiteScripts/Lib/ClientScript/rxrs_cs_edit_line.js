@@ -15,8 +15,6 @@ define([], function () {
    */
   function pageInit(scriptContext) {
     alert("Test");
-    console.log("test");
-    log.audit("test");
   }
 
   function updateFromCatalog() {

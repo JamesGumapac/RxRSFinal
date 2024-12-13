@@ -1781,10 +1781,14 @@ define([
         fieldId: "tobeemailed",
         value: false,
       });
-      objRecord.setValue({
-        fieldId: "discountitem",
-        value: "",
-      });
+      const discountItem = objRecord.getValue("discountitem");
+
+      if (discountItem) {
+        objRecord.setValue({
+          fieldId: "discountitem",
+          value: "",
+        });
+      }
 
       for (let i = 0; i < objRecord.getLineCount("item"); i++) {
         objRecord.removeLine({
