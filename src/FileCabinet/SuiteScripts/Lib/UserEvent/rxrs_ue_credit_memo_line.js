@@ -36,6 +36,15 @@ define(["N/record", "N/search"], /**
         fieldId: "custrecord_cmline_gross_amount",
         value: rec.getValue("custrecord_cm_amount_applied") / 0.15,
       });
+    } else {
+      rec.setValue({
+        fieldId: "custrecord_cmline_gross_unit_price",
+        value: rec.getValue("custrecord_cm_unit_price"),
+      });
+      rec.setValue({
+        fieldId: "custrecord_cmline_gross_amount",
+        value: rec.getValue("custrecord_cm_amount_applied"),
+      });
     }
   };
 

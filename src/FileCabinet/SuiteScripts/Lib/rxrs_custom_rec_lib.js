@@ -635,7 +635,7 @@ define([
             unitPrice: unitPrice,
           });
         } else {
-          log.error("CM DOES NOT EXIST ELSE");
+          log.emergency("CM DOES NOT EXIST ELSE");
           const cmChildRec = record.create({
             type: "customrecord_credit_memo_line_applied",
             isDynamic: true,
@@ -1638,6 +1638,7 @@ define([
               serviceFee: ServiceFee,
               isGovernment: isGovernment,
             };
+            log.audit("CMID", cmId);
             log.audit("CMOBJ", cmObj);
             let cmLines = [];
             if (!cmId) {
@@ -1674,41 +1675,14 @@ define([
                 });
                 returnString = "Successfully created CM " + cmId;
               }
-              // let cmParams = {
-              //   creditMemoNumber: CreditMemoNumber,
-              //   amount,
-              //   serviceFee,
-              //   saveWithoutReconcilingItems,
-              //   invoiceId,
-              //   dateIssued,
-              //   fileId,
-              //   cmId,
-              //   packingSlipAmount,
-              //   isGovernment,
-              // };
-              //const cmId = customreclib.createCreditMemoRec(forCreation);
             } else {
+              returnString = "ERROR: CREDIT MEMO IS ALREADY CREATED";
             }
-            // let { forUpdate, forCreation } = obj;
-            // if (forUpdate.length > 0) {
-            //   createCreditMemoLines({ cmLines: forUpdate });
-            // }
-            // if (forCreation.cmLines.length > 0) {
-            //   const cmId = createCreditMemoRec(forCreation);
-            //
-            //   if (cmId) {
-            //     createCreditMemoLines({
-            //       cmLines: forCreation.cmLines,
-            //       cmParentId: cmId,
-            //       isGovernment: forCreation.isGovernment,
-            //       invId: forCreation.invoiceId,
-            //     });
-            //   }
-            //   response.sucessMessage =
-            //     "Successfully Created Credit Memo ID: " + cmId;
-            // }
           } else {
-            returnString = "ERROR: DEBIT MEMO NUMBER IS INCORRECT";
+            returnString =
+              "ERROR: DEBIT MEMO NUMBER " +
+              DebitMemoNumbers +
+              " DOES NOT EXIST";
           }
         });
       }

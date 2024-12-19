@@ -1451,8 +1451,8 @@ define([
             },
           });
           let viewEditSuiteletUrl = url.resolveScript({
-            scriptId: "customscript_sl_return_cover_letter",
-            deploymentId: "customdeploy_sl_return_cover_letter",
+            scriptId: "customscript_rxrs_sl_view_edit_line",
+            deploymentId: "customdeploy_rxrs_sl_view_edit_line",
             returnExternalUrl: false,
             params: {
               edit: true,
