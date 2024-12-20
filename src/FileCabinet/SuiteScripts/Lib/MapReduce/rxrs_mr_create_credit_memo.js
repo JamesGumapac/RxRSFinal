@@ -8,11 +8,12 @@ define([
   "N/runtime",
   "N/search",
   "../rxrs_custom_rec_lib",
+  "../rxrs_transaction_lib",
 ] /**
  * @param{record} record
  * @param{runtime} runtime
  * @param{search} search
- */, (file, record, runtime, search, customrec) => {
+ */, (file, record, runtime, search, customrec, tranlib) => {
   /**
    * Defines the function that is executed at the beginning of the map/reduce process and generates the input data.
    * @param {Object} inputContext
@@ -83,16 +84,27 @@ define([
   const reduce = (reduceContext) => {
     try {
       const reduceObj = JSON.parse(reduceContext.values);
+      let { CreditMemoNumber, DebitMemoNumbers, Amount } = reduceObj;
       let content = [];
       content.push(reduceObj);
+      const cmRecUploadId = runtime.getCurrentScript().getParameter({
+        name: "custscript_cm_file_rec",
+      });
+
+      let res = {
+        CreditMemoNumber: CreditMemoNumber,
+        DebitMemoNumbers: DebitMemoNumbers,
+        Amount: Amount,
+        cmRecUploadId: cmRecUploadId,
+      };
       let response = customrec.createCreditMemoUpload({
         requestBody: content,
       });
-      if (response.includes("ERROR") == true) {
-        log.error("ERROR", response);
-      } else {
-        log.audit("Result", response);
-      }
+      let cmUploadLogsId = customrec.createCMUploadLogs({
+        ...res,
+        ...response,
+      });
+      log.audit("cmUploadLogs", cmUploadLogsId);
     } catch (e) {
       log.error("reduceContext", e.message);
     }
@@ -117,7 +129,29 @@ define([
    * @param {Object} summaryContext.reduceSummary - Statistics about the reduce stage
    * @since 2015.2
    */
-  const summarize = (summaryContext) => {};
+  const summarize = (summary) => {
+    summary.output.iterator().each(function (key, value) {
+      log.audit({
+        title: "Summary output for key: " + key,
+        details: value,
+      });
+      return true;
+    });
+
+    // Check for and log errors
+    if (summary.error) {
+      log.error({
+        title: "Map/Reduce Error",
+        details: summary.error,
+      });
+    }
+
+    // Log the total time taken
+    log.audit({
+      title: "Map/Reduce Execution Summary",
+      details: "Time Taken: " + summary.seconds + " seconds",
+    });
+  };
 
   return { getInputData, reduce, summarize };
 });

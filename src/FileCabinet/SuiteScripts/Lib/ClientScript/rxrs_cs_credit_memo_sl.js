@@ -84,6 +84,7 @@ define([
     let cmCount = 0;
     let totalAmount = 0;
     isGovernment = suitelet.getValue("custpage_is_government");
+    const fileUploaded = suitelet.getText("custpage_uploaded_file");
 
     lineCount = suitelet.getLineCount("custpage_items_sublist");
     for (let i = 0; i < lineCount; i++) {
@@ -866,8 +867,13 @@ define([
     }
   }
 
+  function refresh() {
+    location.reload();
+  }
+
   return {
     pageInit: pageInit,
+    refresh: refresh,
     fieldChanged: fieldChanged,
     uploadFile: uploadFile,
     showMessage: showMessage,

@@ -46,6 +46,45 @@ define([
       updateDisplayType: "ENTRY",
     },
   ];
+  let CMUPLOADFIELDS = [
+    {
+      id: "custpage_creditmemo",
+      type: "TEXT",
+      label: "CREDIT MEMO NUMBER",
+      updateDisplayType: "INLINE",
+    },
+    {
+      id: "custpage_debitmemo",
+      type: "TEXT",
+      label: "DEBIT MEMO",
+      updateDisplayType: "INLINE",
+    },
+    {
+      id: "custpage_amount",
+      type: "INTEGER",
+      label: "AMOUNT",
+      updateDisplayType: "INLINE",
+    },
+    {
+      id: "custpage_result",
+      type: "TEXT",
+      label: "RESULT",
+      updateDisplayType: "INLINE",
+    },
+    {
+      id: "custpage_fullamount",
+      type: "TEXT",
+      label: "FULL AMOUNT",
+      updateDisplayType: "INLINE",
+    },
+
+    {
+      id: "custpage_error",
+      type: "TEXT",
+      label: "ERROR",
+      updateDisplayType: "INLINE",
+    },
+  ];
   let ADDCREDITMEMOSUBLIST = [
     {
       id: "custpage_select",
@@ -600,5 +639,6 @@ define([
     SOFORM222SUBLIST,
     ADDCREDITMEMOSUBLIST,
     addC2ItemsReqSublist,
+    CMUPLOADFIELDS,
   };
 });

@@ -1602,7 +1602,7 @@ define([
    */
   function createCreditMemoUpload(options) {
     log.audit("createCreditMemoUpload", options);
-    let returnString = "";
+    let returnObj = {};
     let { requestBody } = options;
     try {
       if (requestBody.length > 0) {
@@ -1628,16 +1628,17 @@ define([
             Amount = Number(Amount) * 0.15;
             log.audit("Amount", Amount);
           }
+          let cmObj = {
+            amount: Amount,
+            creditMemoNumber: CreditMemoNumber,
+            dateIssued: DateReceived,
+            invoiceId: invId,
+            serviceFee: ServiceFee,
+            isGovernment: isGovernment,
+          };
           if (invId) {
             let cmId = lookForExistingCreditMemoRec(CreditMemoNumber);
-            let cmObj = {
-              amount: Amount,
-              creditMemoNumber: CreditMemoNumber,
-              dateIssued: DateReceived,
-              invoiceId: invId,
-              serviceFee: ServiceFee,
-              isGovernment: isGovernment,
-            };
+
             log.audit("CMID", cmId);
             log.audit("CMOBJ", cmObj);
             let cmLines = [];
@@ -1673,52 +1674,190 @@ define([
                   isGovernment: isGovernment,
                   invId: invId,
                 });
-                returnString = "Successfully created CM " + cmId;
+                let isFullAmount;
+                let fullAmount = 0;
+                if (isGovernment == true) {
+                  fullAmount = cmObj.packingSlipAmount * 0.15;
+                } else {
+                  fullAmount = Amount;
+                }
+                log.audit("fullAmount", fullAmount);
+                log.error("isFullamount", Number(fullAmount) < Number(Amount));
+                log.error("value", { fullAmount, Amount });
+                if (Number(fullAmount) == Number(Amount)) {
+                  isFullAmount = true;
+                } else {
+                  isFullAmount = false;
+                }
+                returnObj.isFullAmount = isFullAmount;
+                returnObj.response = "Successfully created CM " + cmId;
+                returnObj.cmId = cmId;
+                returnObj.invId = cmObj.invoiceId;
               }
             } else {
-              returnString = "ERROR: CREDIT MEMO IS ALREADY CREATED";
+              returnObj.error = "CREDIT MEMO IS ALREADY CREATED";
             }
           } else {
-            returnString =
-              "ERROR: DEBIT MEMO NUMBER " +
-              DebitMemoNumbers +
-              " DOES NOT EXIST";
+            returnObj.error =
+              "DEBIT MEMO NUMBER " + DebitMemoNumbers + " DOES NOT EXIST";
           }
         });
       }
-      return returnString;
+      return returnObj;
     } catch (e) {
       log.error("createCreditMemoUpload", e.message);
     }
   }
 
+  /**
+   * Get the item request based on mrrId
+   * @param {string} options.name - name of the file
+   * @return the internal id of the customrecord_credit_memo_upload
+   */
+  function getCMFileUpload(options) {
+    log.audit("getCMFileUpload", options);
+    let { name } = options;
+    let id;
+    try {
+      const customrecord_kod_mr_item_requestSearchObj = search.create({
+        type: "customrecord_credit_memo_upload",
+        filters: [["name", "is", name]],
+      });
+
+      customrecord_kod_mr_item_requestSearchObj.run().each(function (result) {
+        id = result.id;
+        return true;
+      });
+      return id;
+    } catch (e) {
+      log.error("getCMFileUpload", e.message);
+    }
+  }
+
+  /**
+   * Create customrecord_credit_memo_upload record
+   * @param options.name name based on the file
+   * @param options.fileId Uploaded file Internal id in the file cabinet
+   * @returns the internal id of the created custom record of the credit memo upload
+   */
+  function createCMFileUpload(options) {
+    let { name, fileId } = options;
+    try {
+      const cmFileUploadRec = record.create({
+        type: "customrecord_credit_memo_upload",
+      });
+      cmFileUploadRec.setValue({
+        fieldId: "name",
+        value: name,
+      });
+      cmFileUploadRec.setValue({
+        fieldId: "custrecord_cm_file",
+        value: fileId,
+      });
+      return cmFileUploadRec.save({
+        ignoreMandatoryFields: true,
+      });
+    } catch (e) {
+      log.error("createCMFileUpload", e.message);
+    }
+  }
+
+  /**
+   * Create CM upload logs
+   * @param options.cmRecUploadId Parent Record
+   * @param options.Amount - Amount
+   * @param options.invId - Invoice Id
+   * @param options.CreditMemoNumber Credit Memo Number
+   * @param options.isFullAmount is partial payment or full payment
+   * @param options.cmId - Custom Credit Memo Id when Created
+   * @param options.error - Error Received
+   * @returns created record id
+   */
+  function createCMUploadLogs(options) {
+    log.audit("createCMUploadLogs", options);
+    let {
+      cmRecUploadId,
+      Amount,
+      invId,
+      CreditMemoNumber,
+      isFullAmount,
+      error,
+      cmId,
+    } = options;
+    try {
+      const cmLineUploadRec = record.create({
+        type: "customrecord_cm_upload_line",
+      });
+      cmLineUploadRec.setValue({
+        fieldId: "custrecord_cm_line_parent",
+        value: cmRecUploadId,
+      });
+      invId &&
+        cmLineUploadRec.setValue({
+          fieldId: "custrecord_cm_line_debit_memo",
+          value: invId,
+        });
+      cmLineUploadRec.setValue({
+        fieldId: "custrecord_cm_line_amount",
+        value: Amount,
+      });
+      cmLineUploadRec.setValue({
+        fieldId: "custrecord_cm_line_number",
+        value: CreditMemoNumber,
+      });
+      isFullAmount &&
+        cmLineUploadRec.setValue({
+          fieldId: "custrecord_cm_line_fullamount",
+          value: isFullAmount,
+        });
+      error &&
+        cmLineUploadRec.setValue({
+          fieldId: "custrecord_cm_line_error",
+          value: error,
+        });
+      cmId &&
+        cmLineUploadRec.setValue({
+          fieldId: "custrecord_cm_line_cm",
+          value: cmId,
+        });
+      return cmLineUploadRec.save({
+        ignoreMandatoryFields: true,
+      });
+    } catch (e) {
+      log.error("createCMUploadLogs", e.message);
+    }
+  }
+
   return {
-    lookForExistingCreditMemoRec,
-    getReturnToInfo,
-    createCreditMemoRec,
+    assignReturnItemRequested,
+    checkIfFor222Regeneration,
+    create222Form,
+    createCMFileUpload,
     createCreditMemoLines,
+    createCreditMemoRec,
     createCreditMemoUpload,
-    deleteCreditMemo,
-    getCMParentInfo,
-    getCMLineCountWithAmount,
+    createPriceHistory,
+    createCMUploadLogs,
+    createReturnPackages,
     createUpdateCM,
+    deleteCreditMemo,
+    deletePriceHistory,
     getAllCM,
     getALlCMTotalAmount,
-    createPriceHistory,
-    deletePriceHistory,
-    getItemRequested,
-    createReturnPackages,
     getC2ItemRequested,
+    getCMFileUpload,
+    getCMLineCountWithAmount,
+    getCMParentInfo,
+    getItemRequested,
+    getItemRequestedPerCategory,
     getReturnPackageInfo,
-    create222Form,
-    checkIfFor222Regeneration,
     getReturnRequestForReprinting222Form,
     getReturnRequestItemRequested,
-    assignReturnItemRequested,
-    getItemRequestedPerCategory,
-    updateItemReturnScan,
+    getReturnToInfo,
+    lookForExistingCreditMemoRec,
     updateIRSPrice,
     updateIRSPricelevel,
+    updateItemReturnScan,
     updateManufAvailableBins,
   };
 });
