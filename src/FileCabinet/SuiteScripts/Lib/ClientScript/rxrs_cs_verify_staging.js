@@ -908,9 +908,12 @@ define([
 
   function updateSO222FormReference(soId) {
     try {
+      const suitelet = currentRecord.get();
+
       let soDetails = {};
       soDetails.soId = soId;
       soDetails.soItemToUpdate = [];
+      alert("test");
       const SUBLIST = "custpage_items_sublist";
       try {
         for (

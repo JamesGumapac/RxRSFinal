@@ -14,6 +14,23 @@ define([
   "../rxrs_util",
   "../rxrs_transaction_lib",
 ], (serverWidget, record, search, util, rxrs_tran_lib) => {
+  const ORDER_STATUS = {
+    WAITING_222_FORM: 3,
+    NEW: 1,
+  };
+
+  const CATEGORY = {
+    RX: 1,
+    C2: 3,
+    C3_5: 4,
+    C1: 7,
+  };
+  const RMATYPE = {
+    Manual: 1,
+    Automatic: 2,
+    Shipped: 3,
+    Destruction: 4,
+  };
   /**
    * Defines the function definition that is executed before record is loaded.
    * @param {Object} scriptContext
@@ -56,23 +73,7 @@ define([
   const beforeSubmit = (context) => {
     let currentRecord = context.newRecord;
     let idleDate;
-    const ORDER_STATUS = {
-      WAITING_222_FORM: 3,
-      NEW: 1,
-    };
 
-    const CATEGORY = {
-      RX: 1,
-      C2: 3,
-      C3_5: 4,
-      C1: 7,
-    };
-    const RMATYPE = {
-      Destruction: 1,
-      Manual: 2,
-      No_Authorization: 3,
-      Online: 4,
-    };
     try {
       const entityId = currentRecord.getValue("entity");
       const entityrec = record.load({
@@ -94,15 +95,15 @@ define([
         fieldId: "custbody_rxrs_manuf_return_procedure",
         value: returnProcedureInfo.id,
       });
-      let rma_type;
-      let category = currentRecord.getValue("custbody_kd_rr_category");
-      if (category == CATEGORY.C2) {
-        rma_type = returnProcedureInfo.custrecord_psauthtypec2;
-      } else if (category == CATEGORY.C3_5) {
-        rma_type = returnProcedureInfo.custrecord_psauthtypec35;
-      } else {
-        rma_type = returnProcedureInfo.custrecord_psauthtyperx;
-      }
+      let rma_type = currentRecord.getValue("custbody_kd_rma_type");
+      // let category = currentRecord.getValue("custbody_kd_rr_category");
+      // if (category == CATEGORY.C2) {
+      //   rma_type = returnProcedureInfo.custrecord_psauthtypec2;
+      // } else if (category == CATEGORY.C3_5) {
+      //   rma_type = returnProcedureInfo.custrecord_psauthtypec35;
+      // } else {
+      //   rma_type = returnProcedureInfo.custrecord_psauthtyperx;
+      // }
       // if (returnProcedureInfo.custrecord_psauthtypec2) {
       //   rma_type = returnProcedureInfo.custrecord_psauthtypec2;
       //   currentRecord.setValue({
@@ -125,7 +126,7 @@ define([
       //   });
       // }
       switch (+rma_type) {
-        case RMATYPE.No_Authorization:
+        case RMATYPE.Automatic:
           currentRecord.setValue({
             fieldId: "custbody_kd_rma_required",
             value: false,
@@ -133,21 +134,21 @@ define([
           break;
         case RMATYPE.Manual:
           idleDate = 15;
-          currentRecord.setValue({
-            fieldId: "custbody_kd_rma_type",
-            value: 1,
-          });
+          // currentRecord.setValue({
+          //   fieldId: "custbody_kd_rma_type",
+          //   value: 1,
+          // });
           currentRecord.setValue({
             fieldId: "custbody_kd_rma_required",
             value: true,
           });
           break;
-        case RMATYPE.Online:
+        case RMATYPE.Shipped:
           //Automatic
-          currentRecord.setValue({
-            fieldId: "custbody_kd_rma_type",
-            value: 2,
-          });
+          // currentRecord.setValue({
+          //   fieldId: "custbody_kd_rma_type",
+          //   value: 2,
+          // });
           currentRecord.setValue({
             fieldId: "custbody_kd_rma_required",
             value: true,
@@ -208,6 +209,35 @@ define([
     } catch (e) {
       log.error("beforeSubmit", e.message);
     }
+  };
+  const afterSubmit = (context) => {
+    // const currentRecord = context.newRecord;
+    // log.audit("context afterSubmit", context.type);
+    // try {
+    //   const entityId = currentRecord.getValue("entity");
+    //   let rma_type = currentRecord.getValue("custbody_kd_rma_type");
+    //   const rmaRequired = currentRecord.getValue("custbody_kd_rma_required");
+    //   const tranId = currentRecord.getValue("tranid");
+    //   log.audit("RMA VAL", { rma_type, rmaRequired, tranId });
+    //   log.audit("RMA", rmaRequired == true && +rma_type == RMATYPE.Manual);
+    //
+    //   if (rmaRequired == true && +rma_type == RMATYPE.Manual) {
+    //     util.createTaskRecord({
+    //       entityId: entityId,
+    //       title: `Request RMA # ${currentRecord.getValue("custbody_kd_rma_number")} for| ${tranId}`,
+    //       entityName: currentRecord.getText("entity"),
+    //       form: 157, //RXRS | RAM# Task Form
+    //       transaction: currentRecord.id,
+    //       link: `<a href ="${util.generateRedirectLink({
+    //         type: "salesorder",
+    //         id: currentRecord.id,
+    //       })}">${currentRecord.getValue("tranid")}</a>`,
+    //       replaceMessage: true,
+    //     });
+    //   }
+    // } catch (e) {
+    //   log.error("afterSubmit", e.message);
+    // }
   };
 
   /**
@@ -345,5 +375,5 @@ define([
     }
   }
 
-  return { beforeLoad, beforeSubmit };
+  return { beforeLoad, beforeSubmit, afterSubmit };
 });

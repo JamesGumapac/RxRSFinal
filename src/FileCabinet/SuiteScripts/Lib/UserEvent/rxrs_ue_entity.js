@@ -100,7 +100,7 @@ define(["N/record", "N/search", "../rxrs_transaction_lib", "../rxrs_util"] /**
       });
       if (newDeaLicenseExpired == false) {
         if (newDeaLicenseExpired !== oldDeaLicenseExpired) {
-          let taskId = util.getLicenseTask({
+          let taskId = util.getTask({
             licenseType: "DEA",
             entityId: newRecord.id,
             isCompleted: false,
@@ -119,7 +119,7 @@ define(["N/record", "N/search", "../rxrs_transaction_lib", "../rxrs_util"] /**
       }
       if (newStateLicenseExpired == false) {
         if (newStateLicenseExpired !== oldStateLicenseExpired) {
-          let taskId = util.getLicenseTask({
+          let taskId = util.getTask({
             licenseType: "STATE",
             entityId: newRecord.id,
             isCompleted: false,

@@ -422,11 +422,23 @@ define([
    * Create Tasks
    * @param options.title - Title of the Tasks
    * @param options.entityId - Associated Entity (Vendor/Customer Pharmacy)
-   * @param options.entityName - Entity Name
+   * @param options.recordLink - Entity Name
+   * @param options.form - Form to used in the Tasks
+   * @param options.transaction - Related Transaction
+   * @param options.replaceMessage Replace the last word in RMA
    * @return the internal id of the created tasks
    */
-  const createLicenseTask = (options) => {
-    let { title, entityId, entityName } = options;
+  const createTaskRecord = (options) => {
+    log.audit("CreateTaskRecord", options);
+    let {
+      title,
+      entityId,
+      entityName,
+      form,
+      transaction,
+      link,
+      replaceMessage,
+    } = options;
     try {
       const assignee = getDefaultTaskAssignee();
       let companyName = "";
@@ -436,7 +448,7 @@ define([
       });
       taskRec.setValue({
         fieldId: "customform",
-        value: 158, //RXRS | License Update Request Task Form
+        value: form,
       });
       taskRec.setValue({
         fieldId: "title",
@@ -450,6 +462,7 @@ define([
         fieldId: "assigned",
         value: assignee,
       });
+
       taskRec.setValue({
         fieldId: "company",
         value: entityId,
@@ -469,22 +482,44 @@ define([
       });
       let taskId = taskRec.save();
       log.debug("task id ", taskId);
-      let entityLink = `<a href ="${generateRedirectLink({
-        type: getEntityType(entityId),
-        id: entityId,
-      })}">${entityName}</a>`;
+      let bodyMessage = "";
+      if (replaceMessage == true) {
+        bodyMessage = changeLastWord(title, link);
+      } else {
+        bodyMessage = title + ` for ${link}`;
+      }
       email.send({
         author: assignee,
         recipients: assignee,
         subject: title,
-        body: title + ` for ${entityLink}`,
+        body: bodyMessage,
       });
-
+      if (transaction) {
+        record.submitFields({
+          type: "task",
+          id: taskId,
+          values: {
+            transaction: transaction,
+          },
+        });
+      }
       return taskId;
     } catch (e) {
       log.error("createTask", e.message);
     }
   };
+
+  function changeLastWord(sentence, newWord) {
+    // Split the sentence into words
+    let words = sentence.split(" ");
+
+    // Replace the last word
+    words[words.length - 1] = newWord;
+
+    // Join the words back into a sentence
+    return words.join(" ");
+  }
+
   /**
    * Create inbound packages
    * @param {number} options.mrrId master return request number
@@ -828,11 +863,13 @@ define([
    * @return {number}
    */
   function addDaysToDate(options) {
+    log.audit("addDaysToDate", options);
     try {
       let { date, days } = options;
       date.setDate(date.getDate() + days);
       let d = Date.parse(date);
       d = getFormattedDate(new Date(d));
+      log.audit("date", d);
       return d;
     } catch (e) {
       log.error("addDaysToDate", e.message);
@@ -1186,27 +1223,50 @@ define([
   }
 
   /**
-   * Get the assigned tasks for expirition
+   * Get the task based on parameters
    * @param options.licenseType - values accepted "DEA" or "STATE"
    * @param options.entityId - Vendor or Customer Internal Id
    * @param options.isCompleted - Set to true
+   * @param options.transactionId - Related Transaction Internal Id
    * @return the internal id of the Tasks
    */
-  function getLicenseTask(options) {
-    log.audit("getLicenseTask", options);
+  function getTask(options) {
+    log.audit("getTask", options);
     let Id = null;
-    let { licenseType, entityId, isCompleted } = options;
+    let { licenseType, entityId, isCompleted, transactionId } = options;
     let keyWords = licenseType == "DEA" ? "DEA Expired" : "STATE License";
     log.audit("keywords", keyWords);
     try {
-      const taskSearchObj = search.create({
-        type: "task",
-        filters: [
-          ["company", "anyof", entityId],
-          "AND",
-          ["title", "haskeywords", keyWords],
-        ],
-      });
+      let taskSearchObj;
+      if (transactionId) {
+        taskSearchObj = search.create({
+          type: "task",
+          filters: [["transaction.internalidnumber", "equalto", transactionId]],
+        });
+      } else {
+        taskSearchObj = search.create({
+          type: "task",
+        });
+        if (keyWords) {
+          taskSearchObj.filters.push(
+            search.createFilter({
+              name: "title",
+              operator: "haskeywords",
+              values: keyWords,
+            }),
+          );
+        }
+      }
+
+      if (entityId) {
+        taskSearchObj.filters.push(
+          search.createFilter({
+            name: "company",
+            operator: "anyof",
+            values: entityId,
+          }),
+        );
+      }
       if (isCompleted == false) {
         taskSearchObj.filters.push(
           search.createFilter({
@@ -1224,7 +1284,7 @@ define([
       });
       return Id;
     } catch (e) {
-      log.error("getLicenseTask", e.message);
+      log.error("getTask", e.message);
     }
   }
 
@@ -1235,7 +1295,7 @@ define([
     createReturnPackages,
     createReturnRequest,
     createTask,
-    createLicenseTask,
+    createTaskRecord: createTaskRecord,
     formatDate,
     groupByDate,
     generateRRPODocumentNumber,
@@ -1263,7 +1323,7 @@ define([
     checkIfThereIsUpdate,
     removeDuplicates,
     removeEmptyArrays,
-    getLicenseTask,
+    getTask,
     SERVICETYPE,
   };
 });

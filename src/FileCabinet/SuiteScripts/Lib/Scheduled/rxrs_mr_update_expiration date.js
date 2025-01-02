@@ -71,7 +71,7 @@ define(["N/record", "N/search", "N/runtime", "../rxrs_util"] /**
       if (getParameters().createTasks == true) {
         log.audit("Creating Tasks");
         if (licenseFieldText.includes("stae")) {
-          let existingTasks = util.getLicenseTask({
+          let existingTasks = util.getTask({
             licenseType: "STATE",
             entityId: reduceObj.id,
             entityName: reduceObj.name,
@@ -79,23 +79,35 @@ define(["N/record", "N/search", "N/runtime", "../rxrs_util"] /**
 
           if (existingTasks == null) {
             log.audit("existing Tasks", existingTasks);
-            util.createLicenseTask({
+            let entityLink = `<a href ="${util.generateRedirectLink({
+              type: util.getEntityType(reduceObj.id),
+              id: reduceObj.id,
+            })}">${reduceObj.name}</a>`;
+            util.createTaskRecord({
               entityId: reduceObj.id,
               title: "STATE LICENSE EXPIRED for " + reduceObj.name,
               entityName: reduceObj.name,
+              form: 158, //RXRS | License Update Request Task Form
+              link: entityLink,
             });
           }
         } else {
-          let existingTasks = util.getLicenseTask({
+          let existingTasks = util.getTask({
             licenseType: "DEA",
             entityId: reduceObj.id,
           });
           log.audit("existing Tasks", existingTasks);
           if (existingTasks == null) {
-            util.createLicenseTask({
+            let entityLink = `<a href ="${util.generateRedirectLink({
+              type: util.getEntityType(reduceObj.id),
+              id: reduceObj.id,
+            })}">${reduceObj.name}</a>`;
+            util.createTaskRecord({
               entityId: reduceObj.id,
               title: "DEA LICENSE EXPIRED for " + reduceObj.name,
               entityName: reduceObj.name,
+              form: 158, //RXRS | License Update Request Task Form
+              link: entityLink,
             });
           }
         }

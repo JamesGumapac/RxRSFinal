@@ -13,6 +13,7 @@ define([
   "N/file",
   "N/record",
   "N/redirect",
+  "N/runtime",
 ], /**
  * @param{serverWidget} serverWidget
  * @param rxrs_sl_module
@@ -35,6 +36,7 @@ define([
   file,
   record,
   redirect,
+  runtime,
 ) => {
   /**
    * Defines the Suitelet script trigger point.
@@ -65,7 +67,9 @@ define([
           fileType: file.Type.PLAINTEXT, // Default file type, adjust as necessary
           contents: uploadedFile.getContents(),
           description: "Uploaded via Suitelet",
-          folder: 7293, // Optional: Specify a folder ID for the File Cabinet (if desired)
+          folder: runtime.getCurrentScript().getParameter({
+            name: "custscript_cm_file_id",
+          }), // Optional: Specify a folder ID for the File Cabinet (if desired)
         });
 
         // Save the file to the File Cabinet
@@ -81,12 +85,14 @@ define([
           const cmFile = file.load({
             id: fileId,
           });
+
           response = rxrs_custom_rec.createCreditMemoUpload({
             requestBody: JSON.parse(cmFile.getContents()),
           });
+          log.audit("Response", response);
         }
 
-        context.response.write(response);
+        context.response.write(response.response);
       } catch (e) {
         log.error("POST", e.message);
       }
