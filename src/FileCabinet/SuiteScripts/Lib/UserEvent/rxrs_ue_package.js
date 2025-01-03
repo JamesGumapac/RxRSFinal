@@ -50,7 +50,6 @@ define(["N/record", "N/search", "../rxrs_util"] /**
       const mrrId = rrRec.getValue("custbody_kd_master_return_id");
       const isPackageReceived = rec.getValue("custrecord_packstatus");
       log.debug("RR Details", { rrId, rrStatus, isPackageReceived });
-
       if (
         isPackageReceived == PACKAGERECEIVED &&
         rrStatus == util.rrStatus.PendingPackageReceipt

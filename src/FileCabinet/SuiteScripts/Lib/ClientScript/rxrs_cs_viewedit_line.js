@@ -50,7 +50,6 @@ define([
    * @since 2015.2
    */
   function pageInit(scriptContext) {
-    alert("test");
     suitelet = scriptContext.currentRecord;
     let arrTemp = window.location.href.split("?");
     urlParams = new URLSearchParams(arrTemp[1]);
@@ -349,12 +348,26 @@ define([
               fieldId: CHANGEPHARMAPROCESSINGFIELD,
               line: line,
             });
+            const rateField = suitelet.getSublistField({
+              sublistId: SUBLIST,
+              fieldId: RATEFIELD,
+              line: line,
+            });
+            const updateCatalogfield = suitelet.getSublistField({
+              sublistId: SUBLIST,
+              fieldId: UPDATEPRODUCTCATALOGFIELD,
+              line: line,
+            });
             console.log(selectField);
 
             if (selectField == true) {
               changePharmaProcessingField.isDisabled = false;
+              rateField.isDisabled = false;
+              updateCatalogfield.isDisabled = false;
             } else {
               changePharmaProcessingField.isDisabled = true;
+              rateField.isDisabled = true;
+              updateCatalogfield.isDisabled = true;
             }
 
             break;
@@ -489,7 +502,12 @@ define([
           fieldId: "custpage_select",
           line: i,
         });
-        if (isSelected == true) {
+        const updateFromCatalog = suitelet.getSublistValue({
+          sublistId: SUBLIST,
+          fieldId: UPDATEPRODUCTCATALOGFIELD,
+          line: i,
+        });
+        if (isSelected == true && updateFromCatalog == true) {
           const irsId = suitelet.getSublistValue({
             sublistId: SUBLIST,
             fieldId: "custpage_internalid",

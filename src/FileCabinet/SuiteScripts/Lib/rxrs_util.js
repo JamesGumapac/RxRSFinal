@@ -425,6 +425,7 @@ define([
    * @param options.recordLink - Entity Name
    * @param options.form - Form to used in the Tasks
    * @param options.transaction - Related Transaction
+   * @param options.returnRequest - Return Request
    * @param options.replaceMessage Replace the last word in RMA
    * @return the internal id of the created tasks
    */
@@ -438,6 +439,7 @@ define([
       transaction,
       link,
       replaceMessage,
+      returnRequest,
     } = options;
     try {
       const assignee = getDefaultTaskAssignee();
@@ -467,6 +469,11 @@ define([
         fieldId: "company",
         value: entityId,
       });
+      returnRequest &&
+        taskRec.setValue({
+          fieldId: "custevent_kd_ret_req",
+          value: returnRequest,
+        });
       taskRec.setValue({
         fieldId: "sendemail",
         value: true,

@@ -185,8 +185,6 @@ define(["N/record", "N/search", "N/runtime", "../rxrs_util"] /**
           [options.licenseDate, "onorbefore", "today"],
           "AND",
           [options.licenseField, "is", createTask],
-          "AND",
-          ["internalidnumber", "equalto", "5515"],
         ],
         columns: [
           search.createColumn({
