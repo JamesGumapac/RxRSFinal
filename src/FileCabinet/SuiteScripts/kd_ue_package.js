@@ -36,6 +36,7 @@ define(["N/record", "N/search"] /**
    * @since 2015.2
    */
   const afterSubmit = (context) => {
+    log.audit("test");
     const RRTYPE = Object.freeze({
       rrSalesType: "customsale_kod_returnrequest",
       rrPoType: "custompurchase_returnrequestpo",

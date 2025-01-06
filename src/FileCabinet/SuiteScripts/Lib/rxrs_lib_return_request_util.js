@@ -140,7 +140,7 @@ define([
         });
         if (options.category === RRCATEGORY.C2) {
           var extId = rrRecSave.getValue("tranid");
-          createTask(extId, rrRecSave.id);
+          // createTask(extId, rrRecSave.id);
           if (
             rrRecSave.getValue("custbody_kd_state_license_expired") === false &&
             rrRecSave.getValue("custbody_kd_license_expired")
@@ -239,32 +239,32 @@ define([
     }
   }
 
-  const createTask = (exId, rrId) => {
-    try {
-      const taskRec = record.create({
-        type: record.Type.TASK,
-      });
-      taskRec.setValue({
-        fieldId: "title",
-        value: exId,
-      });
-      taskRec.setValue({
-        fieldId: "message",
-        value: "Print labels and form 222",
-      });
-      taskRec.setValue({
-        fieldId: "assigned",
-        value: runtime.getCurrentUser().id,
-      });
-      taskRec.setValue({
-        fieldId: "custevent_kd_ret_req",
-        value: rrId,
-      });
-      log.debug("task id ", taskRec.save());
-    } catch (e) {
-      log.error("createTask", e.message);
-    }
-  };
+  // const createTask = (exId, rrId) => {
+  //   try {
+  //     const taskRec = record.create({
+  //       type: record.Type.TASK,
+  //     });
+  //     taskRec.setValue({
+  //       fieldId: "title",
+  //       value: exId,
+  //     });
+  //     taskRec.setValue({
+  //       fieldId: "message",
+  //       value: "Print labels and form 222",
+  //     });
+  //     taskRec.setValue({
+  //       fieldId: "assigned",
+  //       value: runtime.getCurrentUser().id,
+  //     });
+  //     taskRec.setValue({
+  //       fieldId: "custevent_kd_ret_req",
+  //       value: rrId,
+  //     });
+  //     log.debug("task id ", taskRec.save());
+  //   } catch (e) {
+  //     log.error("createTask", e.message);
+  //   }
+  // };
   /**
    * Create inbound packages
    * @param {number} options.mrrId master return request number

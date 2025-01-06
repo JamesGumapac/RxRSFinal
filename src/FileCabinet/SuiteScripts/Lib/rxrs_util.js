@@ -252,10 +252,10 @@ define([
         let tranStatus = rrRecSave.getValue("transtatus");
         log.audit("tranId", { tranId, tranStatus });
         if (options.category === RRCATEGORY.C2) {
-          createTask({
-            tranId: tranId,
-            rrId: RRId,
-          });
+          // createTask({
+          //   tranId: tranId,
+          //   rrId: RRId,
+          // });
           if (
             rrRecSave.getValue("custbody_kd_state_license_expired") === false &&
             rrRecSave.getValue("custbody_kd_license_expired")

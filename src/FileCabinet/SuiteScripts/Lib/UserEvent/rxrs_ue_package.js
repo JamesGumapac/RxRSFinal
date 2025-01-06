@@ -5,6 +5,14 @@
 define(["N/record", "N/search", "../rxrs_util"] /**
  * @param{record} record
  * @param{search} search
+ */ /**
+ * Defines the function definition that is executed before record is loaded.
+ * @param {Object} scriptContext
+ * @param {Record} scriptContext.newRecord - New record
+ * @param {string} scriptContext.type - Trigger type; use values from the context.UserEventType enum
+ * @param {Form} scriptContext.form - Current form
+ * @param {ServletRequest} scriptContext.request - HTTP request information sent from the browser for a client action only.
+ * @since 2015.2
  */, (record, search, util) => {
   /**
    * Defines the function definition that is executed before record is loaded.
@@ -82,10 +90,136 @@ define(["N/record", "N/search", "../rxrs_util"] /**
           );
         }
       }
+      const tasksIdUpdated = checkAllTrackingNumberIsGenerated({ rrId: rrId });
+      log.audit("tasksIdUpdated", tasksIdUpdated);
     } catch (e) {
       log.error("afterSubmit", e.message);
     }
   };
+
+  /**
+   * Checks if all tracking numbers are generated for a given record ID.
+   *
+   * @param {Object} options - An object containing options for the tracking number check.
+   * @param {string} options.rrId - The record ID to check for tracking numbers.
+   *
+   * @return {string}  - task Id
+   */
+  function checkAllTrackingNumberIsGenerated(options) {
+    log.audit("checkAllTrackingNumberIsGenerated", options);
+    let { rrId } = options;
+    let passInbound = false;
+    try {
+      const customrecord_kod_mr_packagesSearchObjInBound = search.create({
+        type: "customrecord_kod_mr_packages",
+        filters: [
+          ["custrecord_kd_is_222_kit", "is", "F"],
+          "AND",
+          ["custrecord_kod_packrtn_rtnrequest", "anyof", rrId],
+        ],
+        columns: [
+          search.createColumn({
+            name: "name",
+            summary: "COUNT",
+            sort: search.Sort.ASC,
+            label: "ID",
+          }),
+          search.createColumn({
+            name: "custrecord_kod_packrtn_trackingnum",
+            summary: "COUNT",
+            label: "Tracking Number",
+          }),
+        ],
+      });
+      let inBoundRPsearchResultCount, inBoundTrackingNumberCount;
+      log.debug(
+        "customrecord_kod_mr_packagesSearchObj result count",
+        inBoundRPsearchResultCount,
+      );
+      customrecord_kod_mr_packagesSearchObjInBound
+        .run()
+        .each(function (result) {
+          // .run().each has a limit of 4,000 results
+          inBoundTrackingNumberCount = result.getValue({
+            name: "custrecord_kod_packrtn_trackingnum",
+            summary: "COUNT",
+          });
+          inBoundRPsearchResultCount = result.getValue({
+            name: "name",
+            summary: "COUNT",
+          });
+          return true;
+        });
+
+      log.debug("inBoundTrackingNumberCount", inBoundTrackingNumberCount);
+      log.debug("inBoundRPsearchResultCount", inBoundRPsearchResultCount);
+      if (inBoundTrackingNumberCount == inBoundRPsearchResultCount) {
+        passInbound = true;
+      }
+      if (passInbound == true) {
+        let taskId = getTasks({ rrId: rrId });
+        if (taskId) {
+          const taskRec = record.load({
+            type: record.Type.TASK,
+            id: taskId,
+          });
+          taskRec.setValue({
+            fieldId: "custevent_kd_tracking_num",
+            value: true,
+          });
+          const all222FormGenerated = taskRec.getValue(
+            "custevent_kd_222_form_generated",
+          );
+          if (all222FormGenerated == true) {
+            taskRec.setValue({
+              fieldId: "status",
+              value: "COMPLETE",
+            });
+          } else {
+            taskRec.setValue({
+              fieldId: "status",
+              value: "PROGRESS",
+            });
+          }
+          return taskRec.save({
+            ignoreMandatoryFields: true,
+          });
+        }
+      }
+    } catch (e) {
+      log.error("checkAllTrackingNumberIsGenerated", e.message);
+    }
+  }
+
+  /**
+   * Retrieves the task ID associated with the given request ID.
+   *
+   * @param {Object} options - The options object containing the request ID.
+   * @param {string} options.rrId - The request ID to search for tasks.
+   *
+   * @return {string} The task ID corresponding to the request ID provided in the options.
+   */
+  function getTasks(options) {
+    try {
+      let { rrId } = options;
+      let taskId;
+      const taskSearchObj = search.create({
+        type: "task",
+        filters: [["custevent_kd_ret_req", "anyof", rrId]],
+        columns: [
+          search.createColumn({ name: "internalid", label: "internalid" }),
+        ],
+      });
+
+      taskSearchObj.run().each(function (result) {
+        taskId = result.getValue({ name: "internalid" });
+        return true;
+      });
+      return taskId;
+    } catch (e) {
+      log.error("getTasks", e.message);
+    }
+  }
 
   return { afterSubmit };
 });

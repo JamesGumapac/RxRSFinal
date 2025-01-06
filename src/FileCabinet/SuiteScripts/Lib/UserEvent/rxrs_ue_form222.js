@@ -129,10 +129,20 @@ define([
           fieldId: "custevent_kd_222_form_generated",
           value: true,
         });
-        taskRec.setValue({
-          fieldId: "status",
-          value: "PROGRESS",
-        });
+        const trackingNUmberGennerated = taskRec.getValue(
+          "custevent_kd_tracking_num",
+        );
+        if (trackingNUmberGennerated == true) {
+          taskRec.setValue({
+            fieldId: "status",
+            value: "COMPLETE",
+          });
+        } else {
+          taskRec.setValue({
+            fieldId: "status",
+            value: "PROGRESS",
+          });
+        }
       }
       const taskIdRec = taskRec.save({ ignoreMandatoryFields: true });
       log.debug("Task rec has been update ", taskIdRec);
@@ -367,15 +377,15 @@ define([
         value: '<a href="' + lineUrl + '">EDIT</a>',
       });
       /*contacts.setSublistValue({
-                                                                                            id: 'edit',
-                                                                                            line: ctr,
-                                                                                            value: 'https://' + domain + editUrl
-                                                                                        });*/
+                                                                                                        id: 'edit',
+                                                                                                        line: ctr,
+                                                                                                        value: 'https://' + domain + editUrl
+                                                                                                    });*/
       /*objSublist.setSublistValue({
-                                                                                            id: 'custpage_edit',
-                                                                                            line: i,
-                                                                                            value: 'https://' + domain + editUrl
-                                                                                        });*/
+                                                                                                        id: 'custpage_edit',
+                                                                                                        line: i,
+                                                                                                        value: 'https://' + domain + editUrl
+                                                                                                    });*/
       objSublist.setSublistValue({
         id: "custpage_col_id",
         value: itemsRequested[i].id,
