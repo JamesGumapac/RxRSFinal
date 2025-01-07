@@ -2,11 +2,12 @@
  * @NApiVersion 2.1
  * @NScriptType UserEventScript
  */
-define(["../rxrs_transaction_lib", "N/ui/serverWidget", "N/search"], (
-  rxrs_tran_lib,
-  serverWidget,
-  search,
-) => {
+define([
+  "../rxrs_transaction_lib",
+  "N/ui/serverWidget",
+  "N/search",
+  "../rxrs_item_lib",
+], (rxrs_tran_lib, serverWidget, search, itemlib) => {
   /**
    * Defines the function definition that is executed before record is loaded.
    * @param {Object} scriptContext
@@ -85,9 +86,12 @@ define(["../rxrs_transaction_lib", "N/ui/serverWidget", "N/search"], (
 
     if (planSelectionType == 11) {
       // GOVERNMENT
+      const res = itemlib.getCurrentDiscountPercentage({
+        displayName: "Government",
+      });
       newRecord.setValue({
         fieldId: "discountitem",
-        value: 487142, //	Invoice Adjustment - Government Accounts
+        value: res.internalId, //	Invoice Adjustment - Government Accounts
       });
       newRecord.setValue({
         fieldId: "192", //RXRS | MFG Invoice [Government]

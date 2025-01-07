@@ -129,8 +129,16 @@ define([
   const createHeaderFields = (options) => {
     let form = options.form;
 
-    let { invId, type, tranId, total, isEdit, creditMemoId, isGovernment } =
-      options.params;
+    let {
+      invId,
+      type,
+      tranId,
+      total,
+      isEdit,
+      creditMemoId,
+      isTopCo,
+      isGovernment,
+    } = options.params;
     options.params.isReload = true;
 
     log.debug("createHeaderFields", options.params);
@@ -194,6 +202,13 @@ define([
         const governmentField = (form.addField({
           id: "custpage_is_government",
           label: "Government",
+          type: serverWidget.FieldType.CHECKBOX,
+        }).defaultValue = "T");
+      }
+      if (JSON.parse(isTopCo) == true) {
+        const isTopCoField = (form.addField({
+          id: "custpage_is_topco",
+          label: "Top Co",
           type: serverWidget.FieldType.CHECKBOX,
         }).defaultValue = "T");
       }

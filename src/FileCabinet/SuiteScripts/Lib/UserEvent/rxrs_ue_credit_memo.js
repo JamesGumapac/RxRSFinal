@@ -2,11 +2,12 @@
  * @NApiVersion 2.1
  * @NScriptType UserEventScript
  */
-define(["../rxrs_transaction_lib", "../rxrs_custom_rec_lib", "N/record"], (
-  tran_lib,
-  customLib,
-  record,
-) => {
+define([
+  "../rxrs_transaction_lib",
+  "../rxrs_custom_rec_lib",
+  "N/record",
+  "../rxrs_item_lib",
+], (tran_lib, customLib, record, itemlib) => {
   /**
    * Defines the function definition that is executed before record is loaded.
    * @param {Object} scriptContext
@@ -30,13 +31,16 @@ define(["../rxrs_transaction_lib", "../rxrs_custom_rec_lib", "N/record"], (
     try {
       const rec = scriptContext.newRecord;
       if (rec.getValue("custrecord_is_government") == true) {
+        const res = itemlib.getCurrentDiscountPercentage({
+          displayName: "Government",
+        });
         const grossCreditReceived = rec.getValue(
           "custrecord_gross_credit_received",
         );
-        log.audit("amount", grossCreditReceived * 0.15);
+        log.audit("amount", grossCreditReceived * res.totalPercent);
         rec.setValue({
           fieldId: "custrecord_amount",
-          value: grossCreditReceived * 0.15,
+          value: grossCreditReceived * res.totalPercent,
         });
       }
     } catch (e) {
@@ -65,7 +69,10 @@ define(["../rxrs_transaction_lib", "../rxrs_custom_rec_lib", "N/record"], (
       let total = result.total;
       const oldAmount = curRec.getValue("custrecord_amount");
       if (rec.getValue("custrecord_is_government") == true) {
-        total *= 0.15;
+        const res = itemlib.getCurrentDiscountPercentage({
+          displayName: "Government",
+        });
+        total *= res.totalPercent;
       }
       let amount = curRec.getValue("custrecord_amount");
       const packingSlipAmount = curRec.getValue(

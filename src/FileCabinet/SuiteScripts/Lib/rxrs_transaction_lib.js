@@ -2102,7 +2102,7 @@ define([
       fullyPaid: 5,
     };
     const GOVERNMENT = 11;
-    let invoiceUpdateStatus;
+    let invoiceUpdateStatus, discountObj;
 
     let params = JSON.parse(options);
     let {
@@ -2147,6 +2147,9 @@ define([
             value: cmId,
           });
         if (planSelectionType == GOVERNMENT) {
+          discountObj = rxrs_itemlib.getCurrentDiscountPercentage({
+            displayName: "Government",
+          });
           paymentRec.selectNewLine({
             sublistId: "line",
           });
@@ -2176,7 +2179,7 @@ define([
           paymentRec.setCurrentSublistValue({
             sublistId: "line",
             fieldId: "credit",
-            value: (paymentAmount * 0.15).toFixed(2),
+            value: (paymentAmount * discountObj.totalPercent).toFixed(2),
           });
           paymentRec.commitLine({
             sublistId: "line",
@@ -2189,11 +2192,14 @@ define([
             fieldId: "account",
             value: ACCOUNT.Undeposited_Funds,
           });
-          log.debug("paymentamount credit", (paymentAmount * 0.85).toFixed(2));
+          log.debug(
+            "paymentamount credit",
+            (paymentAmount * discountObj.discountPercentage).toFixed(2),
+          );
           paymentRec.setCurrentSublistValue({
             sublistId: "line",
             fieldId: "credit",
-            value: (paymentAmount * 0.85).toFixed(2),
+            value: (paymentAmount * discountObj.discountPercentage).toFixed(2),
           });
           paymentRec.commitLine({
             sublistId: "line",

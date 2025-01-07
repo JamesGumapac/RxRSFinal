@@ -100,8 +100,60 @@ define(["N/record", "N/search"] /**
     }
   }
 
+  /**
+   * Retrieves the current discount percentage for a specific item based on the display name.
+   *
+   * @param {object} options - The options for retrieving the discount percentage.
+   * @param {string} options.displayName - The display name of the item to search for.
+   *
+   * @return {object} - An object containing the following properties:
+   *                   - internalId: The internal ID of the item.
+   *                   - discountPercentage: The discount percentage in decimal form.
+   *                   - totalPercent: The total percentage after discount in decimal form.
+   */
+  function getCurrentDiscountPercentage(options) {
+    let { displayName } = options;
+    let res = {};
+    try {
+      const itemSearchObj = search.create({
+        type: "item",
+        filters: [
+          ["displayname", "contains", "Active"],
+          "AND",
+          ["displayname", "contains", displayName],
+        ],
+        columns: [
+          search.createColumn({ name: "itemid", label: "Name" }),
+          search.createColumn({ name: "displayname", label: "Display Name" }),
+          search.createColumn({
+            name: "salesdescription",
+            label: "Description",
+          }),
+          search.createColumn({ name: "type", label: "Type" }),
+          search.createColumn({ name: "baseprice", label: "Base Price" }),
+        ],
+      });
+      itemSearchObj.run().each(function (result) {
+        res.internalId = result.id;
+        let percentage = result.getValue({
+          name: "baseprice",
+        });
+        let numericValue = parseFloat(percentage.replace("%", ""));
+
+        // Convert to the decimal form by dividing by 100
+        res.discountPercentage = Math.abs(numericValue / 100);
+        res.totalPercent = Number((1 - res.discountPercentage).toFixed(2));
+        return true;
+      });
+      return res;
+    } catch (e) {
+      log.error("getCurrentDiscountPercentage", e.message);
+    }
+  }
+
   return {
     updateItemPricing: updateItemPricing,
     getItemId: getItemId,
+    getCurrentDiscountPercentage: getCurrentDiscountPercentage,
   };
 });

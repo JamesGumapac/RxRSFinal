@@ -288,13 +288,16 @@ define([
           value: invoiceId,
         });
       if (isGovernment == true) {
+        const res = itemlib.getCurrentDiscountPercentage({
+          displayName: "Government",
+        });
         amount &&
           cmRec.setValue({
             fieldId: "custrecord_gross_credit_received",
-            value: amount / 0.15,
+            value: amount / res.totalPercent,
           });
-        amount *= 0.15;
-        packingSlipAmount *= 0.15;
+        amount *= res.totalPercent;
+        packingSlipAmount *= res.totalPercent;
       }
       log.audit("amount", amount);
       isGovernment &&
@@ -588,7 +591,6 @@ define([
   function createCreditMemoLines(options) {
     log.audit("createCreditMemoLines", options);
     let { cmLines, invId, cmParentId, isGovernment } = options;
-
     try {
       cmLines.forEach((cm) => {
         let {
@@ -604,16 +606,17 @@ define([
 
         if (!isEmpty(+cmLineId) || cmLineId != " ") {
           log.error("Cm ID EXIST IF");
-          let values = {
-            custrecord_cm_amount_applied: amountApplied,
-            custrecord_cm_unit_price: unitPrice,
-          };
+          // let values = {
+          //   custrecord_cm_amount_applied: amountApplied,
+          //   custrecord_cm_unit_price: unitPrice,
+          // };
 
           const cmLineRec = record.load({
             type: "customrecord_credit_memo_line_applied",
             id: cmLineId,
             isDynamic: true,
           });
+          log.debug("cmLineRec", cmLineRec);
           cmLineRec.setValue({
             fieldId: "custrecord_cm_amount_applied",
             value: amountApplied,
@@ -1430,6 +1433,66 @@ define([
   }
 
   /**
+   * Retrieves the total sum and gross amount applied of credit memo lines for a given parent credit memo ID.
+   * @param {Object} options - The options object containing the parentCmId to identify the credit memo.
+   * @param {Number} options.parentCmId - The internal ID of the parent credit memo.
+   * @return {Object} An object containing the sumAmount and grossAmount of applied credit memo lines.
+   */
+  function getAllCMLineTotal(options) {
+    log.audit("getAllCMLineTotal", options);
+    let { parentCmId } = options;
+    try {
+      let res = {};
+      res.sumAmount = 0;
+      res.grossAmount = 0;
+      const customrecord_credit_memo_line_appliedSearchObj = search.create({
+        type: "customrecord_credit_memo_line_applied",
+        filters: [
+          ["custrecord_credit_memo_id", "anyof", parentCmId],
+          "AND",
+          ["custrecord_cm_amount_applied", "isnotempty", ""],
+          "AND",
+          ["custrecord_cm_amount_applied", "notequalto", "0.00"],
+        ],
+        columns: [
+          search.createColumn({
+            name: "custrecord_cm_amount_applied",
+            summary: "SUM",
+            label: "Amount Applied",
+          }),
+          search.createColumn({
+            name: "custrecord_cmline_gross_amount",
+            summary: "SUM",
+            label: "Gross Applied",
+          }),
+          search.createColumn({
+            name: "internalid",
+            summary: "COUNT",
+            label: "Internal ID",
+          }),
+        ],
+      });
+
+      customrecord_credit_memo_line_appliedSearchObj
+        .run()
+        .each(function (result) {
+          res.sumAmount = result.getValue({
+            name: "custrecord_cm_amount_applied",
+            summary: "SUM",
+          });
+          res.grossAmount = result.getValue({
+            name: "custrecord_cmline_gross_amount",
+            summary: "SUM",
+          });
+          return true;
+        });
+      return res;
+    } catch (e) {
+      log.error("getAllCMLineTotal", e.message);
+    }
+  }
+
+  /**
    * Update Item Return Scan Wac and Amount Price
    * @param rec - Item Return Scan Object
    */
@@ -1604,6 +1667,7 @@ define([
     log.audit("createCreditMemoUpload", options);
     let returnObj = {};
     let { requestBody } = options;
+    let discountObj;
     try {
       if (requestBody.length > 0) {
         requestBody.forEach((obj) => {
@@ -1621,11 +1685,15 @@ define([
             externalId: DebitMemoNumbers,
             type: "CustInvc",
           });
+
           log.audit("RES", res);
           let { invId, isGovernment } = res;
           log.debug("invId", invId);
           if (isGovernment == true) {
-            Amount = Number(Amount) * 0.15;
+            const discountObj = itemlib.getCurrentDiscountPercentage({
+              displayName: "Government",
+            });
+            Amount = Number(Amount) * discountObj.totalPercent;
             log.audit("Amount", Amount);
           }
           let cmObj = {
@@ -1650,8 +1718,8 @@ define([
                   invId: invId,
                 });
                 if (isGovernment == true) {
-                  UnitPrice *= 0.15;
-                  ExtendedPrice *= 0.15;
+                  UnitPrice *= discountObj.totalPercent;
+                  ExtendedPrice *= discountObj.totalPercent;
                 }
                 let lineDetails = {
                   unitPrice: UnitPrice,
@@ -1677,7 +1745,8 @@ define([
                 let isFullAmount;
                 let fullAmount = 0;
                 if (isGovernment == true) {
-                  fullAmount = cmObj.packingSlipAmount * 0.15;
+                  fullAmount =
+                    cmObj.packingSlipAmount * discountObj.totalPercent;
                 } else {
                   fullAmount = Amount;
                 }
@@ -1844,6 +1913,7 @@ define([
     deletePriceHistory,
     getAllCM,
     getALlCMTotalAmount,
+    getAllCMLineTotal,
     getC2ItemRequested,
     getCMFileUpload,
     getCMLineCountWithAmount,

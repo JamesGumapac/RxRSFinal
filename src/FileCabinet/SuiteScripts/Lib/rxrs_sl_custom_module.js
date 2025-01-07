@@ -309,7 +309,7 @@ define([
         functionName: `markAll("false")`,
       });
       sublistFields.forEach((attri) => {
-        log.debug("attri", attri.id);
+        // log.debug("attri", attri.id);
         try {
           if (attri.id == "custpage_item") {
             sublist
@@ -346,14 +346,14 @@ define([
           log.error("error in ", { error: e.message, id: attri.id });
         }
       });
-      log.debug("fieldName", fieldName);
+      // log.debug("fieldName", fieldName);
       let mainLineInfo = [];
       value.forEach((val) => {
         try {
           let value = Object.values(val);
           let fieldInfo = [];
           for (let i = 0; i < value.length; i++) {
-            log.debug("fieldName[i]", fieldName[i]);
+            // log.debug("fieldName[i]", fieldName[i]);
             if (isEmpty(fieldName[i])) continue;
             if (
               fieldName[i] == "custpage_select" ||
@@ -361,14 +361,14 @@ define([
               fieldName[i] == "custpage_nonreturnable_reason"
             ) {
             } else {
-              log.debug("else");
+              //  log.debug("else");
               fieldInfo.push({
                 fieldId: fieldName[i],
                 value: value[i],
               });
             }
           }
-          log.audit("fieldInfo", fieldInfo);
+          // log.audit("fieldInfo", fieldInfo);
           mainLineInfo.push(fieldInfo);
         } catch (e) {
           log.error("ERROR ON FIELD", {
@@ -395,14 +395,14 @@ define([
    */
   const populateSublist = (options) => {
     try {
-      log.audit("populateSublist", options);
+      // log.audit("populateSublist", options);
       let sublist = options.sublist;
       let sublistFields = options.fieldInfo;
       if (sublistFields.length > 0) {
         let lineCount = 0;
         sublistFields.forEach((element) => {
           for (let i = 0; i < element.length; i++) {
-            log.emergency("element", element[i]);
+            //   log.emergency("element", element[i]);
             try {
               sublist.setSublistValue({
                 id: element[i].fieldId,

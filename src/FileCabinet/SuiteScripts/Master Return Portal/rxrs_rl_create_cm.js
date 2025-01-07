@@ -7,10 +7,11 @@ define([
   "N/search",
   "../Lib/rxrs_transaction_lib",
   "../Lib/rxrs_custom_rec_lib",
+  "../Lib/rxrs_item_lib",
 ] /**
  * @param{record} record
  * @param{search} search
- */, (record, search, tranlib, customreclib) => {
+ */, (record, search, tranlib, customreclib, itemlib) => {
   /**
    * Defines the function that is executed when a GET request is sent to a RESTlet.
    * @param {Object} requestParams - Parameters from HTTP request URL; parameters passed as an Object (for all supported
@@ -43,7 +44,7 @@ define([
    */
   const post = (requestBody) => {
     log.debug("requestparams", requestBody);
-
+    let discountObj;
     try {
       if (requestBody.length > 0) {
         requestBody.forEach((obj) => {
@@ -65,7 +66,10 @@ define([
           let { invId, isGovernment } = res;
           log.debug("invId", invId);
           if (isGovernment == true) {
-            Amount = Number(Amount) * 0.15;
+            discountObj = itemlib.getCurrentDiscountPercentage({
+              displayName: "Government",
+            });
+            Amount = Number(Amount) * discountObj.totalPercent;
             log.audit("Amount", Amount);
           }
           if (invId) {
@@ -89,8 +93,8 @@ define([
                   invId: invId,
                 });
                 if (isGovernment == true) {
-                  UnitPrice *= 0.15;
-                  ExtendedPrice *= 0.15;
+                  UnitPrice *= discountObj.totalPercent;
+                  ExtendedPrice *= discountObj.totalPercent;
                 }
                 let lineDetails = {
                   unitPrice: UnitPrice,

@@ -11,6 +11,7 @@ define([
   "N/record",
   "N/https",
   "N/file",
+  "../rxrs_item_lib",
 ], /**
  * @param{runtime} runtime
  * @param{url} url
@@ -20,7 +21,16 @@ define([
  * @param https
  * @param rxrs_rcl_lib
  * @param tranlib
- */ function (runtime, url, currentRecord, message, record, https, file) {
+ */ function (
+  runtime,
+  url,
+  currentRecord,
+  message,
+  record,
+  https,
+  file,
+  itemlib,
+) {
   let suitelet = null;
   let lineCount = 0;
   let urlParams;
@@ -201,11 +211,14 @@ define([
           //  console.table(percentage, lineTotal);
 
           if (isGovernment == true) {
-            console.log("erv amount " + newAmount * 0.15);
+            const res = itemlib.getCurrentDiscountPercentage({
+              displayName: "Government",
+            });
+            console.log("erv amount " + newAmount * res.totalPercent);
             suitelet.setCurrentSublistValue({
               sublistId: "custpage_items_sublist",
               fieldId: "custpage_amount_paid",
-              value: newAmount * 0.15,
+              value: newAmount * res.totalPercent,
             });
           } else {
             suitelet.setCurrentSublistValue({
@@ -626,9 +639,12 @@ define([
             line: i,
           });
           if (isGovernment == true) {
-            total = packingSlipAmountTotal * 0.15;
-            unitPrice *= 0.15;
-            amountApplied *= 0.15;
+            const res = itemlib.getCurrentDiscountPercentage({
+              displayName: "Government",
+            });
+            total = packingSlipAmountTotal * res.totalPercent;
+            unitPrice *= res.totalPercent;
+            amountApplied *= res.totalPercent;
           }
           let cmLineId = suitelet.getSublistValue({
             sublistId: SUBLIST,

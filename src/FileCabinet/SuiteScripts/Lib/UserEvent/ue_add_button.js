@@ -292,6 +292,7 @@ define([
                 tranId: invRec.getValue("tranid"),
                 total: invRec.getValue("total"),
                 isGovernment: invRec.getValue("custbody_plan_type") == 11,
+                isTopCo: invRec.getValue("custbody_plan_type") == 10,
                 isEdit: true,
               };
               let addCreditMemoUrl = url.resolveScript({
@@ -317,6 +318,7 @@ define([
                 tranId: invRec.getValue("tranid"),
                 total: invRec.getValue("total"),
                 isGovernment: invRec.getValue("custbody_plan_type") == 11,
+                isTopCo: invRec.getValue("custbody_plan_type") == 10,
                 isEdit: false,
               };
               let addCreditMemoUrl = url.resolveScript({
