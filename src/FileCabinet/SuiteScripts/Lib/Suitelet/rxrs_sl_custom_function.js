@@ -284,6 +284,10 @@ define([
           case "uploadCMFile":
             log.audit("Params", params);
             break;
+          case "createReturnCoverLetter":
+            let res = rclLib.createReturnCoverLetter({ mrrId: mrrId });
+            context.response.writeLine(res);
+            break;
         }
       } catch (e) {
         context.response.writeLine("ERROR:" + e.message);

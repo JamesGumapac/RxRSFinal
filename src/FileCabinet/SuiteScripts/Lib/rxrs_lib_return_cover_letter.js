@@ -50,32 +50,6 @@ define(["N/record", "N/search"], /**
   }
 
   /**
-   * Creates a Return Cover Letter record with the specified options.
-   *
-   * @param {Object} options - The options for creating the Return Cover Letter record.
-   * @param {string} options.mrrId - The ID of the Master Return record to associate with the cover letter.
-   *
-   * @return {string} - The internal ID of the created Return Cover Letter record.
-   */
-  function createReturnCoverLetter(options) {
-    try {
-      let { mrrId } = options;
-      const rclRec = recod.create({
-        type: "customrecord_return_cover_letter",
-      });
-      rclRec.setValue({
-        fieldId: "custrecord_rcl_master_return",
-        value: mrrId,
-      });
-      return rclRec.save({
-        ignoreMandatoryFields: true,
-      });
-    } catch (e) {
-      log.error("createReturnCoverLetter", e.message);
-    }
-  }
-
-  /**
    * Get the returnable and non-returnable total amount
    * @param {number} options.rrId - return request Id
    * @return {number} total amount
@@ -128,6 +102,5 @@ define(["N/record", "N/search"], /**
   return {
     getCustomerInfo,
     getItemReturnScanTotal,
-    createReturnCoverLetter,
   };
 });

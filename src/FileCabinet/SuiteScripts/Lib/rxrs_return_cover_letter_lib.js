@@ -349,6 +349,39 @@ define(["N/record", "N/search"], /**
     }
   }
 
+  /**
+   * Creates a return cover letter record with the provided options.
+   *
+   * @param {Object} options - The options for creating the return cover letter.
+   * @param {string} options.mrrId - The master return record ID to associate with the cover letter.
+   *
+   * @return {string} A message indicating the result of creating the return cover letter.
+   */
+  function createReturnCoverLetter(options) {
+    let res = "";
+    try {
+      log.audit("createReturnCoverLetter", options);
+      let { mrrId } = options;
+      const rclRec = record.create({
+        type: "customrecord_return_cover_letter",
+      });
+      rclRec.setValue({
+        fieldId: "custrecord_rcl_master_return",
+        value: mrrId,
+      });
+      const rclId = rclRec.save({
+        ignoreMandatoryFields: true,
+      });
+      if (rclId) {
+        res = "SUCCESSFULLY CREATED ID: " + rclId;
+      }
+    } catch (e) {
+      log.error("createReturnCoverLetter", e.message);
+      res = "ERROR: " + e.message;
+    }
+    return res;
+  }
+
   return {
     getCustomerInfo,
     getItemReturnScanTotal,
@@ -357,6 +390,7 @@ define(["N/record", "N/search"], /**
     createPaymentSched,
     hideSublist,
     updateReturnCoverRecord,
+    createReturnCoverLetter,
     getRCLRecord,
     SUBLIST_TO_HIDE_IN_RCL,
     SUBLIST_TO_ENTRY,

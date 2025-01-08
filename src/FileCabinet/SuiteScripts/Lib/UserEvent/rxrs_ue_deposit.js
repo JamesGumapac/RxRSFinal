@@ -45,6 +45,7 @@ define(["N/record", "N/search", "../rxrs_transaction_lib"] /**
         id: rec.id,
       });
       if (type == "create") {
+        let discountObj;
         for (let i = 0; i < newRecord.getLineCount("payment"); i++) {
           let isDeposit = newRecord.getSublistValue({
             sublistId: "payment",
@@ -66,7 +67,15 @@ define(["N/record", "N/search", "../rxrs_transaction_lib"] /**
           });
           log.debug("Line Info", { lineId, lineAmount });
           if (tranlib.getTransactionType({ id: lineId }) == "Payment Info") {
-            cashBackAmount += Number(lineAmount);
+            const rsLookup = search.lookupFields({
+              type: "customtransaction_payment_info",
+              id: lineId,
+              columns: ["custbody_pi_plan_type"],
+            });
+            if (rsLookup.custbody_pi_plan_type[0].value == 11) {
+              // GOVERNMENT
+              cashBackAmount += Number(lineAmount);
+            }
           }
         }
         log.debug("CashBack Amount", cashBackAmount);

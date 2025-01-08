@@ -188,13 +188,19 @@ define(["N/currentRecord", "N/url", "N/https", "N/ui/message"], /**
             returnableFee: returnableFee,
           };
           break;
-        case "createInventoryAdjustment": {
+        case "createInventoryAdjustment":
           params = {
             rrId: rrId,
             mrrId: mrrId,
             action: "createInventoryAdjustment",
           };
-        }
+          break;
+        case "createReturnCoverLetter":
+          params = {
+            mrrId: mrrId,
+            action: "createReturnCoverLetter",
+          };
+          break;
       }
 
       let functionSLURL = url.resolveScript({
@@ -210,6 +216,12 @@ define(["N/currentRecord", "N/url", "N/https", "N/ui/message"], /**
     }
   }
 
+  /**
+   * Generates a 222 Form for the specified IDs by making HTTP POST requests to an external URL.
+   *
+   * @param {Array} ids - An array of IDs for which 222 Forms should be generated.
+   * @return {void}
+   */
   function generate222Form(ids) {
     ids.forEach((id) => {
       let SLURL = url.resolveScript({

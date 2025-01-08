@@ -11,6 +11,7 @@ define([
   "N/file",
   "../rxrs_transaction_lib",
   "../rxrs_custom_rec_lib",
+  "../rxrs_return_cover_letter_lib",
 ], /**
  * @param{record} record
  * @param{search} search
@@ -28,6 +29,7 @@ define([
   file,
   tranlib,
   rxrs_cust_rec_lib,
+  rcl_lib,
 ) => {
   /**
    * Defines the function definition that is executed before record is loaded.
@@ -597,6 +599,25 @@ define([
                   mmrParamsGenerateLabel,
                 )})`,
               });
+            }
+            if (
+              mrrRec.getValue("custrecord_kod_mr_status") ==
+              rxrs_util.mrrStatus.PriceLocked
+            ) {
+              const existingRCLId = rcl_lib.getRCLRecord(mrrRec.id);
+              if (!existingRCLId) {
+                const createRCLParams = {
+                  action: "createReturnCoverLetter",
+                  mrrId: mrrRec.id,
+                };
+                context.form.addButton({
+                  id: "custpage_create_rcl",
+                  label: "Create Return Cover Letter",
+                  functionName: `createTransaction(${JSON.stringify(
+                    createRCLParams,
+                  )})`,
+                });
+              }
             }
             //  let saveSearchURL = `/app/common/search/searchresults.nl?searchid=967&saverun=T&whence=&CUSTRECORD_IRS_MASTER_RETURN_REQUEST=${mrrRec.id}`;
             let viewEditSuiteletUrl = url.resolveScript({

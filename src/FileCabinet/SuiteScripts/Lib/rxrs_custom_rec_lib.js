@@ -582,15 +582,12 @@ define([
   }
 
   /**
-   * Create credit memo child
-   * @param {string} options.invId
-   * @param {boolean} options.isGovernemt
-   * @param{[]} options.cmLines
-   * @param{string} options.cmParentId
-   */
+   * Create credit memo lines based on provided options.
+   *
+   * @param {Object} options - The options object containing cmLines, invId, cmParentId, is*/
   function createCreditMemoLines(options) {
     log.audit("createCreditMemoLines", options);
-    let { cmLines, invId, cmParentId, isGovernment } = options;
+    let { cmLines, invId, cmParentId, isGovernment, isTopCo } = options;
     try {
       cmLines.forEach((cm) => {
         let {
@@ -1690,9 +1687,10 @@ define([
           let { invId, isGovernment } = res;
           log.debug("invId", invId);
           if (isGovernment == true) {
-            const discountObj = itemlib.getCurrentDiscountPercentage({
+            discountObj = itemlib.getCurrentDiscountPercentage({
               displayName: "Government",
             });
+            log.audit("discountObj", discountObj);
             Amount = Number(Amount) * discountObj.totalPercent;
             log.audit("Amount", Amount);
           }
