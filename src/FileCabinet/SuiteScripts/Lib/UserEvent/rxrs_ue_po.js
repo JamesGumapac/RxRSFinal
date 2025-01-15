@@ -48,7 +48,7 @@ define([], () => {
           mfg: mfgProcessing,
         });
         if (
-          pharmaProcessing == NteONRETURNABLE &&
+          pharmaProcessing == NONRETURNABLE &&
           mfgProcessing == NONRETURNABLE
         ) {
           rec.setSublistValue({

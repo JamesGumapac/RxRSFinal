@@ -4757,6 +4757,8 @@ define([
         res.invId = result.id;
         res.isGovernment =
           result.getValue("custbody_plan_type") == 11 ? true : false;
+        res.isTopCo =
+          result.getValue("custbody_plan_type") == 10 ? true : false;
       });
       return res;
     } catch (e) {
@@ -4810,6 +4812,50 @@ define([
     }
   }
 
+  /**
+   * Retrieves Monthly Recurring Revenue (MRR) data by Customer ID.
+   *
+   * @param {string} customerId - The ID of the customer to fetch MRR data for.
+   * @return {Array} - An array of objects containing MRR information for the specified customer.
+   */
+  function getMrrByCustomerId(custmerId) {
+    try {
+      let mrrResult = [];
+      const customrecord_kod_masterreturnSearchObj = search.create({
+        type: "customrecord_kod_masterreturn",
+        filters: [
+          ["formulatext: {custrecord_mrrentity.entityid}", "is", custmerId],
+        ],
+        columns: [
+          search.createColumn({ name: "name", label: "Name" }),
+          search.createColumn({ name: "created", label: "Date Created" }),
+          search.createColumn({
+            name: "custrecord_mrrentity",
+            label: "Customer Name",
+          }),
+          search.createColumn({
+            name: "custrecord_kod_mr_status",
+            label: "Status",
+          }),
+        ],
+      });
+
+      customrecord_kod_masterreturnSearchObj.run().each(function (result) {
+        mrrResult.push({
+          MRR: result.getValue("name"),
+          dateCreated: result.getValue("created"),
+          customer: result.getText("custrecord_mrrentity"),
+          status: result.getText("custrecord_kod_mr_status"),
+        });
+        return true;
+      });
+      log.audit("mrrResults", mrrResult);
+      return mrrResult;
+    } catch (e) {
+      log.error("getMrrByCustomerId", e.message);
+    }
+  }
+
   return {
     ACCOUNT: ACCOUNT,
     addAccruedPurchaseItem: addAccruedPurchaseItem,
@@ -4834,6 +4880,7 @@ define([
     getAllBills: getAllBills,
     getBillId: getBillId,
     getBillStatus: getBillStatus,
+    getMrrByCustomerId: getMrrByCustomerId,
     getNDCTransactionLineDetails: getNDCTransactionLineDetails,
     getCertainField: getCertainField,
     getInvoiceLineAmount: getInvoiceLineAmount,

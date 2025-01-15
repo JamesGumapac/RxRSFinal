@@ -232,6 +232,7 @@ define([
             cmLines: forCreation.cmLines,
             cmParentId: cmId,
             isGovernment: forCreation.isGovernment,
+            isTopCo: forCreation.isTopCo,
             invId: forCreation.invoiceId,
           });
         }
@@ -256,6 +257,7 @@ define([
    * @param  {string}options.fileId
    * @param {number}options.packingSlipAmount
    * @param {boolean}options.isGovernment
+   * @param {boolean}options.isTopCo
    * @param options.cmLines
    *
    * @return string id of the parent credit memo
@@ -275,6 +277,7 @@ define([
         cmId,
         packingSlipAmount,
         isGovernment,
+        isTopCo,
       } = options;
 
       const cmRec = record.create({
@@ -298,9 +301,25 @@ define([
           });
         amount *= res.totalPercent;
         packingSlipAmount *= res.totalPercent;
+      } else if (isTopCo == true) {
+        const res = itemlib.getCurrentDiscountPercentage({
+          displayName: "Top Co",
+        });
+        amount &&
+          cmRec.setValue({
+            fieldId: "custrecord_gross_credit_received",
+            value: amount / res.totalPercent || 1,
+          });
+        amount *= res.totalPercent || 1;
+        packingSlipAmount *= res.totalPercent || 1;
       }
       log.audit("amount", amount);
       isGovernment &&
+        cmRec.setValue({
+          fieldId: "custrecord_is_government",
+          value: isGovernment,
+        });
+      isTopCo &&
         cmRec.setValue({
           fieldId: "custrecord_is_government",
           value: isGovernment,
@@ -651,6 +670,11 @@ define([
                 fieldId: "custrecord_government",
                 value: isGovernment,
               });
+            isTopCo &&
+              cmChildRec.setValue({
+                fieldId: "custrecord_cm_istopco",
+                value: isTopCo,
+              });
             cmChildRec.setValue({
               fieldId: "custrecord_cm_lineuniquekey",
               value: lineUniqueKey,
@@ -668,7 +692,7 @@ define([
               fieldId: "custrecord_cm_unit_price",
               value: unitPrice,
             });
-            if (isGovernment == true) {
+            if (isGovernment == true || isTopCo == true) {
               cmChildRec.setValue({
                 fieldId: "custrecord_cmline_gross_amount",
                 value: amountApplied, /// 0.15,
@@ -1684,14 +1708,21 @@ define([
           });
 
           log.audit("RES", res);
-          let { invId, isGovernment } = res;
+          let { invId, isGovernment, isTopCo } = res;
           log.debug("invId", invId);
           if (isGovernment == true) {
             discountObj = itemlib.getCurrentDiscountPercentage({
               displayName: "Government",
             });
-            log.audit("discountObj", discountObj);
-            Amount = Number(Amount) * discountObj.totalPercent;
+            log.audit("discountObj top co", discountObj);
+            Amount = Number(Amount) * discountObj.totalPercent || 1;
+            log.audit("Amount", Amount);
+          } else if (isTopCo == true) {
+            discountObj = itemlib.getCurrentDiscountPercentage({
+              displayName: "Top Co",
+            });
+            log.audit("discountObj top co", discountObj);
+            Amount = Number(Amount) * discountObj.totalPercent || 1;
             log.audit("Amount", Amount);
           }
           let cmObj = {
@@ -1701,6 +1732,7 @@ define([
             invoiceId: invId,
             serviceFee: ServiceFee,
             isGovernment: isGovernment,
+            isTopCo: isTopCo,
           };
           if (invId) {
             let cmId = lookForExistingCreditMemoRec(CreditMemoNumber);
@@ -1715,9 +1747,9 @@ define([
                   NDC: NDC,
                   invId: invId,
                 });
-                if (isGovernment == true) {
-                  UnitPrice *= discountObj.totalPercent;
-                  ExtendedPrice *= discountObj.totalPercent;
+                if (isGovernment == true || isTopCo == true) {
+                  UnitPrice *= discountObj.totalPercent || 1;
+                  ExtendedPrice *= discountObj.totalPercent || 1;
                 }
                 let lineDetails = {
                   unitPrice: UnitPrice,
@@ -1738,13 +1770,14 @@ define([
                   cmLines: cmLines,
                   cmParentId: cmId,
                   isGovernment: isGovernment,
+                  isTopCo: isTopCo,
                   invId: invId,
                 });
                 let isFullAmount;
                 let fullAmount = 0;
-                if (isGovernment == true) {
+                if (isGovernment == true || isTopCo == true) {
                   fullAmount =
-                    cmObj.packingSlipAmount * discountObj.totalPercent;
+                    cmObj.packingSlipAmount * discountObj.totalPercent || 1;
                 } else {
                   fullAmount = Amount;
                 }
@@ -1895,6 +1928,71 @@ define([
     }
   }
 
+  /**
+   * Retrieves FedEx PDF information based on return request ID.
+   *
+   * @param {object} options - An object containing the returnRequestId.
+   * @param {string} options.returnRequest - The ID of the return request to fetch FedEx PDF information for.
+   *
+   * @return {Array} An array of objects containing PDF link and tracking number for each FedEx PDF associated with the return request ID.
+   */
+  function getFedexPDF(options) {
+    let { returnRequest } = options;
+    try {
+      let res = [];
+      const customrecord_kod_mr_packagesSearchObj = search.create({
+        type: "customrecord_kod_mr_packages",
+        filters: [["custrecord_kod_rtnpack_mr.name", "is", returnRequest]],
+        columns: [
+          search.createColumn({
+            name: "custrecord_kd_pdflink",
+            label: "PDF Link",
+          }),
+          search.createColumn({
+            name: "custrecord_kod_packrtn_trackingnum",
+            label: "Tracking Number",
+          }),
+          search.createColumn({
+            name: "custrecord_kd_inbound_tracking_status",
+            label: "Tracking Status",
+          }),
+          search.createColumn({
+            name: "custrecord_kd_inbound_estimated_delivery",
+            label: "Estimated Delivery",
+          }),
+          search.createColumn({
+            name: "custrecord_packstatus",
+            label: "Package Status",
+          }),
+          search.createColumn({
+            name: "name",
+            label: "name",
+          }),
+        ],
+      });
+
+      customrecord_kod_mr_packagesSearchObj.run().each(function (result) {
+        res.push({
+          name: result.getValue("name"),
+          netsuiteInternalId: result.id,
+          pdfLink: result.getValue("custrecord_kd_pdflink"),
+          trackingNumber: result.getValue("custrecord_kod_packrtn_trackingnum"),
+          trackingStatus: result.getValue(
+            "custrecord_kd_inbound_tracking_status",
+          ),
+          estimatedDelivery: result.getValue(
+            "custrecord_kd_inbound_estimated_delivery",
+          ),
+          packageStatus: result.getText("custrecord_packstatus"),
+        });
+        return true;
+      });
+      return res;
+    } catch (e) {
+      log.error("getFedexPDF", e.message);
+    }
+  }
+
   return {
     assignReturnItemRequested,
     checkIfFor222Regeneration,
@@ -1910,6 +2008,7 @@ define([
     deleteCreditMemo,
     deletePriceHistory,
     getAllCM,
+    getFedexPDF,
     getALlCMTotalAmount,
     getAllCMLineTotal,
     getC2ItemRequested,

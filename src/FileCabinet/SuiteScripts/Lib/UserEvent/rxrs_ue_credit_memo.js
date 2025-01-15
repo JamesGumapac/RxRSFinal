@@ -72,7 +72,12 @@ define([
         const res = itemlib.getCurrentDiscountPercentage({
           displayName: "Government",
         });
-        total *= res.totalPercent;
+        total *= res.totalPercent || 1;
+      } else if (rec.getValue("custrecord_cm_istopco") == true) {
+        const res = itemlib.getCurrentDiscountPercentage({
+          displayName: "Top Co",
+        });
+        total *= res.totalPercent || 1;
       }
       let amount = curRec.getValue("custrecord_amount");
       const packingSlipAmount = curRec.getValue(

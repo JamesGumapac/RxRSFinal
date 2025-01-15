@@ -2,10 +2,15 @@
  * @NApiVersion 2.1
  * @NScriptType UserEventScript
  */
-define(["N/record", "N/search", "../rxrs_transaction_lib"] /**
+define([
+  "N/record",
+  "N/search",
+  "../rxrs_transaction_lib",
+  "../rxrs_item_lib",
+] /**
  * @param{record} record
  * @param{search} search
- */, (record, search, tranlib) => {
+ */, (record, search, tranlib, itemlib) => {
   /**
    * Defines the function definition that is executed before record is loaded.
    * @param {Object} scriptContext
@@ -37,6 +42,10 @@ define(["N/record", "N/search", "../rxrs_transaction_lib"] /**
    */
   const afterSubmit = (scriptContext) => {
     try {
+      const GOVERNMENT = 11;
+      const TOPCO = 10;
+      let res;
+      let keyWord = "";
       let cashBackAmount = 0;
       let { type } = scriptContext;
       let rec = scriptContext.newRecord;
@@ -72,8 +81,20 @@ define(["N/record", "N/search", "../rxrs_transaction_lib"] /**
               id: lineId,
               columns: ["custbody_pi_plan_type"],
             });
-            if (rsLookup.custbody_pi_plan_type[0].value == 11) {
-              // GOVERNMENT
+            res = itemlib.getCurrentDiscountPercentage({
+              displayName: "Government",
+            });
+            if (
+              rsLookup.custbody_pi_plan_type[0].value == GOVERNMENT ||
+              rsLookup.custbody_pi_plan_type[0].value == TOPCO
+            ) {
+              keyWord =
+                rsLookup.custbody_pi_plan_type[0].value == GOVERNMENT
+                  ? "Government"
+                  : "Top Co";
+              res = itemlib.getCurrentDiscountPercentage({
+                displayName: keyWord,
+              });
               cashBackAmount += Number(lineAmount);
             }
           }
@@ -89,7 +110,7 @@ define(["N/record", "N/search", "../rxrs_transaction_lib"] /**
           newRecord.setSublistValue({
             sublistId: "cashback",
             fieldId: "amount",
-            value: cashBackAmount * 0.85,
+            value: cashBackAmount * res.discountPercentage || 1,
             line: 0,
           });
         }

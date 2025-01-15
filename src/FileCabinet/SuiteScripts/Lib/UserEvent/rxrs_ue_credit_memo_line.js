@@ -34,20 +34,26 @@ define([
     try {
       let { newRecord, type } = scriptContext;
       let res;
-      if (newRecord.getValue("custrecord_government") == true) {
+      let keyWord = "";
+
+      const isGovernment = newRecord.getValue("custrecord_government");
+      const isTopCo = newRecord.getValue("custrecord_cmline_istopco");
+      if (isGovernment == true || isTopCo == true) {
+        keyWord = isGovernment == true ? "Government" : "Top Co";
         res = itemlib.getCurrentDiscountPercentage({
-          displayName: "Government",
+          displayName: keyWord,
         });
         newRecord.setValue({
           fieldId: "custrecord_cmline_gross_unit_price",
           value:
-            newRecord.getValue("custrecord_cm_unit_price") / res.totalPercent,
+            newRecord.getValue("custrecord_cm_unit_price") / res.totalPercent ||
+            1,
         });
         newRecord.setValue({
           fieldId: "custrecord_cmline_gross_amount",
           value:
             newRecord.getValue("custrecord_cm_amount_applied") /
-            res.totalPercent,
+              res.totalPercent || 1,
         });
       } else {
         newRecord.setValue({
@@ -61,18 +67,18 @@ define([
       }
       let parentCmId = newRecord.getValue("custrecord_credit_memo_id");
       if (type == "edit") {
-        if (newRecord.getValue("custrecord_government") == true) {
+        if (isGovernment == true || isTopCo == true) {
           newRecord.setValue({
             fieldId: "custrecord_cm_amount_applied",
             value:
               newRecord.getValue("custrecord_cmline_gross_amount") *
-              res.totalPercent,
+                res.totalPercent || 1,
           });
           newRecord.setValue({
             fieldId: "custrecord_cm_unit_price",
             value:
               newRecord.getValue("custrecord_cmline_gross_unit_price") *
-              res.totalPercent,
+                res.totalPercent || 1,
           });
         } else {
           newRecord.setValue({
