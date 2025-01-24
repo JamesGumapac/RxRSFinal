@@ -56,6 +56,7 @@ define([
       "custrecord_isc_inputrate",
       "custrecord_cs_qty",
       "custrecord_cs_full_partial_package",
+      "custrecord_scanpartialcount",
     ];
     try {
       if (context.type == "create") {
@@ -100,13 +101,31 @@ define([
 
   const afterSubmit = (context) => {
     try {
+      const RETURNABLE = 2;
+      const NONRETURNABLE = 1;
+      const ADJUSTMENTITEM = 917;
       log.audit("runtime", runtime.executionContext);
       const DEFAULT = 12;
       const rec = context.newRecord;
       const oldRec = context.oldRecord;
-      let returnRequestId;
+      log.audit("old Rec", oldRec);
+      let oldPharmaProcessing = null;
+      let newPharmaProcessing = null;
+      let oldMFGProcessing = null;
+      let oldRecBin = null;
+      newPharmaProcessing = rec.getValue("custrecord_cs__rqstprocesing");
+
+      const newMFGProcessing = rec.getValue("custrecord_cs__mfgprocessing");
+
       log.audit("rec", rec, oldRec);
       const rrId = rec.getValue("custrecord_cs_ret_req_scan_rrid");
+      if (rrId) {
+        log.audit("For Processing");
+        updateReturnRequestStatus({
+          returnRequestId: rrId,
+          isForProcessing: true,
+        });
+      }
       try {
         log.audit("reloading rr rec");
         let updateRelatedTranParam = {
@@ -136,14 +155,13 @@ define([
         log.error("Reloading the RR", e.message);
       }
       const newRecBin = rec.getValue("custrecord_itemscanbin");
-      const oldRecBin = oldRec.getValue("custrecord_itemscanbin");
-      const RETURNABLE = 2;
-      const NONRETURNABLE = 1;
-      const ADJUSTMENTITEM = 917;
+
       /**
        * Send Email when new bin is assigned
        */
       if (context.type == "edit") {
+        oldRecBin = oldRec.getValue("custrecord_itemscanbin");
+        oldMFGProcessing = oldRec.getValue("custrecord_cs__mfgprocessing");
         const bagId = rec.getValue("custrecord_scanbagtaglabel");
         if (newRecBin != oldRecBin) {
           util.sendEmailMFGProcessingIsUpdated({
@@ -169,6 +187,14 @@ define([
           });
           let response = https.post({
             url: functionSLURL,
+          });
+        }
+        if (oldMFGProcessing != newMFGProcessing) {
+          log.audit("For reverification");
+          updateReturnRequestStatus({
+            returnRequestId: rrId,
+
+            isForRevirefication: true,
           });
         }
       }
@@ -215,12 +241,6 @@ define([
         params.type = record.Type.PURCHASE_ORDER;
         rxrs_tranlib.updateProcessing(params);
       }
-      let oldPharmaProcessing = null;
-      let newPharmaProcessing = null;
-      oldPharmaProcessing = oldRec.getValue("custrecord_cs__rqstprocesing");
-      newPharmaProcessing = rec.getValue("custrecord_cs__rqstprocesing");
-      const oldMFGProcessing = oldRec.getValue("custrecord_cs__mfgprocessing");
-      const newMFGProcessing = rec.getValue("custrecord_cs__mfgprocessing");
 
       /**
        *  Update PO, Bill and IR processing
@@ -419,35 +439,6 @@ define([
         // }
       }
       let isIndate = irsRec.getValue("custrecord_scanindated");
-      if (isIndate == true) {
-        let inDays = rxrs_util.getIndays(rec.id);
-        let isDefault = Math.sign(inDays) == -1;
-        let paymentSchedId =
-          isDefault == true
-            ? rxrsPayment_lib.getPaymentSched(Math.abs(inDays))
-            : 12;
-        log.audit("InDays and Payment Sched", {
-          inDays,
-          paymentSchedId,
-          isDefault,
-        });
-        if (paymentSchedId && isDefault === true) {
-          irsRec.setValue({
-            fieldId: "custrecord_scan_paymentschedule",
-            value: +paymentSchedId,
-          });
-
-          irsRec.setValue({
-            fieldId: "custrecord_scanindated",
-            value: true,
-          });
-        }
-      } else {
-        irsRec.setValue({
-          fieldId: "custrecord_ret_start_date",
-          value: "",
-        });
-      }
 
       // else {
       //   log.audit("Setting indated to false", rec.id);
@@ -458,57 +449,105 @@ define([
       // }
 
       let pharmaProcessing = irsRec.getValue("custrecord_cs__rqstprocesing");
+      if (context.type == "create") {
+        if (isIndate == true) {
+          let inDays = rxrs_util.getIndays(rec.id);
+          let isDefault = Math.sign(inDays) == -1;
+          let paymentSchedId =
+            isDefault == true
+              ? rxrsPayment_lib.getPaymentSched(Math.abs(inDays))
+              : 12;
+          log.audit("InDays and Payment Sched", {
+            inDays,
+            paymentSchedId,
+            isDefault,
+          });
+          if (paymentSchedId && isDefault === true) {
+            irsRec.setValue({
+              fieldId: "custrecord_scan_paymentschedule",
+              value: +paymentSchedId,
+            });
 
-      if (
-        (isIndate == false && pharmaProcessing == 2) ||
-        pharmaProcessing == 1
-      ) {
-        irsRec.setValue({
-          fieldId: "custrecord_final_payment_schedule",
-          value: DEFAULT,
-        });
-        irsRec.setValue({
-          fieldId: "custrecord_scan_paymentschedule",
-          value: DEFAULT,
-        });
+            irsRec.setValue({
+              fieldId: "custrecord_scanindated",
+              value: true,
+            });
+          }
+        } else {
+          irsRec.setValue({
+            fieldId: "custrecord_ret_start_date",
+            value: "",
+          });
+        }
+        if (
+          (isIndate == false && pharmaProcessing == 2) ||
+          pharmaProcessing == 1
+        ) {
+          irsRec.setValue({
+            fieldId: "custrecord_final_payment_schedule",
+            value: DEFAULT,
+          });
+          irsRec.setValue({
+            fieldId: "custrecord_scan_paymentschedule",
+            value: DEFAULT,
+          });
+        }
+        if (notEqualPharma) {
+          irsRec.setValue({
+            fieldId: "customrecord_cs_item_ret_scan",
+            value: true,
+          });
+        }
       }
-      if (notEqualPharma) {
-        irsRec.setValue({
-          fieldId: "customrecord_cs_item_ret_scan",
-          value: true,
-        });
-      }
-      returnRequestId = irsRec.getValue("custrecord_cs_ret_req_scan_rrid");
+
       irsRec.save({
         ignoreMandatoryFields: true,
       });
-
-      updataeReturnRequestStatus({ returnRequestId: returnRequestId });
     } catch (e) {
       log.error("afterSubmit", e.message);
     }
   };
 
-  function updataeReturnRequestStatus(options) {
-    log.audit("updataeReturnRequestStatus", options);
-    let { returnRequestId } = options;
+  /**
+   * Update the status of a return request based on the provided options.
+   *
+   * @param {Object} options - The options object containing the information needed to update the return request status.
+   * @param {string} options.returnRequestId - The ID of the return request to update.
+   * @param {boolean} options.isForRevirefication - Indicates if the request is for re-verification.
+   * @param {boolean} options.isForProcessing - Indicates if the request is for processing.
+   *
+   * @return {void} - This function does not return anything.
+   */
+  function updateReturnRequestStatus(options) {
+    log.audit("updateReturnRequestStatus", options);
+    let { returnRequestId, isForRevirefication, isForProcessing } = options;
     try {
       const rrRec = record.load({
         type: util.getReturnRequestType(returnRequestId),
         id: returnRequestId,
       });
       const rrStatus = rrRec.getValue("transtatus");
-      if (rrStatus == util.rrStatus.ReceivedPendingProcessing) {
+      if (
+        rrStatus == util.rrStatus.ReceivedPendingProcessing &&
+        isForProcessing == true
+      ) {
+        log.audit("setting to processing");
         rrRec.setValue({
           fieldId: "transtatus",
           value: util.rrStatus.Processing,
+        });
+      }
+      if (rrStatus == util.rrStatus.Approved && isForRevirefication == true) {
+        rrRec.setValue({
+          fieldId: "transtatus",
+          value: util.rrStatus.PendingVerification,
         });
       }
       rrRec.save({
         ignoreMandatoryFields: true,
       });
     } catch (e) {
-      log.error("updataeReturnRequestStatus", e.message);
+      log.error("updateReturnRequestStatus", e.message);
     }
   }
 

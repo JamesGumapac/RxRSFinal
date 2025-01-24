@@ -31,48 +31,48 @@ define([
   const beforeSubmit = (scriptContext) => {
     if (scriptContext.type == "delete") return;
     let newRec = scriptContext.newRecord;
-
-    const finalPaymentSchedule = newRec.getValue("custbody_kodpaymentsched");
-    log.debug("finalPaymentSchedule", finalPaymentSchedule);
-    if (!finalPaymentSchedule) return;
-
-    let paymentScheduleText = getPaymentName(finalPaymentSchedule);
-    log.error("paymentSchedule text", paymentScheduleText);
-    let monthsToAdd = "";
-    monthsToAdd = paymentScheduleText.split("-")[1];
-    monthsToAdd = monthsToAdd.split(" ")[0];
-    log.error("months to Add", monthsToAdd);
-    let dueDate = rxrs_util.setBillDueDate({
-      date: new Date(),
-      isTopCo: false,
-      monthsToAdd: monthsToAdd,
-    });
-    log.audit("due date", dueDate);
-    newRec.setValue({
-      fieldId: "duedate",
-      value: new Date(dueDate),
-    });
-
-    const monthShort = dueDate.toLocaleString("en-US", { month: "short" });
-    const year = dueDate.getFullYear();
-    let postingPeriod = rxrs_util.getPeriodId(monthShort + " " + year);
-    log.audit("postingPeriod", postingPeriod);
-    newRec.setValue({
-      fieldId: "postingperiod",
-      value: postingPeriod,
-    });
-
-    const ACCRUEDPURCHASEITEM = 916;
-    const RETURNABLE = 2;
-    const NONRETURNABLE = 1;
-    const RETURNABLESERVICEFEEITEM = 882;
-    const NONRETURNABLESERVICEFEEITEM = 883;
-    vbRec = rxrs_tran_lib.removeVBLine({
-      vbRec: newRec,
-      finalPaymentSchedule: finalPaymentSchedule,
-      updateLine: false,
-    });
     try {
+      const finalPaymentSchedule = newRec.getValue("custbody_kodpaymentsched");
+      log.debug("finalPaymentSchedule", finalPaymentSchedule);
+      if (!finalPaymentSchedule) return;
+
+      let paymentScheduleText = getPaymentName(finalPaymentSchedule);
+      log.error("paymentSchedule text", paymentScheduleText);
+      let monthsToAdd = "";
+      monthsToAdd = paymentScheduleText.split("-")[1];
+      monthsToAdd = monthsToAdd.split(" ")[0];
+      log.error("months to Add", monthsToAdd);
+      let dueDate = rxrs_util.setBillDueDate({
+        date: new Date(),
+        isTopCo: false,
+        monthsToAdd: monthsToAdd,
+      });
+      log.audit("due date", dueDate);
+      newRec.setValue({
+        fieldId: "duedate",
+        value: new Date(dueDate),
+      });
+
+      const monthShort = dueDate.toLocaleString("en-US", { month: "short" });
+      const year = dueDate.getFullYear();
+      let postingPeriod = rxrs_util.getPeriodId(monthShort + " " + year);
+      log.audit("postingPeriod", postingPeriod);
+      newRec.setValue({
+        fieldId: "postingperiod",
+        value: postingPeriod,
+      });
+
+      const ACCRUEDPURCHASEITEM = 916;
+      const RETURNABLE = 2;
+      const NONRETURNABLE = 1;
+      const RETURNABLESERVICEFEEITEM = 882;
+      const NONRETURNABLESERVICEFEEITEM = 883;
+      vbRec = rxrs_tran_lib.removeVBLine({
+        vbRec: newRec,
+        finalPaymentSchedule: finalPaymentSchedule,
+        updateLine: false,
+      });
+
       if (newRec) {
         let mrrId = newRec.getValue("custbody_kd_master_return_id");
         let returnableAmount = rxrs_vs_lib.getMrrIRSTotalAmount({

@@ -84,12 +84,22 @@ define([
               url: forVerificationSLUrl,
               action: "verifyItems",
             };
-            if (rrSaleStatus == rxrs_util.rrStatus.PendingVerification) {
+
+            if (
+              rrSaleStatus == rxrs_util.rrStatus.PendingVerification ||
+              rrSaleStatus == rxrs_util.rrStatus.Approved
+            ) {
+              let buttonLabel =
+                rrSaleStatus == rxrs_util.rrStatus.Approved
+                  ? "Reverify Items"
+                  : "Verify Items";
               context.form.addButton({
                 id: "custpage_verify",
-                label: "Verify Items",
+                label: buttonLabel,
                 functionName: `openSuitelet(${JSON.stringify(paramsRR)})`,
               });
+            }
+            if (rrSaleStatus == rxrs_util.rrStatus.PendingVerification) {
               let approveParams = {
                 rrId: id,
                 mrrId: rrMrrId,
@@ -148,7 +158,7 @@ define([
             const DEA222Feespo = rec.getValue("custbody_kd_total_222_form_fee");
             const rrpoCategory = rec.getValue("custbody_kd_rr_category");
             if (rrPOStatus == rxrs_util.rrStatus.C2Kittobemailed) {
-              const returnItemRequestedURL = `https://6816904.app.netsuite.com/app/common/custom/custrecordentry.nl?rectype=393&whence=&mrrId=${rrpoMrrId}&rrId=${rrpoId}`;
+              const returnItemRequestedURL = `https://6816904-sb1.app.netsuite.com/app/common/custom/custrecordentry.nl?rectype=393&whence=&mrrId=${rrpoMrrId}&rrId=${rrpoId}`;
 
               context.form.addButton({
                 id: "custpage_create_rir",
@@ -212,10 +222,17 @@ define([
               url: forVerificationSLUrlPO,
               action: "verifyItems",
             };
-            if (rrPOStatus == rxrs_util.rrStatus.PendingVerification) {
+            if (
+              rrPOStatus == rxrs_util.rrStatus.PendingVerification ||
+              rrPOStatus == rxrs_util.rrStatus.Approved
+            ) {
+              let buttonLabel =
+                rrPOStatus == rxrs_util.rrStatus.Approved
+                  ? "Reverify Items"
+                  : "Verify Items";
               context.form.addButton({
                 id: "custpage_verify",
-                label: "Verify Items",
+                label: buttonLabel,
                 functionName: `openSuitelet(${JSON.stringify(paramsRRPO)})`,
               });
             }

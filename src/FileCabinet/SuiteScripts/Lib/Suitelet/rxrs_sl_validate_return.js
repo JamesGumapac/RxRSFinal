@@ -9,12 +9,21 @@ define([
   "../rxrs_transaction_lib",
   "../rxrs_custom_rec_lib",
   "../rxrs_util",
+  "N/email",
 ], /**
  * @param{record} record
  * @param rxrsUtil
  * @param rxrsBagUtil
  * @param rxrs_tran_lib
- */ (record, rxrsUtil, rxrsBagUtil, rxrs_tran_lib, rxrs_custom_rec, util) => {
+ */ (
+  record,
+  rxrsUtil,
+  rxrsBagUtil,
+  rxrs_tran_lib,
+  rxrs_custom_rec,
+  util,
+  email,
+) => {
   /**
    * Defines the Suitelet script trigger point.
    * @param {Object} context
@@ -42,6 +51,7 @@ define([
           custscript_payload,
           isVerify,
           isHazardous,
+          rrStatus,
         } = params;
 
         let curAmount = 0;
@@ -430,13 +440,64 @@ define([
             mrrId: mrrid,
           });
         }
-        // else {
-        //   log.audit("Creating PO");
-        //   rxrs_tran_lib.createPO({
-        //     rrId: params.rrId,
-        //     mrrId: params.mrrid,
-        //   });
-        // }
+        try {
+          if (rrStatus.toUpperCase() == "APPROVED") {
+            log.audit("for reverification");
+            if (rrType == "customsale_kod_returnrequest") {
+              sendEmailForReverifcation({
+                rrId: rrId,
+                type: "customsale_kod_returnrequest",
+              });
+              record.submitFields({
+                type: "customsale_kod_returnrequest",
+                id: rrId,
+                values: {
+                  transtatus: util.rrStatus.PendingVerification,
+                },
+              });
+            } else {
+              const res = rxrs_tran_lib.getRelatedTransaction({
+                rrId: rrId,
+                type: "PurchOrd",
+              });
+              log.audit("poId", res.id);
+              if (res.id) {
+                const irRes = rxrs_tran_lib.getRelatedTransaction({
+                  createFrom: res.id,
+                  type: "ItemRcpt",
+                });
+                let deletedIR = record.detele({
+                  type: record.Type.ITEM_RECEIPT,
+                  id: rxrs_tran_lib.getRelatedTransaction({
+                    createFrom: res.id,
+                    id: irRes.id,
+                  }),
+                });
+                if (deletedIR) {
+                  record.delete({
+                    type: record.Type.PURCHASE_ORDER,
+                    id: res.poId,
+                  });
+                }
+
+                record.submitFields({
+                  type: "custompurchase_returnrequestpo",
+                  id: rrId,
+                  values: {
+                    transtatus: util.rrStatus.PendingVerification,
+                  },
+                });
+                sendEmailForReverifcation({
+                  rrId: rrId,
+                  type: "custompurchase_returnrequestpo",
+                });
+              }
+            }
+          }
+        } catch (e) {
+          log.error("Reverification", e.message);
+        }
+
         context.response.write("SUCCESSFUL");
       } catch (e) {
         context.response.write("ERROR: " + e.message);
@@ -444,6 +505,35 @@ define([
       }
     }
   };
+
+  /**
+   * Sends an email for reverification of a return request.
+   *
+   * @param {Object} options - The options for sending the email.
+   * @param {string} options.rrId - The ID of the return request for reverification.
+   *
+   * @return {void} - This function does not return any value.
+   */
+  function sendEmailForReverifcation(options) {
+    try {
+      log.audit("sendEmailForReverifcation", options);
+      let { rrId, type } = options;
+      let redirectLink = util.generateRedirectLink({
+        type: type,
+        id: rrId,
+      });
+      let bodyMessage = `Return Request <a href="${redirectLink}" > ${rrId}</a> for reverification.`;
+      log.audit("message", { redirectLink, bodyMessage });
+      email.send({
+        author: 1177,
+        recipients: util.getDefaultTaskAssignee(),
+        subject: "Return Request For Reverification",
+        body: bodyMessage,
+      });
+    } catch (e) {
+      log.error("sendEmailForReverifcation", e.message);
+    }
+  }
 
   function getPreviousBag(prevBag) {
     prevBag = prevBag.split("&");

@@ -13,6 +13,7 @@ define([
   "../rxrs_lib_bag_label",
   "../rxrs_util",
   "../rxrs_custom_rec_lib",
+  "N/ui/message",
 ], /**
  * @param{serverWidget} serverWidget
  * @param rxrs_vs_util
@@ -31,6 +32,7 @@ define([
   bag,
   util,
   customrec,
+  message,
 ) => {
   /**
    * Defines the Suitelet script trigger point.
@@ -106,7 +108,7 @@ define([
     let binCategory = options.params.binCategory;
     let manualBin = options.params.manualBin;
     let returnTo = options.params.returnTo;
-
+    let rrStatus = "";
     try {
       paramManufacturer = paramManufacturer.includes("_")
         ? paramManufacturer.replaceAll("_", "&")
@@ -235,10 +237,30 @@ define([
         let rslookup = search.lookupFields({
           type: rrType,
           id: rrId,
-          columns: ["custbody_kd_rr_category"],
+          columns: ["custbody_kd_rr_category", "status"],
         });
+        rrStatus = rslookup.status[0].text;
         category = rslookup.custbody_kd_rr_category[0].value;
+        log.error("rslookup", rslookup);
         if (rslookup) {
+          form
+            .addField({
+              id: "custpage_rrstatus",
+              label: "Status",
+              type: serverWidget.FieldType.TEXT,
+            })
+            .updateDisplayType({
+              displayType: serverWidget.FieldDisplayType.DISABLED,
+            }).defaultValue = rrStatus;
+          if (rrStatus.toUpperCase() == "APPROVED") {
+            form.addPageInitMessage({
+              title: "WARNING",
+              message:
+                "Submitting this form will set the status of the Return Request to Pending Verification.",
+              type: message.Type.WARNING,
+              //duration: 1500
+            });
+          }
           form
             .addField({
               id: "custpage_category",

@@ -32,6 +32,7 @@ define([
     RXOTC: 1,
     C3TO5: 4,
   });
+  let rclId;
 
   /**
    * Function to be executed after page is initialized.
@@ -48,7 +49,9 @@ define([
       let arrTemp = window.location.href.split("?");
       urlParams = new URLSearchParams(arrTemp[1]);
       initialPaymentName = suitelet.getValue("custpage_payment_name");
-
+      if (window.location.href.indexOf("rclId") != -1) {
+        rclId = urlParams.get("rclId");
+      }
       if (window.location.href.indexOf("isReload") != -1) {
         let isReload = urlParams.get("isReload");
         console.log("isReload" + isReload);
@@ -331,6 +334,11 @@ define([
     window.open(stSuiteletUrl, "_self");
   }
 
+  /**
+   * Verify method for processing returnable items
+   *
+   * @return nothing
+   */
   function verify() {
     try {
       let arrTemp = window.location.href.split("?");
@@ -341,6 +349,7 @@ define([
       let existingBags = [];
       let selectionType = suitelet.getValue("custpage_radio");
       let binNumber = suitelet.getValue("custpage_bin");
+      const rrStatus = suitelet.getValue("custpage_rrstatus");
       const RETURNABLE = 2;
       let exitingBagId;
       const NONRETURNABLE = 1;
@@ -633,6 +642,7 @@ define([
         category: category,
         manualBin: manualBin,
         isHazardous: isHazardous,
+        rrStatus: rrStatus,
       };
 
       console.table(params);
@@ -817,9 +827,10 @@ define([
         params: {
           mrrId: mrrId,
           isReload: true,
-          inDated: true,
+          inDated: false,
           isVerifyStaging: false,
           returnList: returnList,
+          rclId: rclId,
           createdPaymentId: newPaymentId,
           title: "In-Dated Inventory",
           finalPaymentSched: false,
@@ -848,6 +859,46 @@ define([
       window.open(`${rclSuiteletURL}`, "_self");
     } catch (e) {
       console.error("createPayment" + e.message);
+    }
+  }
+
+  /**
+   * Post URL request
+   * @param {string} options.URL Suitelet URL
+   *
+   */
+  function postURL(options) {
+    let { URL } = options;
+    try {
+      setTimeout(function () {
+        let response = https.post({
+          url: URL,
+        });
+        if (response) {
+          console.log(response);
+          jQuery("body").loadingModal("destroy");
+          if (response.body.includes("ERROR")) {
+            let m = message.create({
+              type: message.Type.ERROR,
+              title: "ERROR",
+              message: response.body,
+            });
+            m.show(10000);
+          } else {
+            let m = message.create({
+              type: message.Type.CONFIRMATION,
+              title: "SUCCESS",
+              message: response.body,
+            });
+            m.show(10000);
+            setTimeout(function () {
+              location.reload();
+            }, 2000);
+          }
+        }
+      }, 100);
+    } catch (e) {
+      console.error("postURL", e.message);
     }
   }
 

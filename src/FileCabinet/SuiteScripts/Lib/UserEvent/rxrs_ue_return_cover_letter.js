@@ -50,11 +50,13 @@ define([
           rclId: rec.id,
           isVerifyStaging: false,
           mrrName: tranName,
+          inDated: false,
           returnableFee: returnableFee,
           nonReturnableFeeAmount: nonReturnableFeeAmount,
           initialSplitpaymentPage: true,
           customize: true,
         });
+        log.audit("itemReturn Scan", itemsReturnScan);
         rxrs_vs_util.createReturnableSublist({
           form: form,
           rrTranId: mrrId,
@@ -62,7 +64,7 @@ define([
           sublistFields: rxrs_vs_util.SUBLISTFIELDS.returnCoverLetterFields,
           value: itemsReturnScan,
           isMainInDated: false,
-          inDate: true,
+          //  inDate: true,
           returnList: itemsReturnScan,
           title: `Payments`,
         });
@@ -92,6 +94,7 @@ define([
       let nonReturnableFeePercent = rec.getValue(
         "custrecord_rcl_non_returnable_fee",
       );
+      let returnableFeePercent = rec.getValue("custrecord_rcl_returnable_fee");
       let nonReturnableAmount = +rxrs_vs_util.getMrrIRSTotalAmount({
         mrrId: mrrId,
         pharmaProcessing: "1",
@@ -101,10 +104,12 @@ define([
         pharmaProcessing: "2",
       });
       nonReturnableFeePercent = parseFloat(nonReturnableFeePercent) / 100;
+      returnableFeePercent = parseFloat(returnableFeePercent) / 100;
       log.audit("amount", {
         returnableAmount,
         nonReturnableAmount,
         nonReturnableFeePercent,
+        returnableFeePercent,
       });
       let freeOfChargeWeight = 0;
       freeOfChargeWeight = rec.getValue("custrecord_free_of_charge_weight");
@@ -130,6 +135,22 @@ define([
       rec.setValue({
         fieldId: "custrecord_rcl_non_returnable_fee_amt",
         value: nonReturnableFeeAmount.toFixed(4),
+      });
+      const deadForm222 = rec.getValue("custrecord_rcl_dea_222_form") || 0;
+      const serviceFee = rec.getValue("custrecord_rcl_credit_discount") || 0;
+      const discount = rec.getValue("custrecord_rcl_credit_discount") || 0;
+      let addOnFees = deadForm222 + serviceFee + discount;
+      let totalCreditAmount = 0;
+      totalCreditAmount =
+        returnableAmount -
+        returnableAmount * returnableFeePercent -
+        nonReturnableAmount * nonReturnableFeePercent -
+        addOnFees;
+
+      log.audit("totalCreditAmount", totalCreditAmount);
+      rec.setValue({
+        fieldId: "custrecord_rcl_total_customer_credit_amt",
+        value: totalCreditAmount.toFixed(2),
       });
       rec.save({
         ignoreMandatoryFields: true,

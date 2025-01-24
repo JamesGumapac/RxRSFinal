@@ -2,7 +2,7 @@
  * @NApiVersion 2.1
  * @NScriptType MapReduceScript
  */
-define(["N/runtime", "./Lib/rxrs_util"], /**
+define(["N/runtime", "../rxrs_util"], /**
  * @param{runtime} runtime
  */ (runtime, rxrsUtil) => {
   /**

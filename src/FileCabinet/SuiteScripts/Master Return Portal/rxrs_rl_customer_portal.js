@@ -29,10 +29,25 @@ define([
     let response;
     let soId;
     log.debug("requestParams", requestParams);
+    const { action, body } = requestParams;
     try {
-      if (requestParams) {
-        let response = tranlib.createMasterReturnRequest(requestParams);
-        return response;
+      switch (action) {
+        case "getMRRHistory":
+          return tranlib.getMrrByCustomerId(customerId);
+          break;
+        case "getPackageInfo":
+          /**
+           * Return the list of package under the Master Return Request
+           * Includes info "name", "netsuiteInternalId,"pdfLink": "trackingStatus","estimatedDelivery" ,"packageStatus"
+           */
+          return customRecLib.getPackageInfo({
+            returnRequest: body.returnRequest,
+          });
+          break;
+        case "createMasterReturn":
+          let response = tranlib.createMasterReturnRequest(body);
+          return response;
+          break;
       }
     } catch (ex) {
       log.error("ERROR", ex.message);
@@ -53,11 +68,6 @@ define([
     switch (action) {
       case "getMRRHistory":
         return tranlib.getMrrByCustomerId(customerId);
-        break;
-      case "getFedexLabel":
-        return customRecLib.getFedexPDF({
-          returnRequest: returnRequest,
-        });
         break;
     }
   };

@@ -1929,14 +1929,22 @@ define([
   }
 
   /**
-   * Retrieves FedEx PDF information based on return request ID.
+   * Retrieves package information based on the given options.
    *
-   * @param {object} options - An object containing the returnRequestId.
-   * @param {string} options.returnRequest - The ID of the return request to fetch FedEx PDF information for.
+   * @param {Object} options The options object containing the returnRequest property.
+   * @param {string} options.returnRequest The specific return request to search for.
    *
-   * @return {Array} An array of objects containing PDF link and tracking number for each FedEx PDF associated with the return request ID.
+   * @return {Array} An array of package information objects with the following properties:
+   * - name {string} The name of the package.
+   * - netsuiteInternalId {string} The internal ID of the package in Netsuite.
+   * - pdfLink {string} The PDF link associated with the package.
+   * - trackingNumber {string} The tracking number of the package.
+   * - packageControl {string} The control associated with the package.
+   * - trackingStatus {string} The tracking status of the package.
+   * - estimatedDelivery {string} The estimated delivery date of the package.
+   * - packageStatus {string} The status of the package.
    */
-  function getFedexPDF(options) {
+  function getPackageInfo(options) {
     let { returnRequest } = options;
     try {
       let res = [];
@@ -1965,6 +1973,10 @@ define([
             label: "Package Status",
           }),
           search.createColumn({
+            name: "custrecord_kod_packrtn_control",
+            label: "Package Control",
+          }),
+          search.createColumn({
             name: "name",
             label: "name",
           }),
@@ -1977,6 +1989,7 @@ define([
           netsuiteInternalId: result.id,
           pdfLink: result.getValue("custrecord_kd_pdflink"),
           trackingNumber: result.getValue("custrecord_kod_packrtn_trackingnum"),
+          packageControl: result.getText("custrecord_kod_packrtn_control"),
           trackingStatus: result.getValue(
             "custrecord_kd_inbound_tracking_status",
           ),
@@ -1989,7 +2002,7 @@ define([
       });
       return res;
     } catch (e) {
-      log.error("getFedexPDF", e.message);
+      log.error("getPackageInfo", e.message);
     }
   }
 
@@ -2008,7 +2021,7 @@ define([
     deleteCreditMemo,
     deletePriceHistory,
     getAllCM,
-    getFedexPDF,
+    getPackageInfo,
     getALlCMTotalAmount,
     getAllCMLineTotal,
     getC2ItemRequested,

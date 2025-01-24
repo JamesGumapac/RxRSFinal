@@ -5,9 +5,9 @@
 define([
   "N/record",
   "N/runtime",
-  "./Lib/rxrs_util",
-  "./Lib/rxrs_custom_rec_lib",
-  "./Lib/rxrs_transaction_lib",
+  "../rxrs_util",
+  "../rxrs_custom_rec_lib",
+  "../rxrs_transaction_lib",
   "N/task",
 ], /**
  * @param{record} record
@@ -42,6 +42,7 @@ define([
       const isStateLicenseExpired = masterRec.getValue(
         "custrecord_kd_state_license_expired",
       );
+      const location = masterRec.getValue("custrecord_kdlocation");
       const SERVICETYPECATEGORY = {
         mailIn: 2,
         serlfService: 1,
@@ -78,6 +79,7 @@ define([
           masterRecId: masterRec.id,
           customer: customer,
           isLicenseExpired: isLicenseExpired,
+          location: location,
           isStateLicenseExpired: isStateLicenseExpired,
           planSelectionType: planSelectionType,
         });

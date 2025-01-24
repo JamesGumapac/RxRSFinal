@@ -1182,7 +1182,12 @@ define([
       allPaymentSched,
       edit,
     } = options;
-    inDated = inDated == false ? "F" : "T";
+    if (inDated) {
+      inDated = inDated == false ? "F" : "T";
+    } else {
+      inDated = null;
+    }
+
     let nonReturnableFeeAmount;
     let orginalNonReturnableFeeAmount;
     if (initialSplitpaymentPage) {
@@ -1246,6 +1251,7 @@ define([
           );
         }
         if (inDated) {
+          log.error("setting in dated value", inDated);
           filters.push(
             search.createFilter({
               name: "custrecord_scanindated",
@@ -1430,6 +1436,9 @@ define([
               });
               billActionWord = "Create Bill";
             }
+          } else {
+            log.audit("no po");
+            billActionWord = "NO PO";
           }
 
           let paymentSchedText = result.getText({
@@ -1447,6 +1456,7 @@ define([
               tranId: mrrName,
               finalPaymentSched: finalPaymentSched,
               customize: true,
+              rclId: rclId,
               billId: isBillExist,
             },
           });
@@ -1460,6 +1470,7 @@ define([
               paymentSchedText: paymentSchedText,
               mrrId: mrrId,
               tranId: mrrName,
+              rclId: rclId,
               finalPaymentSched: finalPaymentSched,
               customize: false,
               billId: isBillExist,
@@ -1588,12 +1599,19 @@ define([
       paymentAmount = paymentAmount - orginalNonReturnableFeeAmount;
       log.emergency("paymentAmount", paymentAmount);
       if (isVerifyStaging == false) {
-        record.submitFields({
+        // record.submitFields({
+        //   type: "customrecord_return_cover_letter",
+        //   id: rclId,
+        //   values: {
+        //     custrecord_rcl_total_customer_credit_amt: paymentAmount.toFixed(2),
+        //   },
+        // });
+        const rclRec = record.load({
           type: "customrecord_return_cover_letter",
           id: rclId,
-          values: {
-            custrecord_rcl_total_customer_credit_amt: paymentAmount.toFixed(2),
-          },
+        });
+        rclRec.save({
+          ignoreMandatoryFields: true,
         });
         itemScanList.push({
           dateCreated: " ",

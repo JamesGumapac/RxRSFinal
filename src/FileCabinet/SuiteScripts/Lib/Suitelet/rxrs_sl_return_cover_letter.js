@@ -137,6 +137,7 @@ define([
             paymentSchedId: paymentId,
             isVerifyStaging: true,
             finalPaymentSched: finalPaymentSched,
+            rclId: rclId,
           });
           updateFinalPayment({
             itemsReturnScan: itemsReturnScan,
@@ -328,6 +329,7 @@ define([
             mrrId: mrrId,
             paymentSchedId: paymentSchedId,
             isVerifyStaging: true,
+            rclId: rclId,
             finalPaymentSched: finalPaymentSched,
             returnableFee: returnableFee,
           });
@@ -367,11 +369,13 @@ define([
           /**
            * If splitpayment in the line column of the suitelet is click the action below will execute
            */
+          log.emergency("test");
           try {
             if (!createdPaymentId) return;
             returnList = JSON.parse(returnList);
             returnList = returnList.split("_");
             returnList.forEach((id) => {
+              log.emergency("Updating", { id, createdPaymentId });
               /**
                * Assign the payment Id selected by the user
                */
@@ -480,6 +484,7 @@ define([
         try {
           let itemsReturnScan = rxrs_vs_util.getReturnableItemScan({
             mrrId: mrrId,
+            rclId: rclId,
             paymentSchedId: paymentId,
             isVerifyStaging: true,
             finalPaymentSched: finalPaymentSched,

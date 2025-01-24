@@ -148,165 +148,6 @@ define([
   });
 
   /**
-   * Create Return Request and Return Packages
-   * @param {int} options.category
-   * @param {int} options.numOfLabels
-   * @param {int} options.docFile
-   * @param {int} options.item
-   * @param {string} options.requestedDate
-   * @param {int} options.masterRecId
-   * @param {int} options.customer
-   * @param {boolean} options.isLicenseExpired
-   * @param {boolean} options.isStateLicenseExpired
-   * @param {int} options.planSelectionType
-   */
-  function createReturnRequest(options) {
-    try {
-      let recordType = "";
-      let location = 1;
-      let rrpoName;
-      let rrRec;
-      if (getEntityType(options.customer) == "vendor") {
-        recordType = "custompurchase_returnrequestpo";
-        rrpoName = generateRRPODocumentNumber();
-      } else {
-        recordType = "customsale_kod_returnrequest";
-      }
-
-      log.audit("createReturnRequest", { options, recordType });
-      rrRec = record.create({
-        type: recordType,
-        isDynamic: false,
-      });
-      rrRec.setValue({
-        fieldId: "entity",
-        value: options.customer,
-      });
-      if (
-        options.category === RRCATEGORY.C2 &&
-        options.isLicenseExpired === false &&
-        options.isStateLicenseExpired === false
-      ) {
-        rrRec.setValue({
-          fieldId: "transtatus",
-          value: rrStatus.C2Kittobemailed,
-        });
-      } else {
-        rrRec.setValue({
-          fieldId: "transtatus",
-          value: rrStatus.PendingReview,
-        });
-      }
-      rrpoName &&
-        rrRec.setValue({
-          fieldId: "tranid",
-          value: rrpoName,
-        });
-      rrRec.setValue({
-        fieldId: "custbody_kd_master_return_id",
-        value: options.masterRecId,
-      });
-      rrRec.setValue({
-        fieldId: "custbody_kd_rr_category",
-        value: options.category,
-      });
-      rrRec.setValue({
-        fieldId: "location",
-        value: location,
-      });
-      rrRec.setValue({
-        fieldId: "custbody_kd_file",
-        value: options.docFile,
-      });
-      rrRec.setValue({
-        fieldId: "custbody_kd_requested_pick_up_date",
-        value: options.requestedDate,
-      });
-
-      rrRec.setSublistValue({
-        sublistId: "item",
-        fieldId: "item",
-        line: 0,
-        value: options.item,
-      });
-      rrRec.setSublistValue({
-        sublistId: "item",
-        fieldId: "amount",
-        line: 0,
-        value: 1,
-      });
-      rrRec.setSublistValue({
-        sublistId: "item",
-        fieldId: "custcol_kod_fullpartial",
-        line: 0,
-        value: 1,
-      });
-      let RRId = rrRec.save({ ignoreMandatoryFields: true });
-      if (RRId) {
-        const rrRecSave = record.load({
-          type: recordType,
-          id: RRId,
-        });
-        let tranId = rrRecSave.getValue("tranid");
-
-        let tranStatus = rrRecSave.getValue("transtatus");
-        log.audit("tranId", { tranId, tranStatus });
-        if (options.category === RRCATEGORY.C2) {
-          // createTask({
-          //   tranId: tranId,
-          //   rrId: RRId,
-          // });
-          if (
-            rrRecSave.getValue("custbody_kd_state_license_expired") === false &&
-            rrRecSave.getValue("custbody_kd_license_expired")
-          ) {
-            sendEmail({
-              category: RRCATEGORY.C2,
-              entity: options.customer,
-              transtatus: tranStatus,
-              tranid: tranId,
-              internalId: RRId,
-            });
-          }
-        }
-        log.debug("RR ID " + RRId);
-        const cat = rrRecSave.getValue({
-          fieldId: "custbody_kd_rr_category",
-        });
-        const requestedDate = rrRecSave.getValue({
-          fieldId: "custbody_kd_requested_pick_up_date",
-        });
-
-        const customer = rrRecSave.getValue({
-          fieldId: "entity",
-        });
-        let isC2 = cat == RRCATEGORY.C2;
-        sendEmail({
-          category: options.category,
-          transtatus: tranStatus,
-          entity: options.customer,
-          tranid: tranId,
-          internalId: RRId,
-        });
-
-        const numOfLabels = options.numOfLabels;
-        const masterRecId = options.masterRecId;
-        log.audit("returnValues ", {
-          rrId: RRId,
-          numOfLabels: numOfLabels,
-          mrrId: masterRecId,
-          requestedDate: requestedDate,
-          category: cat,
-          customer: customer,
-          isC2: isC2,
-        });
-      }
-    } catch (e) {
-      log.error("createReturnRequest", e.message);
-    }
-  }
-
-  /**
    * Return the first employee that is checked as DEFAULT TASK ASSIGNEE FOR EXPIRED LICENSE
    * @return {number} return the internal Id of the employee
    */
@@ -731,6 +572,7 @@ define([
    * @returns {string}
    */
   function getEntityType(internalId) {
+    log.audit("getEntityType", internalId);
     try {
       let type;
       const entitySearchObj = search.create({
@@ -1295,14 +1137,192 @@ define([
     }
   }
 
+  /**
+   * Create a return request based on the provided options.
+   *
+   * @param {Object} options - The options for creating the return request.
+   * @param {string} options.category - The category of the return request.
+   * @param {number} options.numOfLabels - The number of labels.
+   * @param {string} options.docFile - The document file.
+   * @param {string} options.item - The item for the return request.
+   * @param {string} options.requestedDate - The requested pickup date.
+   * @param {string} options.masterRecId - The master record ID.
+   * @param {string} options.customer - The customer for the return request.
+   * @param {string} options.location - The location for the return request.
+   * @param {boolean} options.isLicenseExpired - Flag indicating if the license is expired.
+   * @param {boolean} options.isStateLicenseExpired - Flag indicating if the state license is expired.
+   * @param {string} options.planSelectionType - The plan selection type for the return request.
+   *
+   * @return {void}
+   */
+  function createReturnRequest(options) {
+    log.audit("createReturnRequest", options);
+    const RRCATEGORY = Object.freeze({
+      C2: 3,
+      RXOTC: 1,
+      C3TO5: 4,
+    });
+    try {
+      let recordType = "";
+      let {
+        category,
+        numOfLabels,
+        docFile,
+        item,
+        requestedDate,
+        masterRecId,
+        customer,
+        location,
+        isLicenseExpired,
+        isStateLicenseExpired,
+        planSelectionType,
+      } = options;
+      let rrpoName;
+      let rrRec;
+      if (getEntityType(customer) == "vendor") {
+        recordType = "custompurchase_returnrequestpo";
+        rrpoName = generateRRPODocumentNumber();
+      } else {
+        recordType = "customsale_kod_returnrequest";
+      }
+
+      log.audit("createReturnRequest", { options, recordType });
+      rrRec = record.create({
+        type: recordType,
+        isDynamic: false,
+      });
+      rrRec.setValue({
+        fieldId: "entity",
+        value: customer,
+      });
+      if (
+        category == RRCATEGORY.C2 &&
+        isLicenseExpired == false &&
+        isStateLicenseExpired == false
+      ) {
+        rrRec.setValue({
+          fieldId: "transtatus",
+          value: rrStatus.C2Kittobemailed,
+        });
+      } else {
+        rrRec.setValue({
+          fieldId: "transtatus",
+          value: rrStatus.PendingReview,
+        });
+      }
+      rrpoName &&
+        rrRec.setValue({
+          fieldId: "tranid",
+          value: rrpoName,
+        });
+      rrRec.setValue({
+        fieldId: "custbody_kd_master_return_id",
+        value: masterRecId,
+      });
+      rrRec.setValue({
+        fieldId: "custbody_kd_rr_category",
+        value: category,
+      });
+      rrRec.setValue({
+        fieldId: "location",
+        value: location,
+      });
+      rrRec.setValue({
+        fieldId: "custbody_kd_file",
+        value: docFile,
+      });
+      rrRec.setValue({
+        fieldId: "custbody_kd_requested_pick_up_date",
+        value: requestedDate,
+      });
+
+      rrRec.setSublistValue({
+        sublistId: "item",
+        fieldId: "item",
+        line: 0,
+        value: item,
+      });
+      rrRec.setSublistValue({
+        sublistId: "item",
+        fieldId: "amount",
+        line: 0,
+        value: 1,
+      });
+      rrRec.setSublistValue({
+        sublistId: "item",
+        fieldId: "custcol_kod_fullpartial",
+        line: 0,
+        value: 1,
+      });
+      let RRId = rrRec.save({ ignoreMandatoryFields: true });
+      if (RRId) {
+        const rrRecSave = record.load({
+          type: recordType,
+          id: RRId,
+        });
+        let tranId = rrRecSave.getValue("tranid");
+
+        let tranStatus = rrRecSave.getValue("transtatus");
+        log.audit("tranId", { tranId, tranStatus });
+        if (category == RRCATEGORY.C2) {
+          if (
+            rrRecSave.getValue("custbody_kd_state_license_expired") === false &&
+            rrRecSave.getValue("custbody_kd_license_expired")
+          ) {
+            sendEmail({
+              category: rxrs_util.RRCATEGORY.C2,
+              entity: customer,
+              transtatus: tranStatus,
+              tranid: tranId,
+              internalId: RRId,
+            });
+          }
+        }
+        log.debug("RR ID " + RRId);
+        const cat = rrRecSave.getValue({
+          fieldId: "custbody_kd_rr_category",
+        });
+        const requestedDate = rrRecSave.getValue({
+          fieldId: "custbody_kd_requested_pick_up_date",
+        });
+
+        const customer = rrRecSave.getValue({
+          fieldId: "entity",
+        });
+        let isC2 = cat == RRCATEGORY.C2;
+        sendEmail({
+          category: category,
+          transtatus: tranStatus,
+          entity: customer,
+          tranid: tranId,
+          internalId: RRId,
+        });
+
+        const numOfLabels = numOfLabels;
+        const masterRecId = masterRecId;
+        log.audit("returnValues ", {
+          rrId: RRId,
+          numOfLabels: numOfLabels,
+          mrrId: masterRecId,
+          requestedDate: requestedDate,
+          category: cat,
+          customer: customer,
+          isC2: isC2,
+        });
+      }
+    } catch (e) {
+      log.error("createReturnRequest", e.message);
+    }
+  }
+
   return {
     addDaysToDate,
     checkInstanceInstnaceMR,
     createFolder,
     createReturnPackages,
-    createReturnRequest,
     createTask,
     createTaskRecord: createTaskRecord,
+    createReturnRequest: createReturnRequest,
     formatDate,
     groupByDate,
     generateRRPODocumentNumber,

@@ -4856,6 +4856,98 @@ define([
     }
   }
 
+  /**
+   * Retrieves related transactions based on given options.
+   *
+   * @param {Object} options - The options for filtering related transactions.
+   * @param {string} options.rrId - The return request ID.
+   * @param {string} options.type - The type of transaction.
+   * @param {string | Array} options.createFrom - The created from filter for transactions.
+   *
+   * @return {Object} - The related transaction information.
+   * - If type is "PurchOrd" and only one related transaction is found, returns an object with 'id' property.
+   * - If type is "ItemRcpt", returns an object with 'id' property.
+   */
+  function getRelatedTransaction(options) {
+    try {
+      let { rrId, type, createFrom } = options;
+      let res = {};
+
+      const relatedTranSearchObj = search.create({
+        type: "transaction",
+        settings: [{ name: "consolidationtype", value: "ACCTTYPE" }],
+        filters: [["type", "anyof", type], "AND", ["mainline", "is", "T"]],
+        columns: [
+          search.createColumn({
+            name: "statusref",
+            summary: "GROUP",
+            label: "Status",
+          }),
+          search.createColumn({
+            name: "internalid",
+            summary: "GROUP",
+            label: "internalid",
+          }),
+
+          search.createColumn({
+            name: "formulanumeric",
+            summary: "COUNT",
+            formula: "{custbody_kd_return_request2}",
+            label: "Formula (Numeric)",
+          }),
+        ],
+      });
+
+      if (createFrom) {
+        relatedTranSearchObj.filters.push(
+          search.createFilter({
+            name: "createdfrom",
+            operator: "anyof",
+            values: createFrom,
+          }),
+        );
+      }
+      if (rrId) {
+        relatedTranSearchObj.filters.push(
+          search.createFilter({
+            name: "custbody_kd_return_request2",
+            operator: "anyof",
+            values: rrId,
+          }),
+        );
+      }
+
+      relatedTranSearchObj.run().each(function (result) {
+        switch (type) {
+          case "PurchOrd":
+            const count = result.getValue({
+              name: "formulanumeric",
+              summary: "COUNT",
+              formula: "{custbody_kd_return_request2}",
+            });
+
+            if (count > 1) {
+              return;
+            }
+            res.id = result.getValue({
+              name: "internalid",
+              summary: "GROUP",
+            });
+            break;
+          case "ItemRcpt":
+            res.id = result.getValue({
+              name: "internalid",
+              summary: "GROUP",
+            });
+            break;
+        }
+      });
+      return res;
+    } catch (e) {
+      log.error("getPOInformation", e.message);
+    }
+  }
+
   return {
     ACCOUNT: ACCOUNT,
     addAccruedPurchaseItem: addAccruedPurchaseItem,
@@ -4881,6 +4973,7 @@ define([
     getBillId: getBillId,
     getBillStatus: getBillStatus,
     getMrrByCustomerId: getMrrByCustomerId,
+    getRelatedTransaction: getRelatedTransaction,
     getNDCTransactionLineDetails: getNDCTransactionLineDetails,
     getCertainField: getCertainField,
     getInvoiceLineAmount: getInvoiceLineAmount,

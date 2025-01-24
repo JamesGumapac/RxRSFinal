@@ -871,8 +871,9 @@ define([
         returnExternalUrl: false,
         params: {
           mrrId: mrrId,
+          rclId: rclId,
           isReload: true,
-          inDated: true,
+          inDated: false,
           isVerifyStaging: false,
           returnList: returnList,
           createdPaymentId: newPaymentId,
