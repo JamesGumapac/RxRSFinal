@@ -113,6 +113,7 @@ define(["N/record", "N/search"] /**
    */
   function getCurrentDiscountPercentage(options) {
     let { displayName } = options;
+    log.audit("getCurrentDiscountPercentage", options);
     let res = {};
     try {
       const itemSearchObj = search.create({
@@ -133,6 +134,8 @@ define(["N/record", "N/search"] /**
           search.createColumn({ name: "baseprice", label: "Base Price" }),
         ],
       });
+      const searchResultCount = itemSearchObj.runPaged().count;
+      log.debug("getCurrentDiscountPercentage", searchResultCount);
       itemSearchObj.run().each(function (result) {
         res.internalId = result.id;
         let percentage = result.getValue({

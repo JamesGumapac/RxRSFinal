@@ -2403,7 +2403,7 @@ define([
       let sublistFields = options.sublistFields;
       let value = options.value;
       let scriptId = 35951; // getFileId("rxrs_cs_verify_staging.js");
-      form.clientScriptFileId = getFileId("rxrs_cs_verifystaging");
+      form.clientScriptFileId = getFileId("rxrs_cs_verifystaging.js");
       let sublist;
       sublist = form.addSublist({
         id: "custpage_items_sublist",

@@ -108,7 +108,9 @@ define([
     let binCategory = options.params.binCategory;
     let manualBin = options.params.manualBin;
     let returnTo = options.params.returnTo;
-    let rrStatus = "";
+    let planSelectionType = "",
+      rrStatus = "",
+      weight = "";
     try {
       paramManufacturer = paramManufacturer.includes("_")
         ? paramManufacturer.replaceAll("_", "&")
@@ -237,10 +239,18 @@ define([
         let rslookup = search.lookupFields({
           type: rrType,
           id: rrId,
-          columns: ["custbody_kd_rr_category", "status"],
+          columns: [
+            "custbody_kd_rr_category",
+            "status",
+            "custbody_plan_type",
+            "custbody_bol_fullfilment_weight",
+          ],
         });
         rrStatus = rslookup.status[0].text;
         category = rslookup.custbody_kd_rr_category[0].value;
+        planSelectionType = rslookup.custbody_plan_type[0].value;
+        weight = rslookup.custbody_bol_fullfilment_weight;
+
         log.error("rslookup", rslookup);
         if (rslookup) {
           form
@@ -252,6 +262,19 @@ define([
             .updateDisplayType({
               displayType: serverWidget.FieldDisplayType.DISABLED,
             }).defaultValue = rrStatus;
+          if (planSelectionType) {
+            form
+              .addField({
+                id: "custpage_planselectiontype",
+                label: "Plan Selection Type",
+                type: serverWidget.FieldType.SELECT,
+                source: "customlist_kod_customertype",
+              })
+              .updateDisplayType({
+                displayType: serverWidget.FieldDisplayType.DISABLED,
+              }).defaultValue = planSelectionType;
+          }
+
           if (rrStatus.toUpperCase() == "APPROVED") {
             form.addPageInitMessage({
               title: "WARNING",
@@ -394,6 +417,19 @@ define([
             rrId: rrId,
             isHazardous: paramIsHazardous,
           });
+          const GOVERNMENT = 10,
+            TOPCO = 11;
+          if (planSelectionType == GOVERNMENT || planSelectionType == TOPCO) {
+            const weightField = form.addField({
+              id: "custpage_weight",
+              label: "Weight (LBS)",
+              type: serverWidget.FieldType.TEXT,
+            });
+            if (weight) {
+              weightField.defaultValue = weight;
+            }
+          }
+
           log.emergency("destructionlist", desctructionList);
           let sublistFields = rxrs_vs_util.SUBLISTFIELDS.descrutionField;
           rxrs_vs_util.createDestructioneSublist({

@@ -345,17 +345,40 @@ define([
       urlParams = new URLSearchParams(arrTemp[1]);
       let isHazardous = urlParams.get("isHazardous");
       const category = suitelet.getValue("custpage_category");
-
+      const planSelectionType = suitelet.getValue("custpage_planselectiontype");
+      const weight = suitelet.getValue("custpage_weight");
       let existingBags = [];
       let selectionType = suitelet.getValue("custpage_radio");
       let binNumber = suitelet.getValue("custpage_bin");
       const rrStatus = suitelet.getValue("custpage_rrstatus");
-      const RETURNABLE = 2;
-      let exitingBagId;
-      const NONRETURNABLE = 1;
-      let mfgProcessing;
-      let bagCount = 0;
-      let itemWithoutBag = 0;
+      let maximumAmount = suitelet.getValue("custpage_manuf_max_so_amt");
+      let rrId = suitelet.getValue("custpage_rrid");
+      let mrrId = suitelet.getValue("custpage_mrrid");
+      let rrType = suitelet.getValue("custpage_rr_type");
+      let manufId = suitelet.getValue("custpage_manuf_id");
+
+      const RETURNABLE = 2,
+        NONRETURNABLE = 1,
+        GOVERNMENT = 10,
+        TOPCO = 11;
+      if (planSelectionType == GOVERNMENT || planSelectionType == TOPCO) {
+        if (!weight) {
+          alert("Please enter weight");
+          return;
+        } else {
+          record.submitFields({
+            type: rrType,
+            id: rrId,
+            values: {
+              custbody_bol_fullfilment_weight: weight,
+            },
+          });
+        }
+      }
+      let exitingBagId,
+        mfgProcessing,
+        bagCount = 0,
+        itemWithoutBag = 0;
       if (selectionType == "Returnable") {
         console.log("setting to returnable");
         mfgProcessing = RETURNABLE;
@@ -621,11 +644,6 @@ define([
       }
 
       console.table(returnItemScanIds);
-      let maximumAmount = suitelet.getValue("custpage_manuf_max_so_amt");
-      let rrId = suitelet.getValue("custpage_rrid");
-      let mrrId = suitelet.getValue("custpage_mrrid");
-      let rrType = suitelet.getValue("custpage_rr_type");
-      let manufId = suitelet.getValue("custpage_manuf_id");
 
       let params = {
         custscript_payload: JSON.stringify(returnItemScanIds),

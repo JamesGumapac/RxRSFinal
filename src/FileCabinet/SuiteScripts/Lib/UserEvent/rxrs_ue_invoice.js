@@ -83,25 +83,40 @@ define([
         }
       }
     }
-
-    if (planSelectionType == 11) {
-      // GOVERNMENT
-      const res = itemlib.getCurrentDiscountPercentage({
-        displayName: "Government",
-      });
-      newRecord.setValue({
-        fieldId: "discountitem",
-        value: res.internalId, //	Invoice Adjustment - Government Accounts
-      });
-      newRecord.setValue({
-        fieldId: "192", //RXRS | MFG Invoice [Government]
-      });
-      rxrs_tran_lib.setERVDiscountPrice(newRecord);
-    } else if (planSelectionType == 4) {
-      // quick cash
-      newRecord.setValue({
-        fieldId: "143", //RXRS | MFG Invoice [Government]
-      });
+    log.audit("Plan selection type", planSelectionType);
+    let res;
+    switch (+planSelectionType) {
+      case 11: // Government
+        res = itemlib.getCurrentDiscountPercentage({
+          displayName: "Government",
+        });
+        newRecord.setValue({
+          fieldId: "discountitem",
+          value: res.internalId, //	Invoice Adjustment - Government Accounts
+        });
+        newRecord.setValue({
+          fieldId: "192", //RXRS | MFG Invoice [Government]
+        });
+        rxrs_tran_lib.setERVDiscountPrice(newRecord);
+        break;
+      case 4: // Quick Cash
+        newRecord.setValue({
+          fieldId: "143", //RXRS | MFG Invoice [Government]
+        });
+        break;
+      case 10: // Top Co
+        res = itemlib.getCurrentDiscountPercentage({
+          displayName: "Top Co",
+        });
+        newRecord.setValue({
+          fieldId: "discountitem",
+          value: res.internalId, //	Invoice Adjustment - Government Accounts
+        });
+        newRecord.setValue({
+          fieldId: "197", //RXRS | MFG Invoice [Top Co.]
+        });
+        rxrs_tran_lib.setERVDiscountPrice(newRecord);
+        break;
     }
   };
 
