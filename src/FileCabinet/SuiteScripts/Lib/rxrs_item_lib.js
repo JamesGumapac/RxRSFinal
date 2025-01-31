@@ -154,9 +154,56 @@ define(["N/record", "N/search"] /**
     }
   }
 
+  /**
+   * Retrieves the unit price of an item based on the specified price level.
+   *
+   * @param {object} options - The options object containing itemId and priceLevel.
+   * @param {string} options.itemId - The internal id of the item.
+   * @param {string} options.priceLevel - The internal id of the price level.
+   *
+   * @return {number|null} The unit price of the item based on the specified price level,
+   *                       or null if no matching item is found.
+   */
+  function getItemRateBasedOnPriceLevel(options) {
+    log.audit("getItemRateBasedOnPriceLevel", options);
+    const { itemId, priceLevel } = options;
+    try {
+      let itemRate = null;
+      let itemSearchObj = search.create({
+        type: "item",
+        filters: [
+          ["internalid", "anyof", itemId],
+          "AND",
+          ["pricing.pricelevel", "anyof", priceLevel],
+        ],
+        columns: [
+          search.createColumn({
+            name: "unitprice",
+            join: "pricing",
+            label: "Unit Price",
+          }),
+        ],
+      });
+      const searchResultCount = itemSearchObj.runPaged().count;
+      if (searchResultCount > 0) {
+        itemSearchObj = itemSearchObj.run().getRange(0, 1);
+        itemRate = itemSearchObj[0].getValue({
+          name: "unitprice",
+          join: "pricing",
+          label: "Unit Price",
+        });
+      }
+      log.audit("getItemRateBasedOnPriceLevel", itemRate);
+      return itemRate;
+    } catch (e) {
+      log.error("getItemRateBasedOnPriceLevel", e.message);
+    }
+  }
+
   return {
     updateItemPricing: updateItemPricing,
     getItemId: getItemId,
     getCurrentDiscountPercentage: getCurrentDiscountPercentage,
+    getItemRateBasedOnPriceLevel: getItemRateBasedOnPriceLevel,
   };
 });

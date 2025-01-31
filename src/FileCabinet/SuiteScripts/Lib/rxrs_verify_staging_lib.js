@@ -1182,11 +1182,13 @@ define([
       allPaymentSched,
       edit,
     } = options;
-    if (inDated) {
-      inDated = inDated == false ? "F" : "T";
-    } else {
-      inDated = null;
-    }
+    inDated = inDated == false ? "F" : "T";
+    log.error("indated", inDated);
+    // if (inDated) {
+    //
+    // } else {
+    //   inDated = null;
+    // }
 
     let nonReturnableFeeAmount;
     let orginalNonReturnableFeeAmount;
@@ -1250,7 +1252,7 @@ define([
             }),
           );
         }
-        if (inDated) {
+        if (inDated == "T" || inDated == "F") {
           log.error("setting in dated value", inDated);
           filters.push(
             search.createFilter({
@@ -2168,6 +2170,11 @@ define([
           functionName: `verify()`,
         });
         form.addButton({
+          id: "custpage_printlabel",
+          label: "Print Label",
+          functionName: `printLabel()`,
+        });
+        form.addButton({
           id: "custpage_back",
           label: "Back",
           functionName: `backToReturnable()`,
@@ -2416,6 +2423,11 @@ define([
           id: "custpage_verify",
           label: "Update Verification",
           functionName: `verify()`,
+        });
+        form.addButton({
+          id: "custpage_printlabel",
+          label: "Print Label",
+          functionName: `printLabel()`,
         });
         form.addButton({
           id: "custpage_back",

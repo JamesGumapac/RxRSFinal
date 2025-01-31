@@ -15,6 +15,7 @@ define([
   "../rxrs_custom_rec_lib",
   "../rxrs_util",
   "../rxrs_lib_bag_label",
+  "../rxrs_item_lib",
 ], /**
  * @param{record} record
  * @param{search} search
@@ -37,6 +38,7 @@ define([
   rxrs_customRec,
   util,
   baglib,
+  itemlib,
 ) => {
   const PACKAGESIZE = {
     PARTIAL: 2,
@@ -89,6 +91,24 @@ define([
           fieldId: "custrecord_scanpricelevel",
           value: MANUALINPUT,
         });
+      }
+      if (
+        context.type == context.UserEventType.EDIT &&
+        runtime.executionContext == "SUITELET"
+      ) {
+        log.error("Updating price level");
+        const newPriceLevel = rec.getValue("custrecord_scanpricelevel"),
+          oldPriceLevel = oldRec.getValue("custrecord_scanpricelevel");
+        log.audit("Price level", { oldPriceLevel, newPriceLevel });
+        if (oldPriceLevel !== newPriceLevel) {
+          rec.setValue({
+            fieldId: "custrecord_scanrate",
+            value: itemlib.getItemRateBasedOnPriceLevel({
+              itemId: rec.getValue("custrecord_cs_return_req_scan_item"),
+              priceLevel: newPriceLevel,
+            }),
+          });
+        }
       }
     } catch (e) {
       log.error("beforeSubmit", e.message);

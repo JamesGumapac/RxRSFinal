@@ -35,7 +35,8 @@ define([
       let { newRecord, type } = scriptContext;
       let res;
       let keyWord = "";
-
+      const isRejected = newRecord.getValue("custrecord_rejected");
+      if (isRejected == true) return;
       const isGovernment = newRecord.getValue("custrecord_government");
       const isTopCo = newRecord.getValue("custrecord_cmline_istopco");
       if (isGovernment == true || isTopCo == true) {
@@ -106,7 +107,8 @@ define([
    */
   const afterSubmit = (scriptContext) => {
     let { newRecord, type } = scriptContext;
-
+    const isRejected = newRecord.getValue("custrecord_rejected");
+    if (isRejected == true) return;
     let parentCmId = newRecord.getValue("custrecord_credit_memo_id");
     try {
       if (type == "edit") {

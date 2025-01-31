@@ -30,6 +30,11 @@ define([
   const beforeSubmit = (scriptContext) => {
     try {
       const rec = scriptContext.newRecord;
+      const cmNumber = rec.getValue("custrecord_creditmemonum");
+      rec.setValue({
+        fieldId: "name",
+        value: cmNumber,
+      });
       if (rec.getValue("custrecord_is_government") == true) {
         const res = itemlib.getCurrentDiscountPercentage({
           displayName: "Government",

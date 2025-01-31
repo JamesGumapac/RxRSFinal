@@ -161,7 +161,7 @@ define([
       });
       const itemScanIndex = rec.findSublistLineWithValue({
         sublistId: "item",
-        fieldId: "custcol_rsrs_itemscan_link",
+        fieldId: "custcol_item_scan",
         value: itemScanId,
       });
       log.audit("itemScanIndex", itemScanIndex);
@@ -714,7 +714,7 @@ define([
           id &&
             poRec.setCurrentSublistValue({
               sublistId: "item",
-              fieldId: "custcol_rsrs_itemscan_link",
+              fieldId: "custcol_item_scan",
               value: id,
             });
           manufacturer &&
@@ -1001,7 +1001,7 @@ define([
           });
           vbRec.setCurrentSublistValue({
             sublistId: "item",
-            fieldId: "custcol_rsrs_itemscan_link",
+            fieldId: "custcol_item_scan",
             value: +item.id,
           });
           vbRec.setCurrentSublistValue({
@@ -1068,7 +1068,7 @@ define([
         filters: [
           ["type", "noneof", "CuTrSale102", "CuTrPrch106", "ItemRcpt"],
           "AND",
-          ["custcol_rsrs_itemscan_link", "anyof", irsId],
+          ["custcol_item_scan", "anyof", irsId],
         ],
         columns: [
           search.createColumn({ name: "line", label: "Line ID" }),
@@ -2013,18 +2013,30 @@ define([
   }
 
   /**
-   * Update transactionline CM SalesOrder
-   * @param {object} options
-   * @param {string} options.lineuniquekey
-   * @param {string} options.cmLineId
-   * @param {string} options.invId
-   * @param {string} options.cmId
-   * @param {number} options.amount
-   * @param {number} options.unitPrice
+   * Updates a transaction line with credit memo information.
+   *
+   * @param {Object} options - The options object containing update information.
+   * @param {boolean} options.isRejected - Indicates if the line is rejected or not.
+   * @param {string} options.lineuniquekey - The unique key of the line.
+   * @param {string} options.cmLineId - The ID of the credit memo line.
+   * @param {string} options.invId - The ID of the invoice record.
+   * @param {string} options.cmId - The ID of the credit memo record.
+   * @param {number} options.amount - The amount to update on the transaction line.
+   * @param {number} options.unitPrice - The unit price to set on the transaction line.
+   *
+   * @return {void} - This function does not return anything.
    */
   function updateTranLineCM(options) {
     log.audit("updateTranLineCM", options);
-    let { lineuniquekey, cmLineId, invId, cmId, amount, unitPrice } = options;
+    let {
+      isRejected,
+      lineuniquekey,
+      cmLineId,
+      invId,
+      cmId,
+      amount,
+      unitPrice,
+    } = options;
 
     try {
       const invRec = record.load({
@@ -2054,6 +2066,14 @@ define([
           line: index,
           value: Number(cmLineId),
         });
+        if (isRejected == true) {
+          invRec.setSublistValue({
+            sublistId: "item",
+            fieldId: "custcol_line_status",
+            line: index,
+            value: 1,
+          });
+        }
         // invRec.setSublistValue({
         //   sublistId: "item",
         //   fieldId: "price",
@@ -3632,7 +3652,7 @@ define([
       });
       vbRec.setSublistValue({
         sublistId: "item",
-        fieldId: "custcol_rsrs_itemscan_link",
+        fieldId: "custcol_item_scan",
         value: irsId,
         line: lastIndex,
       });

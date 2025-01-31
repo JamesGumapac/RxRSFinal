@@ -607,6 +607,7 @@ define([
   function createCreditMemoLines(options) {
     log.audit("createCreditMemoLines", options);
     let { cmLines, invId, cmParentId, isGovernment, isTopCo } = options;
+    let isRejected;
     try {
       cmLines.forEach((cm) => {
         let {
@@ -619,7 +620,8 @@ define([
           cmId,
           invId,
         } = cm;
-
+        isRejected = amountApplied <= 0 ? true : false;
+        log.audit("isRejected", isRejected);
         if (!isEmpty(+cmLineId) || cmLineId != " ") {
           log.error("Cm ID EXIST IF");
           // let values = {
@@ -637,6 +639,12 @@ define([
             fieldId: "custrecord_cm_amount_applied",
             value: amountApplied,
           });
+
+          cmLineRec.setValue({
+            fieldId: "custrecord_rejected",
+            value: isRejected,
+          });
+
           cmLineRec.setValue({
             fieldId: "custrecord_cm_unit_price",
             value: unitPrice,
@@ -652,6 +660,7 @@ define([
             lineuniquekey: lineUniqueKey,
             amount: amountApplied,
             unitPrice: unitPrice,
+            isRejected: isRejected,
           });
         } else {
           log.emergency("CM DOES NOT EXIST ELSE");
@@ -687,12 +696,19 @@ define([
               fieldId: "custrecord_cm_amount_applied",
               value: amountApplied,
             });
+            cmChildRec.setValue({
+              fieldId: "custrecord_rejected",
+              value: isRejected,
+            });
 
             cmChildRec.setValue({
               fieldId: "custrecord_cm_unit_price",
               value: unitPrice,
             });
-            if (isGovernment == true || isTopCo == true) {
+            if (
+              isGovernment == true ||
+              (isTopCo == true && isRejected != true)
+            ) {
               cmChildRec.setValue({
                 fieldId: "custrecord_cmline_gross_amount",
                 value: amountApplied, /// 0.15,
@@ -719,6 +735,7 @@ define([
               lineuniquekey: lineUniqueKey,
               amount: amountApplied,
               unitPrice: unitPrice,
+              isRejected: isRejected,
             });
           }
         }
@@ -796,7 +813,10 @@ define([
         ],
         columns: [
           search.createColumn({ name: "id", label: "ID" }),
-          search.createColumn({ name: "scriptid", label: "Script ID" }),
+          search.createColumn({
+            name: "scriptid",
+            label: "Script ID",
+          }),
         ],
       });
       let searchResultCount =
@@ -831,7 +851,10 @@ define([
         ],
         columns: [
           search.createColumn({ name: "id", label: "ID" }),
-          search.createColumn({ name: "scriptid", label: "Script ID" }),
+          search.createColumn({
+            name: "scriptid",
+            label: "Script ID",
+          }),
         ],
       });
       let searchResultCount =
@@ -1272,7 +1295,10 @@ define([
         ],
         columns: [
           search.createColumn({ name: "name", label: "Name" }),
-          search.createColumn({ name: "id", label: "ID" }),
+          search.createColumn({
+            name: "id",
+            label: "ID",
+          }),
           search.createColumn({ name: "scriptid", label: "Script ID" }),
           search.createColumn({
             name: "custrecord_kd_returnrequest",
@@ -1365,6 +1391,10 @@ define([
             irsRec.setValue({
               fieldId: "custrecord_isc_inputrate",
               value: "",
+            });
+            irsRec.setValue({
+              fieldId: "custrecord_scanrate",
+              value: rate,
             });
           } else {
             itemlib.updateItemPricing({
@@ -1597,12 +1627,29 @@ define([
         const irsRec = record.load({
           type: "customrecord_cs_item_ret_scan",
           id: id,
+          isDynamic: true,
+        });
+        log.audit("setting to m configured");
+        irsRec.setValue({
+          fieldId: "custrecord_scanpricelevel",
+          value: 12, // M-CONFIGURED
         });
         irsRec.setValue({
           fieldId: "custrecord_scanpricelevel",
           value: 8, // M-CONFIGURED
+        });
+
+        irsRec.setValue({
+          fieldId: "custrecord_isc_overriderate",
+          value: false, // M-CONFIGURED
           forceSyncSourcing: true,
         });
+        irsRec.setValue({
+          fieldId: "custrecord_isc_inputrate",
+          value: 0, // M-CONFIGURED
+          forceSyncSourcing: true,
+        });
+
         let updatedId = irsRec.save({
           ignoreMandatoryFields: true,
         });

@@ -210,10 +210,10 @@ define(["N/record", "N/search", "../agSharedLib/rxrs_shared_functions"], (
         fieldId: "custrecord_scanpricelevel",
         value: finalPriceLevelToSet,
       });
-      newRecord.setValue({
-        fieldId: "custrecord_scanrate",
-        value: finalAmtToSet,
-      });
+      // newRecord.setValue({
+      //   fieldId: "custrecord_scanrate",
+      //   value: finalAmtToSet,
+      // });
     } catch (e) {
       log.error("beforeSubmit", e.message);
     }

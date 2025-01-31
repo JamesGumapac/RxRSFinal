@@ -143,7 +143,7 @@ define([
     {
       id: "custpage_full",
       type: "TEXT",
-      label: "Quantity",
+      label: "Full Quantity",
       updateDisplayType: "ENTRY",
     },
     {

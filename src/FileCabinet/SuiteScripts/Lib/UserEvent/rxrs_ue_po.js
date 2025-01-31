@@ -57,6 +57,23 @@ define([], () => {
             line: i,
             value: 0,
           });
+        } else {
+          const rate = rec.getSublistValue({
+            sublistId: "item",
+            fieldId: "rate",
+            line: i,
+          });
+          const quantity = rec.getSublistValue({
+            sublistId: "item",
+            fieldId: "quantity",
+            line: i,
+          });
+          rec.setSublistValue({
+            sublistId: "item",
+            fieldId: "amount",
+            line: i,
+            value: +rate * +quantity,
+          });
         }
       }
     } catch (e) {

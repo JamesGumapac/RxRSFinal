@@ -65,7 +65,7 @@ define([
   function displayForms(params) {
     try {
       log.debug("objClientParams", params);
-      let title = "Return Cover Letter";
+      let title = "Approval & Completion";
       let csName = "rxrs_cs_mrr_edit_line.js";
 
       log.audit("displayFrom csname", csName);

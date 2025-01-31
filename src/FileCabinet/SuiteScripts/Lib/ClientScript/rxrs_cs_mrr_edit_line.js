@@ -320,10 +320,10 @@ define([
               console.table(changePharmaProcessing, pharmaProcessing);
               if (changePharmaProcessing == true) {
                 console.log("enabling rate");
-                RATEFIELDCOLUMN.isDisabled = false;
+                //  RATEFIELDCOLUMN.isDisabled = false;
                 notesFields.isDisabled = false;
               } else {
-                RATEFIELDCOLUMN.isDisabled = true;
+                //  RATEFIELDCOLUMN.isDisabled = true;
                 notesFields.isDisabled = true;
               }
               if (
@@ -366,10 +366,10 @@ define([
               console.table(changePharmaProcessing, pharmaProcessing);
               if (changePharmaProcessing == true) {
                 console.log("enabling rate");
-                RATEFIELDCOLUMN.isDisabled = false;
+                // RATEFIELDCOLUMN.isDisabled = false;
                 notesFields.isDisabled = false;
               } else {
-                RATEFIELDCOLUMN.isDisabled = true;
+                //   RATEFIELDCOLUMN.isDisabled = true;
                 notesFields.isDisabled = true;
               }
               if (
@@ -424,10 +424,26 @@ define([
               changePharmaProcessingField.isDisabled = false;
               rateField.isDisabled = false;
               updateCatalogfield.isDisabled = false;
+
+              console.log("line", lineTobeUpdated.indexOf(line));
+              if (
+                lineTobeUpdated.indexOf(line) == -1 ||
+                lineTobeUpdated.length == 0
+              ) {
+                lineTobeUpdated.push(line);
+                console.table(lineTobeUpdated);
+              }
+              console.log("selected line:" + lineTobeUpdated);
             } else {
               changePharmaProcessingField.isDisabled = true;
               rateField.isDisabled = true;
               updateCatalogfield.isDisabled = true;
+              const index = lineTobeUpdated.indexOf(line);
+              if (index > -1) {
+                // Only splice the array when the item is found
+                lineTobeUpdated.splice(index, 1); // Second parameter means remove one item only
+              }
+              console.table(lineTobeUpdated);
             }
 
             break;
@@ -510,7 +526,7 @@ define([
         }
       }
       if (rate != " ") {
-        params.rate = rate;
+        params.rate = Number(rate);
         let updateProductCatalog = suitelet.getSublistValue({
           sublistId: SUBLIST,
           fieldId: UPDATEPRODUCTCATALOGFIELD,
@@ -530,7 +546,7 @@ define([
 
   function submit(billId) {
     {
-      alert(billId);
+      //  alert(billId);
       let itemToBeProcess = [];
       if (selectedLine == null || selectedLine == "null") {
         showMessage();
@@ -577,7 +593,7 @@ define([
           fieldId: UPDATEPRODUCTCATALOGFIELD,
           line: i,
         });
-        if (isSelected == true && updateFromCatalog == true) {
+        if (isSelected == true) {
           const irsId = suitelet.getSublistValue({
             sublistId: SUBLIST,
             fieldId: "custpage_internalid",

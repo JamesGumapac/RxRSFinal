@@ -10,6 +10,7 @@ define([
   "N/ui/message",
   "N/record",
   "N/https",
+  "N/search",
 ], /**
  * @param{runtime} runtime
  * @param{url} url
@@ -19,7 +20,7 @@ define([
  * @param https
  * @param rxrs_rcl_lib
  * @param tranlib
- */ function (runtime, url, currentRecord, message, record, https) {
+ */ function (runtime, url, currentRecord, message, record, https, search) {
   let suitelet = null;
   const RETURNABLESUBLIST = "custpage_items_sublist";
   let urlParams;
@@ -920,6 +921,48 @@ define([
     }
   }
 
+  /**
+   * Prints the bag label for a given internal Id using SuiteScript 2.0.
+   *
+   * @param {Object} options - An object containing the necessary parameters.
+   * @param {string} options.sublistId - The sublist id from which to retrieve the internal Id.
+   * @param {string} options.fieldId - The field id to fetch the internal Id.
+   * @param {number} options.line - The line number in the sublist to fetch the internal Id.
+   * @return {void} This function does not return a value.
+   */
+  function printLabel(options) {
+    try {
+      let bagLabel = null;
+      let internalId = suitelet.getSublistValue({
+        sublistId: RETURNABLESUBLIST,
+        fieldId: "custpage_internalid",
+        line: 0,
+      });
+      let rsLookup = search.lookupFields({
+        type: "customrecord_cs_item_ret_scan",
+        id: internalId,
+        columns: ["custrecord_scanbagtaglabel"],
+      });
+      console.table(rsLookup);
+      if (rsLookup.custrecord_scanbagtaglabel[0]) {
+        bagLabel = rsLookup.custrecord_scanbagtaglabel[0].value;
+        let printSLURL = url.resolveScript({
+          scriptId: "customscript_sl_print_bag_label",
+          deploymentId: "customdeploy_sl_print_bag_label",
+          returnExternalUrl: false,
+          params: {
+            recId: bagLabel,
+          },
+        });
+        window.open(printSLURL);
+      } else {
+        alert("Verification is needed");
+      }
+    } catch (e) {
+      console.error("printLabel", e.message);
+    }
+  }
+
   return {
     pageInit: pageInit,
     fieldChanged: fieldChanged,
@@ -927,5 +970,6 @@ define([
     update222FormReference: update222FormReference,
     backToReturnable: backToReturnable,
     createPayment: createPayment,
+    printLabel: printLabel,
   };
 });
