@@ -139,7 +139,7 @@ define([
               type: "customrecord_kod_masterreturn",
               id: mrrId,
               values: {
-                custrecord_kod_mr_status: util.mrrStatus.Approved,
+                custrecord_kod_mr_status: util.mrrStatus.WaitingForApproval,
               },
             });
           }
