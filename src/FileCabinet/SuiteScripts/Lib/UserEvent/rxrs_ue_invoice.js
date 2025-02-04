@@ -83,6 +83,35 @@ define([
         }
       }
     }
+    if (type == "edit") {
+      for (let i = 0; i < newRecord.getLineCount("item"); i++) {
+        const linestatus = newRecord.getSublistValue({
+          sublistId: "item",
+          fieldId: "custcol_line_status",
+          line: i,
+        });
+        const cmReference = newRecord.getSublistValue({
+          sublistId: "item",
+          fieldId: "custcol_credit_memo_reference",
+          line: i,
+        });
+        log.debug("status", { linestatus, cmReference });
+        const amount = newRecord.getSublistValue({
+          sublistId: "item",
+          fieldId: "amount",
+          line: i,
+        });
+        log.audit("condition", linestatus == 1 && isEmpty(cmReference) == true);
+        if (linestatus == 1 && isEmpty(cmReference) == true) {
+          newRecord.setSublistValue({
+            sublistId: "item",
+            fieldId: "custcol_line_status",
+            line: i,
+            value: "",
+          });
+        }
+      }
+    }
     log.audit("Plan selection type", planSelectionType);
     let res;
     switch (+planSelectionType) {

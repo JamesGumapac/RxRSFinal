@@ -35,6 +35,7 @@ define([
   let lineCount = 0;
   let urlParams;
   let isGovernment = false;
+  let isTopCo = false;
   const columnToDisable = [
     "custpage_full_partial",
     "custpage_package_size",
@@ -95,6 +96,7 @@ define([
     let totalAmount = 0;
     isGovernment = suitelet.getValue("custpage_is_government");
     const fileUploaded = suitelet.getText("custpage_uploaded_file");
+    isTopCo = suitelet.getValue("custpage_is_topco");
 
     lineCount = suitelet.getLineCount("custpage_items_sublist");
     for (let i = 0; i < lineCount; i++) {
@@ -638,9 +640,16 @@ define([
             fieldId: "custpage_amount_paid",
             line: i,
           });
-          if (isGovernment == true) {
+          if (isGovernment == true && amountApplied > 0) {
             const res = itemlib.getCurrentDiscountPercentage({
               displayName: "Government",
+            });
+            total = packingSlipAmountTotal * res.totalPercent;
+            unitPrice *= res.totalPercent;
+            amountApplied *= res.totalPercent;
+          } else if (isTopCo == true && amountApplied > 0) {
+            const res = itemlib.getCurrentDiscountPercentage({
+              displayName: "Top Co",
             });
             total = packingSlipAmountTotal * res.totalPercent;
             unitPrice *= res.totalPercent;
@@ -666,7 +675,10 @@ define([
 
           if (isSelected == false) continue;
           total += Number(amountApplied);
-          packingSlipAmountTotal += Number(packingSlipAmount);
+          if (amountApplied > 0) {
+            packingSlipAmountTotal += Number(packingSlipAmount);
+          }
+
           console.log("isEdit:" + isEdit);
           if (isEdit == "true") {
             console.log("isEdited");

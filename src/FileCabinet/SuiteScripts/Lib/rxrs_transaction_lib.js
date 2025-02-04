@@ -1187,7 +1187,7 @@ define([
    * @return {array} return list of verified Item Return Scan
    */
   function getIRSLine(options) {
-    log.audit("getIRSLine", getIRSLine);
+    log.audit("getIRSLine", options);
     let { rrId, pharmaProcessing, finalyPaymentSchedule, mrrId, irsId } =
       options;
     try {
@@ -1301,6 +1301,7 @@ define([
           }),
         );
       }
+      log.audit("filters", customrecord_cs_item_ret_scanSearchObj.filters);
       customrecord_cs_item_ret_scanSearchObj.run().each(function (result) {
         let amount = 0;
 

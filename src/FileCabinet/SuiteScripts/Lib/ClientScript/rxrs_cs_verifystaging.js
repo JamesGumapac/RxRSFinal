@@ -362,7 +362,10 @@ define([
         NONRETURNABLE = 1,
         GOVERNMENT = 10,
         TOPCO = 11;
-      if (planSelectionType == GOVERNMENT || planSelectionType == TOPCO) {
+      if (
+        (planSelectionType == GOVERNMENT || planSelectionType == TOPCO) &&
+        selectionType !== "Returnable"
+      ) {
         if (!weight) {
           alert("Please enter weight");
           return;

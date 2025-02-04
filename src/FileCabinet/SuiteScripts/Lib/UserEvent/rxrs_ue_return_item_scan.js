@@ -63,51 +63,52 @@ define([
     try {
       if (context.type == "create") {
         rxrs_customRec.updateIRSPrice(rec);
-      }
-      if (context.type !== "edit") return;
-      if (
-        util.checkIfThereIsUpdate({
-          oldRec: oldRec,
-          newRec: rec,
-          FIELDS: fields,
-        }) == true
-      ) {
-        log.emergency("updating price");
-        rxrs_customRec.updateIRSPrice(rec);
-      }
-      if (
-        rec.getValue("custrecord_itemscanbin") !=
-        oldRec.getValue("custrecord_itemscanbin")
-      ) {
-        rxrs_tranlib.updateBinNumber({
-          rrId: rec.getValue("custrecord_cs_ret_req_scan_rrid"),
-          itemScanId: rec.id,
-          binId: rec.getValue("custrecord_itemscanbin"),
-        });
-      }
-      if (rec.getValue("custrecord_isc_overriderate") == true) {
-        const MANUALINPUT = 12;
-        rec.setValue({
-          fieldId: "custrecord_scanpricelevel",
-          value: MANUALINPUT,
-        });
-      }
-      if (
-        context.type == context.UserEventType.EDIT &&
-        runtime.executionContext == "SUITELET"
-      ) {
-        log.error("Updating price level");
-        const newPriceLevel = rec.getValue("custrecord_scanpricelevel"),
-          oldPriceLevel = oldRec.getValue("custrecord_scanpricelevel");
-        log.audit("Price level", { oldPriceLevel, newPriceLevel });
-        if (oldPriceLevel !== newPriceLevel) {
-          rec.setValue({
-            fieldId: "custrecord_scanrate",
-            value: itemlib.getItemRateBasedOnPriceLevel({
-              itemId: rec.getValue("custrecord_cs_return_req_scan_item"),
-              priceLevel: newPriceLevel,
-            }),
+      } else if (context.type == "edit") {
+        if (
+          util.checkIfThereIsUpdate({
+            oldRec: oldRec,
+            newRec: rec,
+            FIELDS: fields,
+          }) == true
+        ) {
+          log.emergency("updating price");
+          rxrs_customRec.updateIRSPrice(rec);
+        }
+        if (
+          rec.getValue("custrecord_itemscanbin") !=
+          oldRec.getValue("custrecord_itemscanbin")
+        ) {
+          rxrs_tranlib.updateBinNumber({
+            rrId: rec.getValue("custrecord_cs_ret_req_scan_rrid"),
+            itemScanId: rec.id,
+            binId: rec.getValue("custrecord_itemscanbin"),
           });
+        }
+        if (rec.getValue("custrecord_isc_overriderate") == true) {
+          const MANUALINPUT = 12;
+          rec.setValue({
+            fieldId: "custrecord_scanpricelevel",
+            value: MANUALINPUT,
+          });
+        }
+        if (
+          context.type == context.UserEventType.EDIT &&
+          runtime.executionContext == "SUITELET"
+        ) {
+          log.audit("Updating price level");
+          const newPriceLevel = rec.getValue("custrecord_scanpricelevel"),
+            oldPriceLevel = oldRec.getValue("custrecord_scanpricelevel");
+          log.audit("Price level", { oldPriceLevel, newPriceLevel });
+          if (oldPriceLevel !== newPriceLevel) {
+            rec.setValue({
+              fieldId: "custrecord_scanrate",
+              value: itemlib.getItemRateBasedOnPriceLevel({
+                itemId: rec.getValue("custrecord_cs_return_req_scan_item"),
+                priceLevel: newPriceLevel,
+              }),
+            });
+            rxrs_customRec.updateIRSPrice(rec);
+          }
         }
       }
     } catch (e) {

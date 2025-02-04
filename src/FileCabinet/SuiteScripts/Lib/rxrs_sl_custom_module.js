@@ -193,14 +193,14 @@ define([
       type: "TEXT",
       label: "CREDIT MEMO REFERENCE ID",
       source: "customrecord_credit_memo_line_applied",
-      updateDisplayType: "INLINE",
+      updateDisplayType: "HIDDEN",
     },
     {
       id: "custpage_credit_memo_parent",
       type: "TEXT",
       label: "CREDIT MEMO PARENT ID",
       source: "customrecord_creditmemo",
-      updateDisplayType: "INLINE",
+      updateDisplayType: "HIDDEN",
     },
   ];
   const VIEWEDITLINESEARCHCOLUMN = [
