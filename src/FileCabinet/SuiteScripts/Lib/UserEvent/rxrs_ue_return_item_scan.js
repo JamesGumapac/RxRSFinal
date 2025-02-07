@@ -69,7 +69,8 @@ define([
             oldRec: oldRec,
             newRec: rec,
             FIELDS: fields,
-          }) == true
+          }) == true ||
+          runtime.executionContext == "USERINTERFACE"
         ) {
           log.emergency("updating price");
           rxrs_customRec.updateIRSPrice(rec);

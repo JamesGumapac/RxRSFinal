@@ -3,12 +3,23 @@
  * @NScriptType ClientScript
  * @NModuleScope SameAccount
  */
-define(["N/currentRecord", "N/url", "N/https", "N/ui/message"], /**
+define([
+  "N/currentRecord",
+  "N/url",
+  "N/https",
+  "N/ui/message",
+  "N/ui/dialog",
+  "N/search",
+], /**
  * @param{currentRecord} currentRecord
  * @param{url} url
  * @param https
  * @param message
- */ function (currentRecord, url, https, message) {
+ */ function (currentRecord, url, https, message, dialog, search) {
+  var bool = true;
+  let mode, type;
+  let existingRR = null;
+
   /**
    * Function to be executed after page is initialized.
    *
@@ -18,7 +29,11 @@ define(["N/currentRecord", "N/url", "N/https", "N/ui/message"], /**
    *
    * @since 2015.2
    */
-  function pageInit(scriptContext) {}
+  function pageInit(scriptContext) {
+    mode = scriptContext.mode;
+    currentRecord = scriptContext.currentRecord;
+    type = currentRecord.type;
+  }
 
   /**
    * Function to be executed when field is changed.
@@ -32,7 +47,32 @@ define(["N/currentRecord", "N/url", "N/https", "N/ui/message"], /**
    *
    * @since 2015.2
    */
-  function fieldChanged(scriptContext) {}
+  function fieldChanged(scriptContext) {
+    const { currentRecord, fieldId } = scriptContext;
+    try {
+      if ((scriptContext.mode = "create")) {
+        if (
+          fieldId == "custbody_kd_master_return_id" ||
+          fieldId == "custbody_kd_rr_category"
+        ) {
+          const category = currentRecord.getValue("custbody_kd_rr_category");
+          const mrrId = currentRecord.getValue("custbody_kd_master_return_id");
+          if (category && mrrId) {
+            existingRR = getReturnRequestPerCategory({
+              mrrId: mrrId,
+              category: category,
+            });
+            console.log("existingRR", +existingRR);
+            if (existingRR) {
+              validateCreation();
+            }
+          }
+        }
+      }
+    } catch (e) {
+      log.error("fieldChanged", e.message);
+    }
+  }
 
   /**
    * Function to be executed when field is slaved.
@@ -132,7 +172,60 @@ define(["N/currentRecord", "N/url", "N/https", "N/ui/message"], /**
    *
    * @since 2015.2
    */
-  function saveRecord(scriptContext) {}
+
+  function saveRecord(scriptContext) {
+    try {
+      console.log(mode);
+      if (mode == "create") {
+        if (bool == true) {
+          transaction.void({
+            type: currentRecord.type,
+            id: existingRR,
+          });
+        }
+        return bool;
+      }
+    } catch (e) {
+      log.error("saveRecord", e.message);
+    }
+  }
+
+  function validateCreation() {
+    let button1 = {
+      label: "Okay",
+      value: true,
+    };
+    let button2 = {
+      label: "Cancel",
+      value: false,
+    };
+
+    let options = {
+      title: "WARNING",
+      message:
+        "Return Category Already Exist. Saving this transaction will void the existing Return Request",
+      buttons: [button1, button2],
+    };
+
+    function success(result) {
+      console.log("Success with value " + result);
+      bool = result;
+      if (result == false) {
+        let m = message.create({
+          type: message.Type.ERROR,
+          title: "ERROR",
+          message: "YOU CANNOT SAVE THIS TRANSACTION. ",
+        });
+        m.show(100000000);
+      }
+    }
+
+    function failure(reason) {
+      console.log("Failure: " + reason);
+    }
+
+    dialog.create(options).then(success).catch(failure);
+  }
 
   /**
    * Call a suitelet to perform custom action
@@ -355,10 +448,52 @@ define(["N/currentRecord", "N/url", "N/https", "N/ui/message"], /**
     }
   }
 
+  /**
+   * Get the return request id per category
+   * @param {string}options.mrrId - Master Return
+   * @param {string}options.category
+   * @return the Internal Id of the Return Request
+   */
+  function getReturnRequestPerCategory(options) {
+    log.audit("getReturnRequestPerCategory", options);
+    let { mrrId, category } = options;
+    let rrId;
+    try {
+      const transactionSearchObj = search.create({
+        type: "transaction",
+        filters: [
+          ["type", "anyof", "CuTrSale102", "CuTrPrch106"],
+          "AND",
+          ["custbody_kd_master_return_id", "anyof", mrrId],
+          "AND",
+          ["voided", "is", "F"],
+        ],
+      });
+      category &&
+        transactionSearchObj.filters.push(
+          search.createFilter({
+            name: "custbody_kd_rr_category",
+            operator: "anyof",
+            values: category,
+          }),
+        );
+
+      transactionSearchObj.run().each(function (result) {
+        rrId = result.id;
+        return true;
+      });
+      return rrId;
+    } catch (e) {
+      log.error("getReturnRequestPerCategory", e.message);
+    }
+  }
+
   return {
     createTransaction: createTransaction,
     pageInit: pageInit,
     openSuitelet: openSuitelet,
     generate222Form: generate222Form,
+    saveRecord: saveRecord,
+    fieldChanged: fieldChanged,
   };
 });

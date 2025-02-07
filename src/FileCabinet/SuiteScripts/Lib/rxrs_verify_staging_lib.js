@@ -58,7 +58,7 @@ define([
     }),
     search.createColumn({ name: "created", label: "Scanned on" }),
     search.createColumn({
-      name: "custrecord_cs_lotnum",
+      name: "custrecord_scanorginallotnumber",
       label: "Serial/Lot Number",
     }),
     search.createColumn({
@@ -257,12 +257,12 @@ define([
         label: "Description",
         updateDisplayType: "DISABLED",
       },
-      {
-        id: "custpage_manufacturer",
-        type: "TEXT",
-        label: "Manufacturer",
-        updateDisplayType: "DISABLED",
-      },
+      // {
+      //   id: "custpage_manufacturer",
+      //   type: "TEXT",
+      //   label: "Manufacturer",
+      //   updateDisplayType: "DISABLED",
+      // },
       {
         id: "custpage_date_created",
         type: "TEXT",
@@ -387,12 +387,12 @@ define([
         label: "Description",
         updateDisplayType: "DISABLED",
       },
-      {
-        id: "custpage_manufacturer",
-        type: "TEXT",
-        label: "Manufacturer",
-        updateDisplayType: "DISABLED",
-      },
+      // {
+      //   id: "custpage_manufacturer",
+      //   type: "TEXT",
+      //   label: "Manufacturer",
+      //   updateDisplayType: "DISABLED",
+      // },
       {
         id: "custpage_date_created",
         type: "TEXT",
@@ -511,12 +511,12 @@ define([
         label: "Description",
         updateDisplayType: "DISABLED",
       },
-      {
-        id: "custpage_manufacturer",
-        type: "TEXT",
-        label: "Manufacturer",
-        updateDisplayType: "DISABLED",
-      },
+      // {
+      //   id: "custpage_manufacturer",
+      //   type: "TEXT",
+      //   label: "Manufacturer",
+      //   updateDisplayType: "DISABLED",
+      // },
       {
         id: "custpage_date_serial_lot",
         type: "TEXT",
@@ -1348,9 +1348,9 @@ define([
               name: "salesdescription",
               join: "CUSTRECORD_CS_RETURN_REQ_SCAN_ITEM",
             }),
-            manufacturer: result.getText("custrecord_cs_item_manufacturer"),
+            //manufacturer: result.getText("custrecord_cs_item_manufacturer"),
             dateCreated: result.getValue("created"),
-            serialLotNumber: result.getValue("custrecord_cs_lotnum"),
+            serialLotNumber: result.getValue("custrecord_scanorginallotnumber"),
             fullPartialPackage: result.getText(
               "custrecord_cs_full_partial_package",
             ),
@@ -1863,7 +1863,7 @@ define([
             label: "Manufacturer",
           }),
           search.createColumn({
-            name: "custrecord_cs_lotnum",
+            name: "custrecord_scanorginallotnumber",
             label: "Serial/Lot Number",
           }),
           search.createColumn({
@@ -1957,7 +1957,7 @@ define([
           }),
           manufacturer: result.getValue("custrecord_scanmanufacturer"),
           serialLotNumber: result.getValue("custrecord_scanmanufacturer"),
-          originalLotNumber: result.getValue("custrecord_cs_lotnum"),
+          originalLotNumber: result.getValue("custrecord_scanorginallotnumber"),
           fullPartialPackage: result.getText(
             "custrecord_cs_full_partial_package",
           ),

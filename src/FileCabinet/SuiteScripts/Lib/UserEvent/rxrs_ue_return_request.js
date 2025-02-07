@@ -73,15 +73,16 @@ define([
   const beforeSubmit = (scriptContext) => {
     log.debug("beforeSubmit");
     try {
-      const rec = scriptContext.newRecord;
-      log.debug("rec", rec);
-      const status = rec.getValue("transtatus");
+      const { newRecord, type } = scriptContext;
+      log.debug("rec", newRecord);
+
+      const status = newRecord.getValue("transtatus");
 
       log.audit("status", status);
       switch (status) {
         case util.rrStatus.PendingVerification:
-          for (let i = 0; i < rec.getLineCount("item"); i++) {
-            const item = rec.getSublistValue({
+          for (let i = 0; i < newRecord.getLineCount("item"); i++) {
+            const item = newRecord.getSublistValue({
               sublistId: "item",
               fieldId: "item",
               line: i,
@@ -92,14 +93,14 @@ define([
               item: item,
             });
             if (Object.values(util.rxrsItem).includes(+item)) {
-              rec.removeLine({
+              newRecord.removeLine({
                 sublistId: "item",
                 line: i,
               });
               break;
             }
           }
-          rec.setValue({
+          newRecord.setValue({
             fieldId: "custbody_kd_actual_item_scan_input",
             value: true,
           });

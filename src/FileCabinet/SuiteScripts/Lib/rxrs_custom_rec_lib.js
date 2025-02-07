@@ -32,6 +32,14 @@ define([
   };
   const RETURNABLE = 2;
   const NONRETURNABLE = 1;
+  const customStaus = {
+    fullyPaid: 5,
+    denied: 6,
+    partiallyDenied: 7,
+    partiallyPaid: 4,
+    openDebit: 1,
+    openCredit: 2,
+  };
 
   /**
    * Look if there is already a custom credit memo created for the invoice
@@ -415,7 +423,15 @@ define([
                   type: record.Type.INVOICE,
                   id: invId,
                   values: {
-                    custbody_invoice_status: 1,
+                    custbody_invoice_status: customStaus.openDebit,
+                  },
+                });
+              } else {
+                record.submitFields({
+                  type: record.Type.INVOICE,
+                  id: invId,
+                  values: {
+                    custbody_invoice_status: customStaus.openCredit,
                   },
                 });
               }

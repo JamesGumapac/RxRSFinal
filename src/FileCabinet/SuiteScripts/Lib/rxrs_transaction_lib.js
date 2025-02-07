@@ -907,7 +907,7 @@ define([
    * Sets partial amount on each line item in a record based on custom fields.
    *
    * @param  rec - The NetSuite record object to process.
-   * @return  rec - The updated record with partial amounts set on line items.
+   * @return  newRecord - The updated record with partial amounts set on line items.
    */
   function setPartialAmount(rec) {
     try {

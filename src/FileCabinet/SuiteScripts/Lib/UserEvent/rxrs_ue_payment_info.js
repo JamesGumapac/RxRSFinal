@@ -38,18 +38,35 @@ define(["N/record", "N/search", "../rxrs_transaction_lib"], /**
    */
   const afterSubmit = (scriptContext) => {
     try {
-      const rec = scriptContext.newRecord;
-      const invId = rec.getValue("custbody_payment_invoice_link");
-      let returnObj = tran_lib.checkExistingPayment({ invId: invId });
-      log.audit("returnObj", returnObj);
-      if (isEmpty(returnObj)) {
-        record.submitFields({
-          type: record.Type.INVOICE,
-          id: invId,
-          values: {
-            custbody_invoice_status: 2, // Open Credit
-          },
-        });
+      const customStaus = {
+        fullyPaid: 5,
+        denied: 6,
+        partiallyDenied: 7,
+        partiallyPaid: 4,
+        openCredit: 2,
+      };
+      const { newRecord, type } = scriptContext;
+      if (type == "delete") {
+        const invId = newRecord.getValue("custbody_payment_invoice_link");
+        let returnObj = tran_lib.checkExistingPayment({ invId: invId });
+        log.audit("returnObj", returnObj);
+        if (isEmpty(returnObj)) {
+          record.submitFields({
+            type: record.Type.INVOICE,
+            id: invId,
+            values: {
+              custbody_invoice_status: customStaus.openCredit, // Open Credit
+            },
+          });
+        } else {
+          record.submitFields({
+            type: record.Type.INVOICE,
+            id: invId,
+            values: {
+              custbody_invoice_status: customStaus.partiallyPaid, // Open Credit
+            },
+          });
+        }
       }
     } catch (e) {
       log.error("afterSubmit", { error: e.message, params: scriptContext });

@@ -96,13 +96,16 @@ define([
           line: i,
         });
         log.debug("status", { linestatus, cmReference });
-        const amount = newRecord.getSublistValue({
+        const cmUnnitPrice = newRecord.getSublistValue({
           sublistId: "item",
-          fieldId: "amount",
+          fieldId: "custcol_cm_unit_price",
           line: i,
         });
         log.audit("condition", linestatus == 1 && isEmpty(cmReference) == true);
-        if (linestatus == 1 && isEmpty(cmReference) == true) {
+        if (
+          linestatus == 1 &&
+          (isEmpty(cmReference) == true || Number(cmUnnitPrice)) > 0
+        ) {
           newRecord.setSublistValue({
             sublistId: "item",
             fieldId: "custcol_line_status",
@@ -164,6 +167,7 @@ define([
         fullyPaid: 5,
         denied: 6,
         partiallyDenied: 7,
+        partiallyPaid: 4,
       };
       let invStatus;
       log.debug("scriptContext", scriptContext.type);

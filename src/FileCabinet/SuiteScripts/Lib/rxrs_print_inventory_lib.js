@@ -89,7 +89,7 @@ define(["N/record", "N/search"], /**
             join: "CUSTRECORD_SCAN_222FORM",
           }),
           search.createColumn({
-            name: "custrecord_cs_lotnum",
+            name: "custrecord_scanorginallotnumber",
             label: "Serial/Lot Number",
           }),
           search.createColumn({
