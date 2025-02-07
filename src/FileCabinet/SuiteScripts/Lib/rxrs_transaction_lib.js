@@ -1710,8 +1710,9 @@ define([
           });
         }
         if (
-          JSON.parse(isEdit) == false &&
-          isEmpty(creditMemoReference) == true
+          JSON.parse(isEdit) == false
+          //    &&
+          //  isEmpty(creditMemoReference) == false
         ) {
           itemInfo.push({
             lineUniqueKey: lineUniqueKey,
