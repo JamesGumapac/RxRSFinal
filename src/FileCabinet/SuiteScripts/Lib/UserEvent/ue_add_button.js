@@ -124,20 +124,24 @@ define([
                   action: "createLabelC2",
                   customerId: rec.getValue("entity"),
                   mrrId: rec.getValue("custbody_kd_master_return_id"),
+                  GeneratedForm: true,
                 },
               });
               let mmrParamsGenerateLabel = {
                 url: generateLabelURL,
               };
 
-              //Customer Submitted
-              context.form.addButton({
-                id: "custpage_generate_label",
-                label: "Add Label",
-                functionName: `openSuitelet(${JSON.stringify(
-                  mmrParamsGenerateLabel,
-                )})`,
-              });
+              const form222 = rxrs_cust_rec_lib.get222Forms(rec.id);
+              if (form222.length > 0) {
+                context.form.addButton({
+                  id: "custpage_generate_label",
+                  label: "Add Label",
+                  functionName: `openSuitelet(${JSON.stringify(
+                    mmrParamsGenerateLabel,
+                  )})`,
+                });
+              }
+
               const form222ForReprinting =
                 rxrs_cust_rec_lib.getReturnRequestForReprinting222Form(rec.id);
               log.audit("form222ForReprinting", form222ForReprinting);
@@ -177,20 +181,24 @@ define([
                   action: "createLabelC2",
                   customerId: rec.getValue("entity"),
                   mrrId: rec.getValue("custbody_kd_master_return_id"),
+                  GeneratedForm: true,
                 },
               });
               let mmrParamsGenerateLabel = {
                 url: generateLabelURL,
               };
 
-              //Customer Submitted
-              context.form.addButton({
-                id: "custpage_generate_label",
-                label: "Add Label",
-                functionName: `openSuitelet(${JSON.stringify(
-                  mmrParamsGenerateLabel,
-                )})`,
-              });
+              const form222 = rxrs_cust_rec_lib.get222Forms(rrpoId);
+              if (form222.length > 0) {
+                context.form.addButton({
+                  id: "custpage_generate_label",
+                  label: "Add Label",
+                  functionName: `openSuitelet(${JSON.stringify(
+                    mmrParamsGenerateLabel,
+                  )})`,
+                });
+              }
+
               /**
                * Print 222 Form
                */
@@ -593,13 +601,20 @@ define([
               rxrs_util.mrrStatus.CustomerSubmitted
             ) {
               //Customer Submitted
-              context.form.addButton({
-                id: "custpage_generate_label",
-                label: "Add Label",
-                functionName: `openSuitelet(${JSON.stringify(
-                  mmrParamsGenerateLabel,
-                )})`,
+              log.debug({
+                title: "tranlib.checkRrpoCount(id)",
+                details: tranlib.checkRrpoCount(id),
               });
+              //Customer Submitted
+              if (tranlib.checkRrpoCount(id)) {
+                context.form.addButton({
+                  id: "custpage_generate_label",
+                  label: "Add Label",
+                  functionName: `openSuitelet(${JSON.stringify(
+                    mmrParamsGenerateLabel,
+                  )})`,
+                });
+              }
             }
             if (
               mrrRec.getValue("custrecord_kod_mr_status") ==
@@ -609,13 +624,15 @@ define([
               // Rep Service
             ) {
               //Customer Submitted
-              context.form.addButton({
-                id: "custpage_generate_label",
-                label: "Add Label",
-                functionName: `openSuitelet(${JSON.stringify(
-                  mmrParamsGenerateLabel,
-                )})`,
-              });
+              if (tranlib.checkRrpoCount(id)) {
+                context.form.addButton({
+                  id: "custpage_generate_label",
+                  label: "Add Label",
+                  functionName: `openSuitelet(${JSON.stringify(
+                    mmrParamsGenerateLabel,
+                  )})`,
+                });
+              }
             }
             if (
               mrrRec.getValue("custrecord_kod_mr_status") ==

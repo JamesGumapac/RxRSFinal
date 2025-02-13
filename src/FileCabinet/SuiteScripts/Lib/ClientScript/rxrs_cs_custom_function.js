@@ -10,6 +10,8 @@ define(["N/currentRecord", "N/search", "N/url", "N/https", "N/ui/message"], /**
  * @param https
  * @param message
  */ function (currentRecord, search, url, https, message) {
+  let generatedForm;
+
   /**
    * Function to be executed after page is initialized.
    *
@@ -23,7 +25,7 @@ define(["N/currentRecord", "N/search", "N/url", "N/https", "N/ui/message"], /**
     suitelet = scriptContext.currentRecord;
     let arrTemp = window.location.href.split("?");
     urlParams = new URLSearchParams(arrTemp[1]);
-
+    generatedForm = urlParams.get("GeneratedForm");
     if (window.location.href.indexOf("isReload") != -1) {
       let isReload = urlParams.get("isReload");
       console.log("isReload" + isReload);
@@ -249,6 +251,7 @@ define(["N/currentRecord", "N/search", "N/url", "N/https", "N/ui/message"], /**
 
   function createReturnPackages(mrrId) {
     try {
+      const C2Category = 3;
       const curRec = currentRecord.get();
       const category = curRec.getValue("custpage_product_group");
       const rrId = curRec.getValue("custpage_returnrequest");
@@ -259,8 +262,14 @@ define(["N/currentRecord", "N/search", "N/url", "N/https", "N/ui/message"], /**
         requestedDate: curRec.getValue("custpage_estimated_ship_date"),
         customer: curRec.getValue("custpage_entity"),
       };
+
       if (rrId) {
         params.rrId = rrId;
+      } else {
+        if (category == C2Category && generatedForm != "true") {
+          alert("Cannot create package. Form 222 Kit must be created first.");
+          return;
+        }
       }
       let returnPackageParams = {
         returnPackageDetails: JSON.stringify(params),

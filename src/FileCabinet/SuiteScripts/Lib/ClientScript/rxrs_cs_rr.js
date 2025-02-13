@@ -10,12 +10,13 @@ define([
   "N/ui/message",
   "N/ui/dialog",
   "N/search",
+  "N/transaction",
 ], /**
  * @param{currentRecord} currentRecord
  * @param{url} url
  * @param https
  * @param message
- */ function (currentRecord, url, https, message, dialog, search) {
+ */ function (currentRecord, url, https, message, dialog, search, transaction) {
   var bool = true;
   let mode, type;
   let existingRR = null;
@@ -175,7 +176,7 @@ define([
 
   function saveRecord(scriptContext) {
     try {
-      console.log(mode);
+      console.log(mode, bool);
       if (mode == "create") {
         if (bool == true) {
           transaction.void({

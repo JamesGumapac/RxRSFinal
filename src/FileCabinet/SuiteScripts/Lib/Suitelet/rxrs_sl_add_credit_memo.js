@@ -9,6 +9,7 @@ define([
   "../rxrs_verify_staging_lib",
   "../rxrs_util",
   "../rxrs_custom_rec_lib",
+  "N/ui/message",
   "N/cache",
   "N/file",
   "N/record",
@@ -32,6 +33,7 @@ define([
   rxrs_vb_lib,
   rxrs_util,
   rxrs_custom_rec,
+  message,
   cache,
   file,
   record,
@@ -151,12 +153,14 @@ define([
           type: serverWidget.FieldType.INLINEHTML,
           label: "Dialog HTML Field",
         });
+
         dialogHtmlField.defaultValue = file
           .load({
             id: htmlFileId,
           })
           .getContents();
       }
+
       let cmParentInfo;
 
       if (JSON.parse(isEdit) == false) {
@@ -247,7 +251,7 @@ define([
           type: serverWidget.FieldType.CURRENCY,
         })
         .updateDisplayType({
-          displayType: serverWidget.FieldDisplayType.INLINE,
+          displayType: serverWidget.FieldDisplayType.NORMAL,
         });
       const customAmountField = form.addField({
         id: "custpage_custom_amount",

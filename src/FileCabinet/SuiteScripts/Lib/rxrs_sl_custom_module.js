@@ -633,6 +633,48 @@ define([
     }
   }
 
+  /**
+   * Hides a specific field in a sublist on a form.
+   *
+   * @param {Object} options - An object containing the form object, sublist id, and field id.
+   * @param {Object} options.formObj - The form object containing the sublist.
+   * @param {string} options.sublistId - The id of the sublist where the field is located.
+   * @param {string} options.fieldId - The id of the field to be hidden.
+   *
+   * @return {void} - This method does not return anything.
+   */
+  function hideColumnField(options) {
+    log.audit("hideColumnField", options);
+    const { formObj, sublistId, fieldId } = options;
+    try {
+      const formSublist = formObj.getSublist({
+        id: sublistId,
+      });
+      if (formSublist) {
+        const formField = formSublist.getField({
+          id: fieldId,
+        });
+        if (
+          formField &&
+          typeof formField !== "undefined" &&
+          formField !== null
+        ) {
+          formField.updateDisplayType({
+            displayType: serverWidget.FieldDisplayType.HIDDEN,
+          });
+        }
+      }
+    } catch (error) {
+      log.error({
+        title: "Error occurred when hiding field",
+        details: JSON.stringify({
+          sublistId: sublistId,
+          fieldId: fieldId,
+        }),
+      });
+    }
+  }
+
   return {
     createSublist: createSublist,
     getFileId,
@@ -640,5 +682,6 @@ define([
     ADDCREDITMEMOSUBLIST,
     addC2ItemsReqSublist,
     CMUPLOADFIELDS,
+    hideColumnField: hideColumnField,
   };
 });

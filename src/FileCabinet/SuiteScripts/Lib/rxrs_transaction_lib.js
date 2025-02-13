@@ -49,6 +49,50 @@ define([
   };
 
   /**
+   * @agrajo
+   * Function to execute a transaction search based on a passed master return ID.
+   *
+   * @param {string} masterReturnId - The master return ID to filter the search.
+   * @returns {boolean} - Returns true if the count of the search is greater than 1, otherwise false.
+   */
+  const checkRrpoCount = (masterReturnId) => {
+    const filters = [
+      search.createFilter({
+        name: "custbody_kd_master_return_id",
+        operator: search.Operator.ANYOF,
+        values: masterReturnId,
+      }),
+      search.createFilter({
+        name: "type",
+        operator: search.Operator.ANYOF,
+        values: "CuTrPrch106", // Custom transaction type
+      }),
+      search.createFilter({
+        name: "status",
+        operator: search.Operator.ANYOF,
+        values: "CuTrPrch106:D", // Custom transaction status
+      }),
+    ];
+
+    const columns = [
+      search.createColumn({ name: "internalid", label: "Internal ID" }),
+      search.createColumn({ name: "statusref", label: "Status" }),
+    ];
+
+    const transactionSearchObj = search.create({
+      type: search.Type.TRANSACTION,
+      filters,
+      columns,
+      settings: [{ name: "consolidationtype", value: "ACCTTYPE" }],
+    });
+
+    const searchResultCount = transactionSearchObj.runPaged().count;
+    log.debug("transactionSearchObj result count", searchResultCount);
+
+    return searchResultCount > 1;
+  };
+
+  /**
    * Create Inventory Adjustment for verified Item Return Scan
    * @param {number}options.rrId Internal I'd of the Return Request
    * @param {number} options.mrrId Internal I'd of the Master Return Request
@@ -4989,6 +5033,7 @@ define([
     createMasterReturnRequest: createMasterReturnRequest,
     createPayment: createPayment,
     createPO: createPO,
+    checkRrpoCount: checkRrpoCount,
     createVendorCredit: createVendorCredit,
     deleteTransaction: deleteTransaction,
     getAllBills: getAllBills,

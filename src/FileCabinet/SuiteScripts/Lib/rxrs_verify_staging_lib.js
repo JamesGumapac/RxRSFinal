@@ -2182,11 +2182,11 @@ define([
         sublist.addMarkAllButtons();
       }
       if (ClientScriptName == "rxrs_cs_viewedit_line.js") {
-        sublist.addButton({
-          id: "custpage_submitline",
-          label: "SUBMIT LAST MODIFIED LINE",
-          functionName: `submit()`,
-        });
+        // sublist.addButton({
+        //   id: "custpage_submitline",
+        //   label: "SUBMIT LAST MODIFIED LINE",
+        //   functionName: `submit()`,
+        // });
       }
       sublistFields.forEach((attri) => {
         // log.audit("attri", attri);
@@ -2294,11 +2294,21 @@ define([
         type: serverWidget.SublistType.LIST,
         label: title,
       });
-
+      //
+      // sublist.addButton({
+      //   id: "custpage_submitline",
+      //   label: "SUBMIT LAST MODIFIED LINE",
+      //   functionName: `submit()`,
+      // });
       sublist.addButton({
-        id: "custpage_submitline",
-        label: "SUBMIT LAST MODIFIED LINE",
-        functionName: `submit()`,
+        id: "custpage_markall",
+        label: "Mark All",
+        functionName: `markAll("true")`,
+      });
+      sublist.addButton({
+        id: "custpage_unmarkall",
+        label: "Unmark All",
+        functionName: `markAll("false")`,
       });
 
       sublistFields.forEach((attri) => {

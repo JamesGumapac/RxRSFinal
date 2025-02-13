@@ -45,42 +45,41 @@ define([
     const masterRecId = masterRec.id;
     let mrrStatus = masterRec.getValue("custrecord_kod_mr_status");
     try {
-      if (mrrStatus == rxrsUtil.mrrStatus.CustomerSubmitted) {
-        const customer = masterRec.getValue({
-          fieldId: "custrecord_mrrentity",
-        });
-        const planSelectionType = masterRec.getValue(
-          "custrecord_mrrplanselectiontype",
-        );
-        const requestedDate = masterRec.getValue("custrecord_kod_mr_requestdt");
-        const isLicenseExpired = masterRec.getValue(
-          "custrecord_kd_license_expired",
-        );
-        const isStateLicenseExpired = masterRec.getValue(
-          "custrecord_kd_state_license_expired",
-        );
-        const category = customRec.getItemRequested(masterRec.id);
-        log.audit("Category", category);
-        let rrCategory = [];
-        category.forEach((cat) => {
-          rrCategory.push({
-            category: cat.value,
-            item: rxrsUtil.rxrsItem[cat.text],
-            requestedDate: requestedDate,
-            masterRecId: masterRecId,
-            customer: customer,
-            isLicenseExpired: isLicenseExpired,
-            isStateLicenseExpired: isStateLicenseExpired,
-            planSelectionType: planSelectionType,
-          });
-        });
-        log.audit("rrCategory", rrCategory);
-        rrCategory.forEach((rrCategory) => {
-          let rrId = rxrsUtil.createReturnRequest(rrCategory);
-          log.audit("Created RR", rrId);
-        });
-      }
-
+      // if (mrrStatus == rxrsUtil.mrrStatus.CustomerSubmitted) {
+      //   const customer = masterRec.getValue({
+      //     fieldId: "custrecord_mrrentity",
+      //   });
+      //   const planSelectionType = masterRec.getValue(
+      //     "custrecord_mrrplanselectiontype",
+      //   );
+      //   const requestedDate = masterRec.getValue("custrecord_kod_mr_requestdt");
+      //   const isLicenseExpired = masterRec.getValue(
+      //     "custrecord_kd_license_expired",
+      //   );
+      //   const isStateLicenseExpired = masterRec.getValue(
+      //     "custrecord_kd_state_license_expired",
+      //   );
+      //   const category = customRec.getItemRequested(masterRec.id);
+      //   log.audit("Category", category);
+      //   let rrCategory = [];
+      //   category.forEach((cat) => {
+      //     rrCategory.push({
+      //       category: cat.value,
+      //       item: rxrsUtil.rxrsItem[cat.text],
+      //       requestedDate: requestedDate,
+      //       masterRecId: masterRecId,
+      //       customer: customer,
+      //       isLicenseExpired: isLicenseExpired,
+      //       isStateLicenseExpired: isStateLicenseExpired,
+      //       planSelectionType: planSelectionType,
+      //     });
+      //   });
+      //   log.audit("rrCategory", rrCategory);
+      //   rrCategory.forEach((rrCategory) => {
+      //     let rrId = rxrsUtil.createReturnRequest(rrCategory);
+      //     log.audit("Created RR", rrId);
+      //   });
+      // }
       // const deploymentId = runtime
       //   .getCurrentScript()
       //   .getParameter("custscript_rxrs_mr_script_deployment");

@@ -7,7 +7,8 @@ define([
   "N/ui/serverWidget",
   "N/search",
   "../rxrs_item_lib",
-], (rxrs_tran_lib, serverWidget, search, itemlib) => {
+  "../rxrs_sl_custom_module",
+], (rxrs_tran_lib, serverWidget, search, itemlib, sllib) => {
   /**
    * Defines the function definition that is executed before record is loaded.
    * @param {Object} scriptContext
@@ -17,17 +18,33 @@ define([
    * @param {ServletRequest} scriptContext.request - HTTP request information sent from the browser for a client action only.
    * @since 2015.2
    */
+  const PLANSELECTIONTYPE = {
+    GOVERNMENT: 11,
+    TOPCO: 10,
+    QUICKCASH: 4,
+  };
+  const columnToHide = ["taxcode", "taxcode_display"];
+
   const beforeLoad = (context) => {
-    log.audit("context.type", context.type);
-    const curRec = context.newRecord;
+    const { type, newRecord, form } = context;
+    log.audit("context.type", type);
     let src;
 
     try {
-      if (context.type === "view" || context.type === "edit") {
-        const status = curRec.getText("custbody_invoice_status");
+      columnToHide.forEach((fieldId) => {
+        sllib.hideColumnField({
+          formObj: form,
+          sublistId: "item",
+          fieldId: fieldId,
+        });
+      });
+
+      if (type === "view" || type === "edit") {
+        const planSelectionType = newRecord.getValue("custbody_plan_type");
+        const status = newRecord.getText("custbody_invoice_status");
         log.debug("status", status);
         if (status) {
-          var hideFld = context.form.addField({
+          var hideFld = form.addField({
             id: "custpage_hide_buttons",
             label: "not shown - hidden",
             type: serverWidget.FieldType.INLINEHTML,
@@ -40,6 +57,16 @@ define([
             "<script>jQuery(function($){require([], function(){" +
             scr +
             "})})</script>";
+        }
+        if (
+          planSelectionType == PLANSELECTIONTYPE.GOVERNMENT ||
+          planSelectionType == PLANSELECTIONTYPE.TOPCO
+        ) {
+          sllib.hideColumnField({
+            formObj: form,
+            sublistId: "item",
+            fieldId: "custcol_item_scan_entity",
+          });
         }
       }
     } catch (e) {
@@ -118,7 +145,7 @@ define([
     log.audit("Plan selection type", planSelectionType);
     let res;
     switch (+planSelectionType) {
-      case 11: // Government
+      case PLANSELECTIONTYPE.GOVERNMENT: // Government
         res = itemlib.getCurrentDiscountPercentage({
           displayName: "Government",
         });
@@ -131,12 +158,12 @@ define([
         });
         rxrs_tran_lib.setERVDiscountPrice(newRecord);
         break;
-      case 4: // Quick Cash
+      case PLANSELECTIONTYPE.QUICKCASH: // Quick Cash
         newRecord.setValue({
           fieldId: "143", //RXRS | MFG Invoice [Government]
         });
         break;
-      case 10: // Top Co
+      case PLANSELECTIONTYPE.TOPCO: // Top Co
         res = itemlib.getCurrentDiscountPercentage({
           displayName: "Top Co",
         });

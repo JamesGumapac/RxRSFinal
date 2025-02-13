@@ -44,8 +44,7 @@ define([
     "custpage_unit_price",
     "custpage_amount_paid",
     "custpage_packing_slip_value",
-    "custpage_packing_slip_price",
-    // "custpage_erv_discounted_unit_price",
+    "custpage_packing_slip_price", // "custpage_erv_discounted_unit_price",
     // "custpage_erv_discounted_amount",
   ];
   const columnToDisableEnabled = [
@@ -57,9 +56,11 @@ define([
     "custpage_unit_price",
     "custpage_amount_paid",
   ];
-
+  let isEdit, invAmount;
   let isSelectedNeed = true;
-
+  let alreadyAppliedAmount = 0,
+    totalAmount = 0,
+    cmCount = 0;
   /**
    * Function to be executed after page is initialized.
    *
@@ -69,11 +70,14 @@ define([
    *
    * @since 2015.2
    */
+  let columnsHidden = [1, 2, 15];
+
   function pageInit(scriptContext) {
     console.log("pageInit");
     let arrTemp = window.location.href.split("?");
     urlParams = new URLSearchParams(arrTemp[1]);
-    let isEdit = urlParams.get("isEdit");
+    isEdit = urlParams.get("isEdit");
+    const tdColor = "#ebebed";
     if (window.location.href.indexOf("isReload") != -1) {
       let isReload = urlParams.get("isReload");
       console.log("isReload" + isReload);
@@ -91,9 +95,9 @@ define([
         }, 100);
       }
     }
+
     suitelet = scriptContext.currentRecord;
-    let cmCount = 0;
-    let totalAmount = 0;
+
     isGovernment = suitelet.getValue("custpage_is_government");
     const fileUploaded = suitelet.getText("custpage_uploaded_file");
     isTopCo = suitelet.getValue("custpage_is_topco");
@@ -105,6 +109,7 @@ define([
         fieldId: "custpage_credit_memo_parent",
         line: i,
       });
+      console.log("parent CM " + parentCM);
       const fullPartial = suitelet.getSublistText({
         sublistId: "custpage_items_sublist",
         fieldId: "custpage_full_partial",
@@ -116,6 +121,16 @@ define([
         fieldId: "custpage_select",
         line: i,
       });
+      const unitPriceField = suitelet.getSublistField({
+        sublistId: "custpage_items_sublist",
+        fieldId: "custpage_unit_price",
+        line: i,
+      });
+      const amountField = suitelet.getSublistField({
+        sublistId: "custpage_items_sublist",
+        fieldId: "custpage_amount_paid",
+        line: i,
+      });
       const amount = suitelet.getSublistValue({
         sublistId: "custpage_items_sublist",
         fieldId: "custpage_amount_paid",
@@ -125,6 +140,35 @@ define([
       if (parentCM !== " ") {
         cmCount += 1;
         totalAmount += amount;
+        console.log("isEdit " + isEdit);
+        if (isEdit == "false") {
+          selectField.isDisabled = true;
+          const trDom = document.getElementById(
+              "custpage_items_sublistrow" + i,
+            ),
+            trDomChild = trDom.children;
+
+          for (let t = 0; t < trDomChild.length - 1; t += 1) {
+            if (columnsHidden.indexOf(t) != -1) continue;
+            let tdDom = trDomChild[t];
+
+            tdDom.setAttribute(
+              "style",
+              "background-color: " +
+                tdColor +
+                "!important;border-color: white " +
+                tdColor +
+                " " +
+                tdColor +
+                " " +
+                tdColor +
+                "!important;",
+            );
+          }
+          alreadyAppliedAmount += Number(amount);
+        } else {
+          selectField.isDisabled = false;
+        }
       } else {
         selectField.isDisabled = false;
       }
@@ -135,26 +179,32 @@ define([
           fieldId: columnToDisable[a],
           line: i,
         });
-        if (
-          fullPartial.includes("Full") &&
-          columnToDisable[a] == "custpage_full"
-        ) {
-          continue;
-        }
-        if (
-          !fullPartial.includes("Full") &&
-          columnToDisable[a] == "custpage_partial"
-        ) {
-          continue;
-        }
+        // if (
+        //   fullPartial.includes("Full") &&
+        //   columnToDisable[a] == "custpage_full"
+        // ) {
+        //   continue;
+        // }
+        // if (
+        //   !fullPartial.includes("Full") &&
+        //   columnToDisable[a] == "custpage_partial"
+        // ) {
+        //   continue;
+        // }
+
         if (
           columnToDisable[a] == "custpage_unit_price" ||
           columnToDisable[a] == "custpage_amount_paid"
         ) {
-          if (parentCM) {
+          if (parentCM && isEdit == false) {
             itemField.isDisabled = false;
+            amountField.isDisabled = true;
+            unitPriceField.isDisabled = true;
           } else {
             itemField.isDisabled = true;
+
+            amountField.isDisabled = true;
+            unitPriceField.isDisabled = true;
           }
         } else {
           itemField.isDisabled = true;
@@ -164,7 +214,7 @@ define([
 
     suitelet.setValue({
       fieldId: "custpage_amount",
-      value: +totalAmount,
+      value: +totalAmount.toFixed(2),
     });
   }
 
@@ -197,38 +247,46 @@ define([
       if (scriptContext.fieldId == "custpage_custom_amount") {
         //console.log("fieldChanged custpage_custom_amount");
         const customAmount = suitelet.getValue("custpage_custom_amount");
-        const invAmount = suitelet.getValue("custpage_packing_slip_total");
+        const invAmount = suitelet.getValue("custpage_amount");
         // console.table(customAmount, invAmount);
         for (let i = 0; i < lineCount; i++) {
           suitelet.selectLine({
             sublistId: "custpage_items_sublist",
             line: i,
           });
+          const isSelected = suitelet.getCurrentSublistValue({
+            sublistId: "custpage_items_sublist",
+            fieldId: "custpage_select",
+          });
+          log.audit("isSelected " + isSelected);
+          if (isSelected != true) continue;
+
           const lineTotal = suitelet.getCurrentSublistValue({
             sublistId: "custpage_items_sublist",
             fieldId: "custpage_packing_slip_value",
           });
-          const percentage = lineTotal / invAmount;
-          let newAmount = Number(percentage) * customAmount;
-          //  console.table(percentage, lineTotal);
 
-          if (isGovernment == true) {
-            const res = itemlib.getCurrentDiscountPercentage({
-              displayName: "Government",
-            });
-            console.log("erv amount " + newAmount * res.totalPercent);
-            suitelet.setCurrentSublistValue({
-              sublistId: "custpage_items_sublist",
-              fieldId: "custpage_amount_paid",
-              value: newAmount * res.totalPercent,
-            });
-          } else {
-            suitelet.setCurrentSublistValue({
-              sublistId: "custpage_items_sublist",
-              fieldId: "custpage_amount_paid",
-              value: newAmount.toFixed(2),
-            });
-          }
+          const percentage = lineTotal / invAmount;
+          console.table(percentage, lineTotal, invAmount);
+          let newAmount = Number(percentage) * customAmount;
+
+          // if (isGovernment == true) {
+          //   const res = itemlib.getCurrentDiscountPercentage({
+          //     displayName: "Government",
+          //   });
+          //   console.log("erv amount " + newAmount * res.totalPercent);
+          //   suitelet.setCurrentSublistValue({
+          //     sublistId: "custpage_items_sublist",
+          //     fieldId: "custpage_amount_paid",
+          //     value: newAmount * res.totalPercent,
+          //   });
+          // } else {
+          suitelet.setCurrentSublistValue({
+            sublistId: "custpage_items_sublist",
+            fieldId: "custpage_amount_paid",
+            value: newAmount.toFixed(2),
+          });
+          //}
         }
       }
       if (scriptContext.fieldId == "custpage_credit_memo") {
@@ -289,6 +347,35 @@ define([
             sublistId: "custpage_items_sublist",
             fieldId: "custpage_select",
           });
+          if (isEdit == false || isEdit == "false") {
+            let totalAmount = 0;
+            for (
+              let i = 0;
+              i < suitelet.getLineCount("custpage_items_sublist");
+              i++
+            ) {
+              let isSelected = suitelet.getSublistValue({
+                sublistId: "custpage_items_sublist",
+                fieldId: "custpage_select",
+                line: i,
+              });
+              console.table("isSelected", isSelected + i);
+              if (isSelected == true || isSelected == "true") {
+                let amount = suitelet.getSublistValue({
+                  sublistId: "custpage_items_sublist",
+                  fieldId: "custpage_packing_slip_value",
+                  line: i,
+                });
+                console.table("amount", amount, i);
+                totalAmount += Number(amount);
+              }
+            }
+            totalAmount &&
+              suitelet.setValue({
+                fieldId: "custpage_amount",
+                value: totalAmount,
+              });
+          }
 
           if (isSelected == false) {
             suitelet.setCurrentSublistValue({
@@ -370,7 +457,7 @@ define([
           totalAmount &&
             suitelet.setValue({
               fieldId: "custpage_amount",
-              value: totalAmount,
+              value: totalAmount.toFixed(2),
             });
         }
         if (scriptContext.fieldId === "custpage_amount_paid") {

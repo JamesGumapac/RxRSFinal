@@ -2069,30 +2069,72 @@ define([
     }
   }
 
+  /**
+   * Retrieves all form IDs associated with a specific return request ID.
+   *
+   * @param {number} rrId - The ID of the return request to retrieve form IDs for.
+   * @return {Array<number>} An array of form IDs associated with the specified return request ID.
+   */
+  function get222Forms(rrId) {
+    try {
+      log.audit("get222Forms", rrId);
+      let form222s = [];
+      const f2rnSearch = search.create({
+        type: "customrecord_kd_222formrefnum",
+        columns: [
+          search.createColumn({
+            name: "internalid",
+          }),
+        ],
+        filters: [
+          {
+            name: "custrecord_kd_returnrequest",
+            operator: "anyof",
+            values: [rrId],
+          },
+        ],
+      });
+      const result = f2rnSearch.run();
+      result.each(function (row) {
+        form222s.push(
+          row.getValue({
+            name: "internalid",
+          }),
+        );
+        return true;
+      });
+      log.audit("get222Forms", form222s);
+      return form222s;
+    } catch (ex) {
+      log.error("get222forms catch", JSON.stringify(ex));
+    }
+  }
+
   return {
     assignReturnItemRequested,
     checkIfFor222Regeneration,
     create222Form,
     createCMFileUpload,
+    createCMUploadLogs,
     createCreditMemoLines,
     createCreditMemoRec,
     createCreditMemoUpload,
     createPriceHistory,
-    createCMUploadLogs,
     createReturnPackages,
     createUpdateCM,
     deleteCreditMemo,
     deletePriceHistory,
+    get222Forms,
     getAllCM,
-    getPackageInfo,
-    getALlCMTotalAmount,
     getAllCMLineTotal,
+    getALlCMTotalAmount,
     getC2ItemRequested,
     getCMFileUpload,
     getCMLineCountWithAmount,
     getCMParentInfo,
     getItemRequested,
     getItemRequestedPerCategory,
+    getPackageInfo,
     getReturnPackageInfo,
     getReturnRequestForReprinting222Form,
     getReturnRequestItemRequested,
