@@ -85,7 +85,7 @@ define([
   const beforeSubmit = (scriptContext) => {
     let { newRecord, type } = scriptContext;
 
-    let planSelectionType;
+    let planSelectionType, pharmacy, returnRequest;
 
     if (type == "create") {
       const irsId = newRecord.getSublistValue({
@@ -97,15 +97,33 @@ define([
         let irsSearch = search.lookupFields({
           type: "customrecord_cs_item_ret_scan",
           id: irsId,
-          columns: ["custrecord_irs_plan_selection_type"],
+          columns: [
+            "custrecord_irs_plan_selection_type",
+            "custrecord_scanentity",
+            "custrecord_cs_ret_req_scan_rrid",
+          ],
         });
         planSelectionType =
           irsSearch.custrecord_irs_plan_selection_type[0].value;
-        log.audit("res", planSelectionType);
+        pharmacy = irsSearch.custrecord_scanentity[0].value;
+        returnRequest = irsSearch.custrecord_cs_ret_req_scan_rrid[0].value;
+        log.audit("res", { planSelectionType, pharmacy, returnRequest });
         if (planSelectionType) {
           newRecord.setValue({
             fieldId: "custbody_plan_type",
             value: planSelectionType,
+          });
+        }
+        if (pharmacy) {
+          newRecord.setValue({
+            fieldId: "custbody_pharmacy",
+            value: pharmacy,
+          });
+        }
+        if (returnRequest) {
+          newRecord.setValue({
+            fieldId: "custbody_kd_return_request",
+            value: returnRequest,
           });
         }
       }

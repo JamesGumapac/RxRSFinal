@@ -265,12 +265,13 @@ define(["N/currentRecord", "N/search", "N/url", "N/https", "N/ui/message"], /**
 
       if (rrId) {
         params.rrId = rrId;
-      } else {
-        if (category == C2Category && generatedForm != "true") {
-          alert("Cannot create package. Form 222 Kit must be created first.");
-          return;
-        }
       }
+      // else {
+      //   if (category == C2Category && generatedForm != "true") {
+      //     alert("Cannot create package. Form 222 Kit must be created first.");
+      //     return;
+      //   }
+      // }
       let returnPackageParams = {
         returnPackageDetails: JSON.stringify(params),
         action: "createReturnPackages",

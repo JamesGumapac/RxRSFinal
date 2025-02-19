@@ -90,27 +90,27 @@ define([
         rrId = rxrsUtil.createReturnRequest(rrCategory);
 
         if (rrCategory.category == rxrsUtil.RRCATEGORY.C2) {
-          rrId = tranlib.getReturnRequestPerCategory({
-            mrrId: rrCategory.masterRecId,
-            category: rxrsUtil.RRCATEGORY.C2,
-          });
-          log.audit("rrObj", rrId);
-          log.audit("Creating 222 form for", rrId);
-          const totalItemRequest = customRec.getC2ItemRequested(masterRec.id);
-          if (totalItemRequest.length <= 20) {
-            customRec.create222Form({
-              rrId: rrId,
-              page: 1,
-            });
-          } else {
-            let i = totalItemRequest.length / 20;
-            for (let i = 0; i < Math.ceil(i); i++) {
-              customRec.create222Form({
-                rrId: rrId,
-                page: i,
-              });
-            }
-          }
+          // rrId = tranlib.getReturnRequestPerCategory({
+          //   mrrId: rrCategory.masterRecId,
+          //   category: rxrsUtil.RRCATEGORY.C2,
+          // });
+          // log.audit("rrObj", rrId);
+          // log.audit("Creating 222 form for", rrId);
+          // const totalItemRequest = customRec.getC2ItemRequested(masterRec.id);
+          // if (totalItemRequest.length <= 20) {
+          //   customRec.create222Form({
+          //     rrId: rrId,
+          //     page: 1,
+          //   });
+          // } else {
+          //   let i = totalItemRequest.length / 20;
+          //   for (let i = 0; i < Math.ceil(i); i++) {
+          //     customRec.create222Form({
+          //       rrId: rrId,
+          //       page: i,
+          //     });
+          //   }
+          // }
         }
       });
     } catch (e) {

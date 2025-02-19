@@ -328,14 +328,29 @@ define([
                 returnExternalUrl: false,
                 params: cmParams,
               });
+              let viewCreditMemoUrl = url.resolveScript({
+                scriptId: "customscript_rxrs_sl_view_credit_memo",
+                deploymentId: "customdeploy_rxrs_sl_view_credit_memo",
+                returnExternalUrl: false,
+                params: cmParams,
+              });
               const invParamsAddCM = {
                 action: "add222FormReference",
                 url: addCreditMemoUrl,
+              };
+              const invParamsViewCM = {
+                action: "add222FormReference",
+                url: viewCreditMemoUrl,
               };
               context.form.addButton({
                 id: "custpage_edit_credit_memo",
                 label: "Edit Credit Memo",
                 functionName: `openSuitelet(${JSON.stringify(invParamsAddCM)})`,
+              });
+              context.form.addButton({
+                id: "custpage_view_credit_memo",
+                label: "View Credit Memo",
+                functionName: `openSuitelet(${JSON.stringify(invParamsViewCM)})`,
               });
             }
             if (itemWithCM < lineCount) {
@@ -596,9 +611,10 @@ define([
             let mmrParamsGenerateLabel = {
               url: generateLabelURL,
             };
+            const mrrRecStatus = mrrRec.getValue("custrecord_kod_mr_status");
             if (
-              mrrRec.getValue("custrecord_kod_mr_status") ==
-              rxrs_util.mrrStatus.CustomerSubmitted
+              mrrRecStatus == rxrs_util.mrrStatus.CustomerSubmitted ||
+              mrrRecStatus == rxrs_util.mrrStatus.InProgress
             ) {
               //Customer Submitted
               log.debug({

@@ -71,6 +71,17 @@ define(["N/record"], /**
             value: true,
           });
         }
+
+        const invoiceRec = record.transform({
+          fromType: record.Type.SALES_ORDER,
+          toType: record.Type.INVOICE,
+          fromId: soId,
+          isDynamic: false,
+        });
+        const invoiceId = invoiceRec.save({
+          ignoreMandatoryFields: true,
+        });
+        log.audit("Successfully created invoice", invoiceId);
       }
       soRec.save({ ignoreMandatoryFields: true });
     } catch (e) {

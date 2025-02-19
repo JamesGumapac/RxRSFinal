@@ -100,6 +100,70 @@ define([
   }
 
   /**
+   * Retrieves Credit Memo information related to a specific invoice ID.
+   *
+   * @param {string} invId - The invoice ID to search for related Credit Memos.
+   *
+   * @return {Array} An array of Credit Memo objects with the following properties:
+   * - id: string - The internal ID of the Credit Memo.
+   * - cmNumber: string - The Credit Memo number.
+   * - issuedOn: string - The date the Credit Memo was issued.
+   * - createdOn: string - The date the Credit Memo was created.
+   * - createdBy: string - The user who created the Credit Memo.
+   * - amount: string - The amount of the Credit Memo.
+   */
+  function getCMInfos(invId) {
+    let cmInfo = [];
+    try {
+      const customrecord_creditmemoSearchObj = search.create({
+        type: "customrecord_creditmemo",
+        filters: [["custrecord_invoice_applied", "anyof", invId]],
+        columns: [
+          search.createColumn({
+            name: "internalid",
+            sort: search.Sort.ASC,
+            label: "ID",
+          }),
+          search.createColumn({
+            name: "custrecord_creditmemonum",
+            label: "Credit Memo No.",
+          }),
+          search.createColumn({
+            name: "custrecord_amount",
+            label: "Amount.",
+          }),
+          search.createColumn({
+            name: "custrecord_issuedon",
+            label: "Amount.",
+          }),
+          search.createColumn({
+            name: "owner",
+            label: "Created by",
+          }),
+          search.createColumn({
+            name: "created",
+            label: "Created on",
+          }),
+        ],
+      });
+      customrecord_creditmemoSearchObj.run().each(function (result) {
+        cmInfo.push({
+          id: result.getValue("internalid"),
+          cmNumber: result.getValue("custrecord_creditmemonum"),
+          issuedOn: result.getValue("custrecord_issuedon"),
+          createdOn: result.getValue("created"),
+          createdBy: result.getText("owner"),
+          amount: result.getValue("custrecord_amount"),
+        });
+        return true;
+      });
+      return cmInfo;
+    } catch (e) {
+      log.error("getAllCM", e.message);
+    }
+  }
+
+  /**
    * Delete the Price History if exists
    * @param options main object
    * @param {string} options.priceType
@@ -2144,5 +2208,6 @@ define([
     updateIRSPricelevel,
     updateItemReturnScan,
     updateManufAvailableBins,
+    getCMInfos: getCMInfos,
   };
 });

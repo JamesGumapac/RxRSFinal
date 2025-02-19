@@ -108,6 +108,10 @@ define([
         case util.rrStatus.Approved:
           break;
       }
+      newRecord.setValue({
+        fieldId: "custbody_last_modified_date",
+        value: newRecord.getValue("lastmodifieddate"),
+      });
     } catch (e) {
       log.error("beforeSubmit", e.message);
     }

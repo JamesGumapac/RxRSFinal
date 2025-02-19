@@ -203,6 +203,50 @@ define([
       updateDisplayType: "HIDDEN",
     },
   ];
+  let VIEWCREDITMEMOSUBLIST = [
+    {
+      id: "custpage_select",
+      type: "CHECKBOX",
+      label: "RECONCILE",
+      updateDisplayType: "NORMAL",
+    },
+    {
+      id: "custpage_internalid",
+      type: "TEXT",
+      label: "ID",
+      updateDisplayType: "HIDDEN",
+    },
+    {
+      id: "custpage_cm_number",
+      type: "TEXT",
+      label: "Credit Memo No.",
+      updateDisplayType: "INLINE",
+    },
+    {
+      id: "custpage_issued_on",
+      type: "TEXT",
+      label: "ISSUED ON",
+      updateDisplayType: "INLINE",
+    },
+    {
+      id: "custpage_created_on",
+      type: "TEXT",
+      label: "Created On",
+      updateDisplayType: "INLINE",
+    },
+    {
+      id: "custpage_created_by",
+      type: "TEXT",
+      label: "Created By",
+      updateDisplayType: "INLINE",
+    },
+    {
+      id: "custpage_amount",
+      type: "CURRENCY",
+      label: "amount",
+      updateDisplayType: "INLINE",
+    },
+  ];
   const VIEWEDITLINESEARCHCOLUMN = [
     search.createColumn({
       name: "custrecord_cs_item_ndc",
@@ -682,6 +726,7 @@ define([
     ADDCREDITMEMOSUBLIST,
     addC2ItemsReqSublist,
     CMUPLOADFIELDS,
+    VIEWCREDITMEMOSUBLIST,
     hideColumnField: hideColumnField,
   };
 });

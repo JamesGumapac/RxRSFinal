@@ -224,7 +224,7 @@ define([
         log.emergency("category", category);
         const productGroupField = form.addField({
           id: "custpage_product_group",
-          label: "PRODUCT GROUP",
+          label: "Package Control",
           type: serverWidget.FieldType.SELECT,
         });
         if (category.length > 0) {
@@ -240,6 +240,7 @@ define([
             });
           }
         }
+        productGroupField.isMandatory = true;
         const numberOfLabels = form.addField({
           id: "custpage_num_of_labels",
           label: "Number of labels",

@@ -1207,7 +1207,7 @@ define([
       } else {
         rrRec.setValue({
           fieldId: "transtatus",
-          value: rrStatus.PendingReview,
+          value: rrStatus.PendingPackageReceipt,
         });
       }
       rrpoName &&

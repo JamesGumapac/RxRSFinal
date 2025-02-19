@@ -59,8 +59,9 @@ define([
   function create222Reference() {
     var currRecord = currentRecord.get();
     window.open(
-      "/app/common/custom/custrecordentry.nl?rectype=402&custscript_rrid=" +
-        currRecord.id,
+      "/app/common/custom/custrecordentry.nl?rectype=402&pf=CUSTRECORD_KD_RETURNREQUEST&pi=" +
+        currRecord.id +
+        "&pr=-30",
       "_self",
     );
   }
@@ -193,37 +194,37 @@ define([
             );
 
             /*var objSubrecord = currRec.getCurrentSublistSubrecord({
-                                                                                                                                sublistId: 'item',
-                                                                                                                                fieldId: 'inventorydetail'
-                                                                                                                            });*/
+                                                                                                                                                                                sublistId: 'item',
+                                                                                                                                                                                fieldId: 'inventorydetail'
+                                                                                                                                                                            });*/
 
             /*objSubrecord.selectNewLine({
-                                                                                                                                sublistId: 'inventoryassignment',
-                                                                                                                            });
-                                                                                    
-                                                                                                                            objSubrecord.setCurrentSublistValue({
-                                                                                                                                sublistId: 'inventoryassignment',
-                                                                                                                                fieldId: 'numberedrecordid',
-                                                                                                                                value: 2022
-                                                                                                                            });
-                                                                                    
-                                                                                                                            objSubrecord.setCurrentSublistValue({
-                                                                                                                                sublistId: 'inventoryassignment',
-                                                                                                                                fieldId: 'quantity',
-                                                                                                                                value: qty
-                                                                                                                            });
-                                                                                    
-                                                                                                                            objSubrecord.setCurrentSublistValue({
-                                                                                                                                sublistId: 'inventoryassignment',
-                                                                                                                                fieldId: 'expirationdate',
-                                                                                                                                value: expiDate
-                                                                                                                            });
-                                                                                    
-                                                                                                                            objSubrecord.commitLine({
-                                                                                                                                sublistId: 'inventoryassignment'
-                                                                                                                            });
-                                                                                    
-                                                                                                                            objSubrecord.commit();     */
+                                                                                                                                                                                sublistId: 'inventoryassignment',
+                                                                                                                                                                            });
+                                                                                                                                    
+                                                                                                                                                                            objSubrecord.setCurrentSublistValue({
+                                                                                                                                                                                sublistId: 'inventoryassignment',
+                                                                                                                                                                                fieldId: 'numberedrecordid',
+                                                                                                                                                                                value: 2022
+                                                                                                                                                                            });
+                                                                                                                                    
+                                                                                                                                                                            objSubrecord.setCurrentSublistValue({
+                                                                                                                                                                                sublistId: 'inventoryassignment',
+                                                                                                                                                                                fieldId: 'quantity',
+                                                                                                                                                                                value: qty
+                                                                                                                                                                            });
+                                                                                                                                    
+                                                                                                                                                                            objSubrecord.setCurrentSublistValue({
+                                                                                                                                                                                sublistId: 'inventoryassignment',
+                                                                                                                                                                                fieldId: 'expirationdate',
+                                                                                                                                                                                value: expiDate
+                                                                                                                                                                            });
+                                                                                                                                    
+                                                                                                                                                                            objSubrecord.commitLine({
+                                                                                                                                                                                sublistId: 'inventoryassignment'
+                                                                                                                                                                            });
+                                                                                                                                    
+                                                                                                                                                                            objSubrecord.commit();     */
             break;
           case "custcol_kod_fullpartial":
             if (
@@ -677,17 +678,17 @@ define([
       ) {
         pharmaProcessing = PROCESSING_NON_RETURNABLE;
         /*log.debug('TEST', 'get expi date');
-                                                                                    var expiDate = new Date(currentRecord.getCurrentSublistValue({
-                                                                                        sublistId: 'item',
-                                                                                        fieldId: FLD_RR_IT_EXPIRATION_DATE
-                                                                                    }));
-                                                                                    log.debug('TEST', 'expi date' + expiDate);
-                                                                                    if(expiDate == 'Invalid Date' || expiDate == ''){
-                                                                                        alert('Please enter Expiration Date!');
-                                                                                        return false;
-                                                                                    }
-                                                                                    var firstDayExpiDate = new Date(expiDate.getFullYear(), expiDate.getMonth(), 1);
-                                                                                    mfgProcessing = getMfgProcessing(expiDate, retPolicyDetails)*/
+                                                                                                                    var expiDate = new Date(currentRecord.getCurrentSublistValue({
+                                                                                                                        sublistId: 'item',
+                                                                                                                        fieldId: FLD_RR_IT_EXPIRATION_DATE
+                                                                                                                    }));
+                                                                                                                    log.debug('TEST', 'expi date' + expiDate);
+                                                                                                                    if(expiDate == 'Invalid Date' || expiDate == ''){
+                                                                                                                        alert('Please enter Expiration Date!');
+                                                                                                                        return false;
+                                                                                                                    }
+                                                                                                                    var firstDayExpiDate = new Date(expiDate.getFullYear(), expiDate.getMonth(), 1);
+                                                                                                                    mfgProcessing = getMfgProcessing(expiDate, retPolicyDetails)*/
       }
 
       log.debug(
@@ -777,12 +778,12 @@ define([
   function authorize(context) {
     //alert('authorize ' + currentRecord.get().id);
     /*redirect.toSuitelet({
-                                                        scriptId: 'customscript_kd_sl_generate_form222',
-                                                        deploymentId: 'customdeploy_kd_sl_generate_form222',
-                                                        parameters: {
-                                                            'custscript_kd_rr_id': currentRecord.get().id
-                                                        }
-                                                    });*/
+                                                                        scriptId: 'customscript_kd_sl_generate_form222',
+                                                                        deploymentId: 'customdeploy_kd_sl_generate_form222',
+                                                                        parameters: {
+                                                                            'custscript_kd_rr_id': currentRecord.get().id
+                                                                        }
+                                                                    });*/
     if (!isAllForm222NoHasContent()) {
       alert("All Form 222 No. must at least have 1 item on it.");
     } else {
@@ -1990,10 +1991,10 @@ define([
       }),
     );
     /*form222RefSearch.filters.push(search.createFilter({
-                                                name: FLD_FORM222_PAGE,
-                                                operator: search.Operator.GREATERTHAN,
-                                                values: noForm222
-                                            }));*/
+                                                                name: FLD_FORM222_PAGE,
+                                                                operator: search.Operator.GREATERTHAN,
+                                                                values: noForm222
+                                                            }));*/
     var form222RefRecIds = [];
     var rs = form222RefSearch.run().getRange({ start: 0, end: 1000 });
     for (var i = 0; i < rs.length; i++) {
@@ -2131,33 +2132,33 @@ define([
     location.reload();
 
     /*var rrSearch = search.load({
-                                                id: 'customsearch_kd_mr_rr_sublist'
-                                            });
-                                            rrSearch.filters.push(search.createFilter({
-                                                name: 'custbody_kd_master_return_id',
-                                                operator: search.Operator.ANYOF,
-                                                values: mrrId
-                                            }));
-                                            rrSearch.filters.push(search.createFilter({
-                                                name: 'custbody_kd_rr_category',
-                                                operator: search.Operator.ANYOF,
-                                                values: CATEGORY_C2
-                                            }));
-                                            var rs = rrSearch.run().getRange({ start: 0, end: 1 });
-                                            if(rs.length > 0){
-                                                var rrId = rs[0].id;
-                                                record.submitFields({
-                                                    type: 'customsale_kod_returnrequest',
-                                                    id: rrId,
-                                                    values: {
-                                                        'custbody_kd_no_form_222': form222Count
-                                                    },
-                                                    options: {
-                                                        enableSourcing: false,
-                                                        ignoreMandatoryFields : true
-                                                    }
-                                                });
-                                            }*/
+                                                                id: 'customsearch_kd_mr_rr_sublist'
+                                                            });
+                                                            rrSearch.filters.push(search.createFilter({
+                                                                name: 'custbody_kd_master_return_id',
+                                                                operator: search.Operator.ANYOF,
+                                                                values: mrrId
+                                                            }));
+                                                            rrSearch.filters.push(search.createFilter({
+                                                                name: 'custbody_kd_rr_category',
+                                                                operator: search.Operator.ANYOF,
+                                                                values: CATEGORY_C2
+                                                            }));
+                                                            var rs = rrSearch.run().getRange({ start: 0, end: 1 });
+                                                            if(rs.length > 0){
+                                                                var rrId = rs[0].id;
+                                                                record.submitFields({
+                                                                    type: 'customsale_kod_returnrequest',
+                                                                    id: rrId,
+                                                                    values: {
+                                                                        'custbody_kd_no_form_222': form222Count
+                                                                    },
+                                                                    options: {
+                                                                        enableSourcing: false,
+                                                                        ignoreMandatoryFields : true
+                                                                    }
+                                                                });
+                                                            }*/
   }
 
   function saveRecord(scriptContext) {
