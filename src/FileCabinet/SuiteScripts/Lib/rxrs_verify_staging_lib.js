@@ -1679,8 +1679,8 @@ define([
           ["custrecord_cs__mfgprocessing", "anyof", "1"],
           "AND",
           ["custrecord_cs_ret_req_scan_rrid", "anyof", rrId],
-          "AND",
-          ["custrecord_scanindated", "is", "F"],
+          //   "AND",
+          // ["custrecord_scanindated", "is", "F"],
         ],
         columns: [
           search.createColumn({

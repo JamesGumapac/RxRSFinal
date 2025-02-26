@@ -78,6 +78,10 @@ define(["N/record"], /**
           fromId: soId,
           isDynamic: false,
         });
+        invoiceRec.setValue({
+          fieldId: "approvalstatus",
+          value: 2,
+        });
         const invoiceId = invoiceRec.save({
           ignoreMandatoryFields: true,
         });

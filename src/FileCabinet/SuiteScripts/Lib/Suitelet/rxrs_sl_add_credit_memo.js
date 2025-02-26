@@ -150,9 +150,12 @@ define([
       manufacturer,
       remitTo,
       action,
+      status,
+      closed,
+      assignee,
     } = options.params;
     options.params.isReload = true;
-
+    let creditMemoFGText = JSON.parse(isEdit) == false ? "ADD" : "EDIT";
     log.debug("createHeaderFields", options.params);
 
     try {
@@ -163,7 +166,11 @@ define([
         });
       }
       const debitMemoSummary = form.addFieldGroup({
-        label: "DEBIT MEMO SUMMARY",
+        label: `<span style="position: absolute; left: 30px;">
+    <b style="color: #ff3333">DEBIT MEMO SUMMARY</b>  </span>
+   <span style="position: absolute; right: 20px;"> <b style="color: #ff3333;">STATUS: </b> 
+    <b>${status}</b>
+</span>`, //`<b style="color: #ff3333">DEBIT MEMO SUMMARY</b> <b style="color: #ff3333">STATUS: </b> <b>${status}</b>   `,
         id: "custpage_debitmemo",
       });
       const debitMemoNumberField = form
@@ -199,6 +206,9 @@ define([
         source: "employee",
         container: "custpage_debitmemo",
       });
+      if (assignee) {
+        assignedToField.defaultValue = assignee;
+      }
 
       const manufField = (form
         .addField({
@@ -225,6 +235,19 @@ define([
       if (remitTo) {
         remmitToField.defaultValue = remitTo;
       }
+      const isClosedField = form
+        .addField({
+          id: "custpage_isclosed",
+          label: "Closed",
+          type: serverWidget.FieldType.CHECKBOX,
+          container: "custpage_debitmemo",
+        })
+        .updateDisplayType({
+          displayType: serverWidget.FieldDisplayType.INLINE,
+        });
+      if (closed) {
+        isClosedField.defaultValue = closed;
+      }
       const showAccountField = form.addField({
         id: "custpage_show_account",
         label: "Show Account",
@@ -250,7 +273,7 @@ define([
 
       let cmParentInfo;
       const creditMemos = form.addFieldGroup({
-        label: "ADD CREDIT MEMO",
+        label: `<b style="color: #ff3333">${creditMemoFGText} CREDIT MEMO</b>`,
         id: "custpage_creditmemos",
       });
       if (JSON.parse(isEdit) == false) {
@@ -261,7 +284,7 @@ define([
           container: "custpage_creditmemos",
         }).isMandatory = true);
         form.addFieldGroup({
-          label: "CREDIT MEMO SUMMARY",
+          label: `<b style="color: #ff3333">CREDIT MEMO SUMMARY</b>`,
           id: "custpage_cm_summary",
         });
         let cmTable = createCMTABLE({
@@ -315,6 +338,7 @@ define([
           }
         }
       }
+
       if (JSON.parse(isGovernment) == true) {
         const governmentField = (form.addField({
           id: "custpage_is_government",
@@ -506,7 +530,7 @@ define([
       const { invId, initialParams } = options;
       const data = rxrs_custom_rec.getCMInfos(invId);
       let editParams = initialParams;
-      log.error("data", data);
+      log.audit("createCMTABLE data", data);
       if (data.length == 0) {
         return "";
       }
@@ -541,11 +565,11 @@ define([
                     <td style='border: 1px solid #ccc; padding: 8px;'>${item.issuedOn}</td>
                     <td style='border: 1px solid #ccc; padding: 8px;'>${item.createdOn}</td>
                     <td style='border: 1px solid #ccc; padding: 8px;'>${item.createdBy}</td>
-                    <td style='border: 1px solid #ccc; padding: 8px;'><input type='checkbox' ${item.notReconciled ? "checked" : ""} disabled></td>
+                    <td style='border: 1px solid #ccc; padding: 8px;'><input type='checkbox' ${item.notReconciled == "T" ? "checked" : ""} ></td>
                     <td style='border: 1px solid #ccc; padding: 8px;'>$${item.amount}</td>
                       <td style='border: 1px solid #ccc; padding: 8px;'>
                         <a href='${viewCMLink}' style='margin-right: 10px; text-decoration: none; color: blue;'>Edit</a>|   
-                        <a href='${deleteCMSuiteletUrl}' style='margin-right: 10px; text-decoration: none; color: blue;'>  Delete</a> 
+                        <a href='${deleteCMSuiteletUrl}' style='margin-right: 10px; text-decoration: none; color: blue;'>     Delete</a> 
                  
                     </td>
                 `;

@@ -148,7 +148,7 @@ define([
               if (form222ForReprinting.length > 0) {
                 context.form.addButton({
                   id: "custpage_reprint_222_form",
-                  label: "Generate 222 Form PDF",
+                  label: "Generate Form Number PDF",
                   functionName: `generate222Form(${JSON.stringify(form222ForReprinting)})`,
                 });
               }
@@ -208,7 +208,7 @@ define([
               if (form222ForReprinting.length > 0) {
                 context.form.addButton({
                   id: "custpage_reprint_222_form",
-                  label: "Generate 222 Form PDF",
+                  label: "Generate Form Number PDF",
                   functionName: `generate222Form(${JSON.stringify(form222ForReprinting)})`,
                 });
               }
@@ -310,6 +310,7 @@ define([
               });
               if (cmId) itemWithCM++;
             }
+
             const cmParams = {
               type: invRec.type,
               invId: invRec.id,
@@ -321,7 +322,15 @@ define([
               dateCreated: invRec.getValue("trandate"),
               manufacturer: invRec.getValue("entity"),
               remitTo: invRec.getValue("custbody_so_remitto"),
+              status: invRec.getText("custbody_invoice_status"),
+              closed: invRec.getValue("voided"),
+              assignee: invRec.getValue("custbody_assignee"),
             };
+            context.form.addButton({
+              id: "custpage_assign_employee",
+              label: "Assign Employee",
+              functionName: `openEmployeePopup()`,
+            });
             log.debug("line count", { itemWithCM, lineCount });
             if (itemWithCM == lineCount || itemWithCM != 0) {
               cmParams.isEdit = true;

@@ -11,12 +11,22 @@ define([
   "N/ui/dialog",
   "N/search",
   "N/transaction",
+  "N/record",
 ], /**
  * @param{currentRecord} currentRecord
  * @param{url} url
  * @param https
  * @param message
- */ function (currentRecord, url, https, message, dialog, search, transaction) {
+ */ function (
+  currentRecord,
+  url,
+  https,
+  message,
+  dialog,
+  search,
+  transaction,
+  record,
+) {
   var bool = true;
   let mode, type;
   let existingRR = null;
@@ -489,6 +499,118 @@ define([
     }
   }
 
+  /**
+   * Retrieves a list of all employees from the system.
+   *
+   * @returns {Object[]} An array of employee objects containing their ID and name.
+   */
+  const getAllEmployees = () => {
+    const employeeList = [];
+
+    const employeeSearch = search.create({
+      type: search.Type.EMPLOYEE,
+      columns: ["internalid", "entityid"],
+    });
+
+    const pagedResults = employeeSearch.runPaged({ pageSize: 1000 });
+
+    pagedResults.pageRanges.forEach((pageRange) => {
+      const page = pagedResults.fetch({ index: pageRange.index });
+      page.data.forEach((result) => {
+        employeeList.push({
+          id: result.getValue("internalid"),
+          name: result.getValue("entityid"),
+        });
+      });
+    });
+
+    return employeeList;
+  };
+  /**
+   * Create and display a popup dialog to assign an employee by selecting from a dropdown list.
+   *
+   * The function performs the following actions:
+   * 1. Creates a select element using vanilla JavaScript with employee options.
+   * 2. Listens for changes in the selection and logs the selected employee's ID.
+   * 3. Displays the dialog with buttons for assigning or canceling.
+   * 4. Assigns the selected employee if the user chooses to assign.
+   *
+   * @returns {Promise<void>} A Promise that resolves once the operation is completed.
+   * @throws {Error} If no employee is selected during the assignment process.
+   */
+  const openEmployeePopup = async () => {
+    try {
+      // Create a select element using vanilla JavaScript
+      let select = document.createElement("select");
+      select.id = "employeeSelect";
+      select.style.width = "100%";
+      select.style.padding = "5px";
+      select.style.marginTop = "10px";
+
+      // Sample employee options
+      let employeeOptions = getAllEmployees();
+      employeeOptions.forEach((emp) => {
+        let option = document.createElement("option");
+        option.value = emp.id;
+        option.textContent = emp.name;
+        select.appendChild(option);
+      });
+
+      // Listen for selection change
+      let selectedEmployeeId = select.value;
+      select.addEventListener("change", function () {
+        selectedEmployeeId = this.value;
+        console.log("New selected employee:", selectedEmployeeId);
+      });
+
+      // Create a container div and add the dropdown
+      let container = document.createElement("div");
+      container.innerHTML = "<p>Select an employee:</p>";
+      container.appendChild(select);
+
+      // Show the dialog
+      const result = await dialog.create({
+        title: "Assign Employee",
+        message: container,
+        buttons: [
+          { label: "Assign", value: true },
+          { label: "Cancel", value: false },
+        ],
+      });
+
+      if (result) {
+        if (!selectedEmployeeId) throw new Error("No employee selected.");
+        await assignEmployee(selectedEmployeeId);
+      }
+    } catch (error) {
+      console.error("Error in popup:", error);
+    }
+  };
+
+  /**
+   * Assigns a new employee to the current record by updating the 'custbody_assignee' field.
+   * This function takes the employeeId as a parameter and uses it to update the record.
+   * After updating the record, it reloads the page to reflect the changes made.
+   *
+   * @param {String} employeeId - The employee Id to be assigned to the record
+   * @returns {Promise} - A promise that resolves after updating the record and reloading the page
+   */
+  const assignEmployee = async (employeeId) => {
+    try {
+      const rec = currentRecord.get();
+      record.submitFields({
+        type: rec.type,
+        id: rec.id,
+        values: {
+          custbody_assignee: employeeId,
+        },
+      });
+      location.reload(); // Refresh page after updating the record
+    } catch (error) {
+      console.error("Error updating record:", error);
+    }
+  };
+
   return {
     createTransaction: createTransaction,
     pageInit: pageInit,
@@ -496,5 +618,6 @@ define([
     generate222Form: generate222Form,
     saveRecord: saveRecord,
     fieldChanged: fieldChanged,
+    openEmployeePopup: openEmployeePopup,
   };
 });
