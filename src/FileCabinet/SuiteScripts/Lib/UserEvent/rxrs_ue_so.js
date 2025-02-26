@@ -13,7 +13,8 @@ define([
   "N/search",
   "../rxrs_util",
   "../rxrs_transaction_lib",
-], (serverWidget, record, search, util, rxrs_tran_lib) => {
+  "../rxrs_entity_lib",
+], (serverWidget, record, search, util, rxrs_tran_lib, entitylib) => {
   const ORDER_STATUS = {
     WAITING_222_FORM: 3,
     NEW: 1,
@@ -71,32 +72,50 @@ define([
     }
   };
   const beforeSubmit = (context) => {
-    let currentRecord = context.newRecord;
+    const { newRecord, type } = context;
     let idleDate;
 
     try {
-      const entityId = currentRecord.getValue("entity");
+      let tranid = "";
+      const remitToPrefix = newRecord.getValue("custbody_remit_to_prefix");
+
+      const entityId = newRecord.getValue("entity");
+      const cardinalCode = entitylib.getManufInfo({ entityId: entityId });
+      if (remitToPrefix) {
+        switch (remitToPrefix) {
+          case "MKRX":
+            tranid = `${remitToPrefix}${newRecord.id}`;
+            break;
+          default:
+            tranid = `${remitToPrefix}${newRecord.id}A${cardinalCode}`;
+            break;
+        }
+        newRecord.setValue({
+          fieldId: "tranid",
+          value: tranid,
+        });
+      }
       const entityrec = record.load({
         type: record.Type.CUSTOMER,
         id: entityId,
       });
-      let orderStatus = currentRecord.getValue("custbody_orderstatus");
+      let orderStatus = newRecord.getValue("custbody_orderstatus");
 
       let manufId = entityrec.getValue("csegmanufacturer");
-      currentRecord.getValue("csegmanufacturer");
+      newRecord.getValue("csegmanufacturer");
       if (!manufId) return;
-      currentRecord.setValue({
+      newRecord.setValue({
         fieldId: "csegmanufacturer",
         value: manufId,
       });
       let returnProcedureInfo = getManufReturnProcedure(manufId);
       log.debug("returnProcedureInfo: ", returnProcedureInfo);
-      currentRecord.setValue({
+      newRecord.setValue({
         fieldId: "custbody_rxrs_manuf_return_procedure",
         value: returnProcedureInfo.id,
       });
-      let rma_type = currentRecord.getValue("custbody_kd_rma_type");
-      // let category = currentRecord.getValue("custbody_kd_rr_category");
+      let rma_type = newRecord.getValue("custbody_kd_rma_type");
+      // let category = newRecord.getValue("custbody_kd_rr_category");
       // if (category == CATEGORY.C2) {
       //   rma_type = returnProcedureInfo.custrecord_psauthtypec2;
       // } else if (category == CATEGORY.C3_5) {
@@ -106,57 +125,57 @@ define([
       // }
       // if (returnProcedureInfo.custrecord_psauthtypec2) {
       //   rma_type = returnProcedureInfo.custrecord_psauthtypec2;
-      //   currentRecord.setValue({
+      //   newRecord.setValue({
       //     fieldId: "custbody_kd_rr_category",
       //     value: CATEGORY.C2,
       //   });
       // }
       // if (returnProcedureInfo.custrecord_psauthtypec35) {
       //   rma_type = returnProcedureInfo.custrecord_psauthtypec35;
-      //   currentRecord.setValue({
+      //   newRecord.setValue({
       //     fieldId: "custbody_kd_rr_category",
       //     value: CATEGORY.C3_5,
       //   });
       // }
       // if (returnProcedureInfo.custrecord_psauthtyperx) {
       //   rma_type = returnProcedureInfo.custrecord_psauthtyperx;
-      //   currentRecord.setValue({
+      //   newRecord.setValue({
       //     fieldId: "custbody_kd_rr_category",
       //     value: CATEGORY.RX,
       //   });
       // }
       switch (+rma_type) {
         case RMATYPE.Automatic:
-          currentRecord.setValue({
+          newRecord.setValue({
             fieldId: "custbody_kd_rma_required",
             value: false,
           });
           break;
         case RMATYPE.Manual:
           idleDate = 15;
-          // currentRecord.setValue({
+          // newRecord.setValue({
           //   fieldId: "custbody_kd_rma_type",
           //   value: 1,
           // });
-          currentRecord.setValue({
+          newRecord.setValue({
             fieldId: "custbody_kd_rma_required",
             value: true,
           });
           break;
         case RMATYPE.Shipped:
           //Automatic
-          // currentRecord.setValue({
+          // newRecord.setValue({
           //   fieldId: "custbody_kd_rma_type",
           //   value: 2,
           // });
-          currentRecord.setValue({
+          newRecord.setValue({
             fieldId: "custbody_kd_rma_required",
             value: true,
           });
           idleDate = 19;
           break;
         case RMATYPE.Destruction:
-          currentRecord.setValue({
+          newRecord.setValue({
             fieldId: "custbody_kd_rma_required",
             value: false,
           });
@@ -164,9 +183,9 @@ define([
       }
       log.debug("status", { orderStatus, idleDate });
       if (orderStatus == ORDER_STATUS.NEW && +rma_type == RMATYPE.Manual) {
-        let isIdileDate = currentRecord.getValue("custbody_rxrs_idle_date");
+        let isIdileDate = newRecord.getValue("custbody_rxrs_idle_date");
         if (!isIdileDate) {
-          currentRecord.setValue({
+          newRecord.setValue({
             fieldId: "custbody_rxrs_idle_date",
             value: new Date(
               util.addDaysToDate({
@@ -178,9 +197,9 @@ define([
         }
       }
       if (orderStatus == ORDER_STATUS.WAITING_222_FORM) {
-        let isIdileDate = currentRecord.getValue("custbody_rxrs_idle_date");
+        let isIdileDate = newRecord.getValue("custbody_rxrs_idle_date");
         if (!isIdileDate) {
-          currentRecord.setValue({
+          newRecord.setValue({
             fieldId: "custbody_rxrs_idle_date",
             value: new Date(
               util.addDaysToDate({
@@ -195,17 +214,17 @@ define([
         returnProcedureInfo.custrecord_psauthemail ||
         returnProcedureInfo.custrecord_psaltpodemail;
       authorizationEmail &&
-        currentRecord.setValue({
+        newRecord.setValue({
           fieldId: "custbody_rma_authorization_email",
           value: authorizationEmail,
         });
       returnProcedureInfo.custrecord_fulfillmenttype &&
-        currentRecord.setValue({
+        newRecord.setValue({
           fieldId: "custbody_fulfillmenttype",
           value: returnProcedureInfo.custrecord_fulfillmenttype,
         });
 
-      rxrs_tran_lib.setPartialAmount(currentRecord);
+      rxrs_tran_lib.setPartialAmount(newRecord);
     } catch (e) {
       log.error("beforeSubmit", e.message);
     }

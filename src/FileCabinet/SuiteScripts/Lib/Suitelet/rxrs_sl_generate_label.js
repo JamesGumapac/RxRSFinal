@@ -186,10 +186,18 @@ define([
         .updateDisplayType({
           displayType: serverWidget.FieldDisplayType.INLINE,
         });
+      const productGroupField = form.addField({
+        id: "custpage_product_group",
+        label: "Package Control",
+        type: serverWidget.FieldType.SELECT,
+      });
       if (customerId) {
         customerField.defaultValue = customerId;
       }
       if (serviceType == SERVICE_TYPE.mailIn) {
+        productGroupField.updateDisplayType({
+          displayType: serverWidget.FieldDisplayType.HIDDEN,
+        });
         let returnRequestList =
           rxrs_tran_lib.getMasterReturnReturnRequest(mrrId);
         log.audit("returnRequestList", returnRequestList);
@@ -222,11 +230,7 @@ define([
         }
 
         log.emergency("category", category);
-        const productGroupField = form.addField({
-          id: "custpage_product_group",
-          label: "Package Control",
-          type: serverWidget.FieldType.SELECT,
-        });
+
         if (category.length > 0) {
           productGroupField.addSelectOption({
             value: " ",

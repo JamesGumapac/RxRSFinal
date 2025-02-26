@@ -1182,7 +1182,10 @@ define([
       allPaymentSched,
       edit,
     } = options;
-    inDated = inDated == false ? "F" : "T";
+    if (inDated) {
+      inDated = inDated == false ? "F" : "T";
+    }
+
     log.error("indated", inDated);
     // if (inDated) {
     //

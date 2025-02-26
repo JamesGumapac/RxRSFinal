@@ -49,7 +49,7 @@ define([
       } = params;
       try {
         let returnObj;
-        log.audit("POST", params);
+        log.audit("POST", action);
         switch (action) {
           case "createCustPayment":
             const paymentCreationRes = tranLib.createPayment(paymentDetails);
@@ -58,6 +58,7 @@ define([
 
             break;
           case "deleteCreditMemo":
+            log.audit("deleteParams", deleteParams);
             const deleteResult = custRecLib.deleteCreditMemo(deleteParams);
             log.audit("deleteResult", deleteResult);
             context.response.writeLine(deleteResult);

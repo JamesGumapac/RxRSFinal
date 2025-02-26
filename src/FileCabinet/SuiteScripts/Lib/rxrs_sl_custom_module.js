@@ -107,73 +107,73 @@ define([
     {
       id: "custpage_ndc",
       type: "TEXT",
-      label: "NDC",
+      label: `<b>NDC</b>`,
       updateDisplayType: "INLINE",
     },
     {
       id: "custpage_description",
       type: "TEXT",
-      label: "Description",
+      label: `<b>Description </b>`,
       updateDisplayType: "NORMAL",
     },
     {
       id: "custpage_lot_number",
       type: "TEXT",
-      label: "Lot Number",
+      label: `<b>Lot Number</b>`,
       updateDisplayType: "NORMAL",
     },
     {
       id: "custpage_exp_date",
       type: "TEXT",
-      label: "Exp. Date",
+      label: `<b>Exp. Date</b>`,
       updateDisplayType: "NORMAL",
     },
     {
       id: "custpage_full_partial",
       type: "TEXT",
-      label: "FULL/PARTIAL PACKAGE",
-      updateDisplayType: "ENTRY",
+      label: `<b>FULL/PARTIAL  <br> PACKAGE</b>`,
+      updateDisplayType: "NORMAL",
     },
     {
       id: "custpage_package_size",
       type: "TEXT",
-      label: "Package Size",
-      updateDisplayType: "ENTRY",
+      label: `<b>Package <br> Size</b>`,
+      updateDisplayType: "NORMAL",
     },
     {
       id: "custpage_full",
       type: "TEXT",
-      label: "Full Quantity",
-      updateDisplayType: "ENTRY",
+      label: `<b>Full <br> Quantity</b>`,
+      updateDisplayType: "NORMAL",
     },
     {
       id: "custpage_partial",
       type: "TEXT",
-      label: "Partial Quantity",
-      updateDisplayType: "ENTRY",
+      label: `<b>Partial <br> Quantity</b>`,
+      updateDisplayType: "NORMAL",
     },
     {
       id: "custpage_packing_slip_price",
       type: "CURRENCY",
-      label: "Packing Slip Price",
-      updateDisplayType: "ENTRY",
+      label: `<b>Packing <br>Slip Price</b>`,
+      updateDisplayType: "NORMAL",
     },
     {
       id: "custpage_packing_slip_value",
       type: "CURRENCY",
-      label: "Packing Slip Value",
-      updateDisplayType: "ENTRY",
+      label: `<b>Packing<br> Slip Value</b>`,
+      updateDisplayType: "NORMAL",
     },
     {
       id: "custpage_unit_price",
       type: "CURRENCY",
-      label: "UNIT PRICE",
+      label: `<b>UNIT PRICE</b>`,
       updateDisplayType: "ENTRY",
     },
     {
       id: "custpage_amount_paid",
       type: "CURRENCY",
-      label: "Credit Received",
+      label: `<b>Credit Received</b>`,
       updateDisplayType: "ENTRY",
     },
     // {
@@ -198,16 +198,27 @@ define([
     {
       id: "custpage_credit_memo_parent",
       type: "TEXT",
-      label: "CREDIT MEMO PARENT ID",
-      source: "customrecord_creditmemo",
-      updateDisplayType: "HIDDEN",
+      label: "ID",
+      updateDisplayType: "NORMAL",
+    },
+    {
+      id: "custpage_credit_memo_parent2",
+      type: "TEXT",
+      label: `<b>CM REFERENCE</b>`,
+      updateDisplayType: "NORMAL",
+    },
+    {
+      id: "custpage_paid_customer",
+      type: "TEXT",
+      label: `<b>PAID CUSTOMER</b>`,
+      updateDisplayType: "NORMAL",
     },
   ];
   let VIEWCREDITMEMOSUBLIST = [
     {
-      id: "custpage_select",
+      id: "custpage_notreconciled",
       type: "CHECKBOX",
-      label: "RECONCILE",
+      label: "NOT RECONCILED",
       updateDisplayType: "NORMAL",
     },
     {
@@ -390,6 +401,7 @@ define([
           log.error("error in ", { error: e.message, id: attri.id });
         }
       });
+
       // log.debug("fieldName", fieldName);
       let mainLineInfo = [];
       value.forEach((val) => {
@@ -397,7 +409,7 @@ define([
           let value = Object.values(val);
           let fieldInfo = [];
           for (let i = 0; i < value.length; i++) {
-            // log.debug("fieldName[i]", fieldName[i]);
+            //  log.debug("fieldName[i]", fieldName[i]);
             if (isEmpty(fieldName[i])) continue;
             if (
               fieldName[i] == "custpage_select" ||
@@ -446,7 +458,7 @@ define([
         let lineCount = 0;
         sublistFields.forEach((element) => {
           for (let i = 0; i < element.length; i++) {
-            //   log.emergency("element", element[i]);
+            log.emergency("element", element[i]);
             try {
               sublist.setSublistValue({
                 id: element[i].fieldId,

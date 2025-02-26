@@ -49,6 +49,7 @@ define([
    */
   const onRequest = (context) => {
     let params = context.request.parameters;
+
     log.debug("params", params);
     if (context.request.method === "GET") {
       try {
@@ -57,49 +58,23 @@ define([
       } catch (e) {
         log.error("GET", e.message);
       }
+    } else {
+      try {
+        const ids = JSON.parse(params.cmIds);
+        ids.forEach((id) => {
+          record.submitFields({
+            type: "customrecord_creditmemo",
+            id: id,
+            values: {
+              custrecord_not_reconciled: true,
+            },
+          });
+        });
+        context.response.writeLine("Updating...");
+      } catch (e) {
+        log.error("POST", e.message);
+      }
     }
-    // else {
-    //     try {
-    //         let response;
-    //         let invoiceId = params.custpage_invoice_id;
-    //
-    //         const uploadedFile = context.request.files.custpage_file_upload;
-    //         log.emergency("Params", uploadedFile);
-    //         const newFile = file.create({
-    //             name: invoiceId + "_" + uploadedFile.name,
-    //             fileType: file.Type.PLAINTEXT, // Default file type, adjust as necessary
-    //             contents: uploadedFile.getContents(),
-    //             description: "Uploaded via Suitelet",
-    //             folder: runtime.getCurrentScript().getParameter({
-    //                 name: "custscript_cm_file_id",
-    //             }), // Optional: Specify a folder ID for the File Cabinet (if desired)
-    //         });
-    //
-    //         // Save the file to the File Cabinet
-    //         const fileId = newFile.save();
-    //         if (fileId) {
-    //             record.submitFields({
-    //                 type: record.Type.INVOICE,
-    //                 id: invoiceId,
-    //                 values: {
-    //                     custbody_credit_memo_file: fileId,
-    //                 },
-    //             });
-    //             const cmFile = file.load({
-    //                 id: fileId,
-    //             });
-    //
-    //             response = rxrs_custom_rec.createCreditMemoUpload({
-    //                 requestBody: JSON.parse(cmFile.getContents()),
-    //             });
-    //             log.audit("Response", response);
-    //         }
-    //
-    //         context.response.write(response.response);
-    //     } catch (e) {
-    //         log.error("POST", e.message);
-    //     }
-    // }
   };
 
   /**
@@ -114,6 +89,9 @@ define([
         title: "Credit Memo",
         hideNavBar: true,
       });
+      form.clientScriptFileId = rxrs_util.getFileId(
+        "rxrs_cs_credit_memo_sl.js",
+      );
       log.audit("form", form);
 
       form = createHeaderFields({ form, params });
@@ -152,7 +130,7 @@ define([
           })
           .getContents();
       }
-      invId = 25178;
+
       let numOfRes = " ";
 
       let cmInfos = rxrs_custom_rec.getCMInfos(invId);
@@ -176,6 +154,7 @@ define([
       form.addButton({
         id: "custpage_save",
         label: "Save",
+        functionName: `updateCM()`,
       });
 
       return form;

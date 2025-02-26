@@ -7,7 +7,8 @@ define([
   "../rxrs_verify_staging_lib",
   "../rxrs_util",
   "N/search",
-], (rxrs_tran_lib, rxrs_vs_lib, rxrs_util, search) => {
+  "N/record",
+], (rxrs_tran_lib, rxrs_vs_lib, rxrs_util, search, record) => {
   /**
    * Defines the function definition that is executed before record is loaded.
    * @param {Object} scriptContext
@@ -94,6 +95,10 @@ define([
           "custbody_kodpaymentsched",
         );
         log.debug("finalPaymentSchedule", finalPaymentSchedule);
+        newRec.setValue({
+          fieldId: "custbody_kodpaymentsched",
+          value: finalPaymentSchedule,
+        });
 
         if (finalPaymentSchedule != 12) return;
         for (let i = 0; i < newRec.getLineCount("item"); i++) {
@@ -383,5 +388,19 @@ define([
    */
   const afterSubmit = (scriptContext) => {};
 
-  return { beforeLoad, beforeSubmit, afterSubmit };
+  function isEmpty(stValue) {
+    return (
+      stValue === "" ||
+      stValue == null ||
+      false ||
+      (stValue.constructor === Array && stValue.length == 0) ||
+      (stValue.constructor === Object &&
+        (function (v) {
+          for (var k in v) return false;
+          return true;
+        })(stValue))
+    );
+  }
+
+  return { beforeLoad, beforeSubmit };
 });

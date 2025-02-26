@@ -15,6 +15,7 @@ define([
   "N/record",
   "N/redirect",
   "N/runtime",
+  "N/url",
 ], /**
  * @param{serverWidget} serverWidget
  * @param rxrs_sl_module
@@ -39,6 +40,7 @@ define([
   record,
   redirect,
   runtime,
+  url,
 ) => {
   /**
    * Defines the Suitelet script trigger point.
@@ -89,7 +91,10 @@ define([
           });
 
           response = rxrs_custom_rec.createCreditMemoUpload({
-            requestBody: JSON.parse(cmFile.getContents()),
+            requestBody: JSON.parse({
+              requestBody: cmFile.getContents(),
+              fileId: fileId,
+            }),
           });
           log.audit("Response", response);
         }
@@ -140,12 +145,94 @@ define([
       creditMemoId,
       isTopCo,
       isGovernment,
+      dateCreated,
+      showAccount,
+      manufacturer,
+      remitTo,
+      action,
     } = options.params;
     options.params.isReload = true;
 
     log.debug("createHeaderFields", options.params);
 
     try {
+      if (action) {
+        initiateAction({
+          action: action,
+          params: { invId: invId, creditMemoId: creditMemoId },
+        });
+      }
+      const debitMemoSummary = form.addFieldGroup({
+        label: "DEBIT MEMO SUMMARY",
+        id: "custpage_debitmemo",
+      });
+      const debitMemoNumberField = form
+        .addField({
+          id: "custpage_debitmemonumber",
+          label: "Debit Memo Number",
+          type: serverWidget.FieldType.TEXT,
+          container: "custpage_debitmemo",
+        })
+        .updateDisplayType({
+          displayType: serverWidget.FieldDisplayType.INLINE,
+        });
+      const invLink = rxrs_util.generateRedirectLink({
+        type: "invoice",
+        id: invId,
+      });
+      debitMemoNumberField.defaultValue = ` <a href="${invLink}" style="color: blue;" > ${tranId} </a>`;
+      const dateCreatedField = (form
+        .addField({
+          id: "custpage_datecreated",
+          label: "Date Created",
+          type: serverWidget.FieldType.DATE,
+          container: "custpage_debitmemo",
+        })
+        .updateDisplayType({
+          displayType: serverWidget.FieldDisplayType.INLINE,
+        }).defaultValue = new Date(dateCreated));
+
+      const assignedToField = form.addField({
+        id: "custpage_assignee",
+        label: "Assigned To",
+        type: serverWidget.FieldType.SELECT,
+        source: "employee",
+        container: "custpage_debitmemo",
+      });
+
+      const manufField = (form
+        .addField({
+          id: "custpage_manufacturer",
+          label: "Manufacturer",
+          type: serverWidget.FieldType.SELECT,
+          source: "customer",
+          container: "custpage_debitmemo",
+        })
+        .updateDisplayType({
+          displayType: serverWidget.FieldDisplayType.INLINE,
+        }).defaultValue = manufacturer);
+      const remmitToField = form
+        .addField({
+          id: "custpage_remit_to",
+          label: "Issue Credits To",
+          type: serverWidget.FieldType.SELECT,
+          source: "customer",
+          container: "custpage_debitmemo",
+        })
+        .updateDisplayType({
+          displayType: serverWidget.FieldDisplayType.INLINE,
+        });
+      if (remitTo) {
+        remmitToField.defaultValue = remitTo;
+      }
+      const showAccountField = form.addField({
+        id: "custpage_show_account",
+        label: "Show Account",
+        type: serverWidget.FieldType.CHECKBOX,
+        container: "custpage_debitmemo",
+      });
+      showAccountField.defaultValue = showAccount == "true" ? "T" : "F";
+
       let htmlFileId = rxrs_sl_module.getFileId("SL_loading_html.html"); // HTML file for loading animation
       if (htmlFileId) {
         const dialogHtmlField = form.addField({
@@ -162,18 +249,44 @@ define([
       }
 
       let cmParentInfo;
-
+      const creditMemos = form.addFieldGroup({
+        label: "ADD CREDIT MEMO",
+        id: "custpage_creditmemos",
+      });
       if (JSON.parse(isEdit) == false) {
-        const creditMemoNumberField = form.addField({
+        const creditMemoNumberField = (form.addField({
           id: "custpage_credit_memo_number",
           label: "Credit Memo Number",
           type: serverWidget.FieldType.TEXT,
+          container: "custpage_creditmemos",
+        }).isMandatory = true);
+        form.addFieldGroup({
+          label: "CREDIT MEMO SUMMARY",
+          id: "custpage_cm_summary",
         });
+        let cmTable = createCMTABLE({
+          invId: invId,
+          initialParams: options.params,
+        });
+        if (cmTable !== "") {
+          const cmTableField = form
+            .addField({
+              id: "custpage_cmtable",
+              type: serverWidget.FieldType.INLINEHTML,
+              label: "Dialog HTML Field",
+              container: "custpage_cm_summary",
+            })
+            .updateBreakType({
+              breakType: serverWidget.FieldBreakType.STARTROW,
+            });
+          cmTableField.defaultValue = cmTable;
+        }
       } else {
         const creditMemoNumberField = form.addField({
           id: "custpage_credit_memo",
           label: "Credit Memo",
           type: serverWidget.FieldType.SELECT,
+          container: "custpage_creditmemos",
         });
 
         const cmIds = rxrs_custom_rec.getAllCM(invId);
@@ -207,6 +320,7 @@ define([
           id: "custpage_is_government",
           label: "Government",
           type: serverWidget.FieldType.CHECKBOX,
+          container: "custpage_creditmemos",
         }).defaultValue = "T");
       }
       if (JSON.parse(isTopCo) == true) {
@@ -214,6 +328,7 @@ define([
           id: "custpage_is_topco",
           label: "Top Co",
           type: serverWidget.FieldType.CHECKBOX,
+          container: "custpage_creditmemos",
         }).defaultValue = "T");
       }
       const packingSlipTotalField = form
@@ -221,6 +336,7 @@ define([
           id: "custpage_packing_slip_total",
           label: "Packing Slip Total",
           type: serverWidget.FieldType.CURRENCY,
+          container: "custpage_creditmemos",
         })
         .updateDisplayType({
           displayType: serverWidget.FieldDisplayType.INLINE,
@@ -230,25 +346,30 @@ define([
         id: "custpage_service_fee",
         label: "Service Fee (%)",
         type: serverWidget.FieldType.PERCENT,
+        container: "custpage_creditmemos",
       });
 
       const fileUpload = form.addField({
         id: "custpage_file_upload",
-        label: "File Upload",
+        label: " ",
         type: serverWidget.FieldType.FILE,
       });
 
-      const issuedOnField = form.addField({
+      // Add a file field (outside of the field group)
+
+      const issuedOnField = (form.addField({
         id: "custpage_issued_on",
         label: "Issued On",
         type: serverWidget.FieldType.DATE,
-      });
+        container: "custpage_creditmemos",
+      }).isMandatory = true);
 
       const amountField = form
         .addField({
           id: "custpage_amount",
           label: "Credit Memo Amount",
           type: serverWidget.FieldType.CURRENCY,
+          container: "custpage_creditmemos",
         })
         .updateDisplayType({
           displayType: serverWidget.FieldDisplayType.NORMAL,
@@ -257,6 +378,7 @@ define([
         id: "custpage_custom_amount",
         label: "Custom Amount",
         type: serverWidget.FieldType.CURRENCY,
+        container: "custpage_creditmemos",
       });
 
       form.clientScriptFileId = rxrs_util.getFileId(
@@ -268,6 +390,7 @@ define([
           id: "custpage_invoice_id",
           label: "Invoice Internal Id",
           type: serverWidget.FieldType.TEXT,
+          container: "custpage_creditmemos",
         })
         .updateDisplayType({
           displayType: serverWidget.FieldDisplayType.HIDDEN,
@@ -293,24 +416,30 @@ define([
         }
       }
       let numOfRes = " ";
-
+      let values;
       let soLine = rxrs_tran_lib.getSalesTransactionLine({
         type: type,
         id: invId,
         isEdit: isEdit,
         creditMemoId: creditMemoId,
       });
-      if (soLine) {
-        numOfRes = soLine.length ? soLine.length : 0;
+      if (showAccount == "true") {
+        values = groupByReturnRequest(soLine);
+      } else {
+        values = soLine;
       }
-      log.emergency("SO Line", soLine);
+      log.audit("values", values);
+      if (values) {
+        numOfRes = values.length ? values.length : 0;
+      }
+
       let sublistFields = rxrs_sl_module.ADDCREDITMEMOSUBLIST;
       rxrs_sl_module.createSublist({
         form: form,
         sublistFields: sublistFields,
-        value: soLine,
+        value: values,
         clientScriptAdded: true,
-        title: `Item: ${numOfRes}`,
+        title: `PRODUCTS: ${numOfRes}`,
       });
       let createCMParam = {
         invId: invId,
@@ -326,11 +455,142 @@ define([
       form.addSubmitButton({
         label: "Upload File",
       });
+
       return form;
     } catch (e) {
       log.error("createHeaderFields", e.message);
     }
   };
+
+  function groupByReturnRequest(data) {
+    const grouped = {};
+
+    // Group by returnRequest (keeping HTML tags)
+    data.forEach((item) => {
+      const returnRequest = item.returnRequest.trim(); // Keep HTML tags
+      if (!grouped[returnRequest]) {
+        grouped[returnRequest] = {
+          header: {
+            lineUniqueKey: "INVALID",
+            itemId: "",
+            item: item.pharmacy,
+            description: returnRequest,
+            lotNumber: "",
+            expDate: "",
+            fullPartial: "",
+            packageSize: "",
+            quantity: "",
+            partialQuantity: "",
+            rate: "",
+            amount: "",
+            creditMemoReference: "",
+            creditMemoParent: "",
+            pharmacy: "",
+          },
+          items: [],
+        };
+      }
+      // Keep creditMemoReference and creditMemoParent
+      grouped[returnRequest].items.push(item);
+    });
+
+    // Flatten the grouped object into an array
+    return Object.values(grouped).flatMap((group) => [
+      group.header,
+      ...group.items,
+    ]);
+  }
+
+  function createCMTABLE(options) {
+    try {
+      const { invId, initialParams } = options;
+      const data = rxrs_custom_rec.getCMInfos(invId);
+      let editParams = initialParams;
+      log.error("data", data);
+      if (data.length == 0) {
+        return "";
+      }
+      let htmlStr = "",
+        innerHTML = "";
+
+      data.forEach((item) => {
+        let deleteCMSuiteletUrl = "",
+          viewCMLink = "";
+        editParams.creditMemoId = item.id;
+        editParams.isReload = false;
+        editParams.isEdit = true;
+        viewCMLink = url.resolveScript({
+          scriptId: "customscript_sl_add_credit_memo",
+          deploymentId: "customdeploy_sl_add_credit_memo",
+          params: editParams,
+        });
+        log.audit("viewLink", { viewCMLink, initialParams });
+        if (rxrs_tran_lib.checkExistingPaymentInfo(item.id) == false) {
+          initialParams.isEdit = false;
+          initialParams.action = "deleteCreditMemo";
+          initialParams.isReload = true;
+          deleteCMSuiteletUrl = url.resolveScript({
+            scriptId: "customscript_sl_add_credit_memo",
+            deploymentId: "customdeploy_sl_add_credit_memo",
+            params: initialParams,
+          });
+        }
+        innerHTML += `<tr>`;
+        innerHTML += `
+                    <td style='border: 1px solid #ccc; padding: 8px;'>${item.cmNumber}</td>
+                    <td style='border: 1px solid #ccc; padding: 8px;'>${item.issuedOn}</td>
+                    <td style='border: 1px solid #ccc; padding: 8px;'>${item.createdOn}</td>
+                    <td style='border: 1px solid #ccc; padding: 8px;'>${item.createdBy}</td>
+                    <td style='border: 1px solid #ccc; padding: 8px;'><input type='checkbox' ${item.notReconciled ? "checked" : ""} disabled></td>
+                    <td style='border: 1px solid #ccc; padding: 8px;'>$${item.amount}</td>
+                      <td style='border: 1px solid #ccc; padding: 8px;'>
+                        <a href='${viewCMLink}' style='margin-right: 10px; text-decoration: none; color: blue;'>Edit</a>|   
+                        <a href='${deleteCMSuiteletUrl}' style='margin-right: 10px; text-decoration: none; color: blue;'>  Delete</a> 
+                 
+                    </td>
+                `;
+        innerHTML += `</tr>`;
+      });
+      htmlStr = `
+          <table style="width: 200%; border-collapse: collapse; margin-top: 10px; float: left;">
+              <thead>
+                  <tr>
+                      <th style="border: 1px solid #ccc; padding: 8px; text-align: left; background-color: #f4f4f4;">Credit Memo Number</th>
+                      <th style="border: 1px solid #ccc; padding: 8px; text-align: left; background-color: #f4f4f4;">Issued On</th>
+                      <th style="border: 1px solid #ccc; padding: 8px; text-align: left; background-color: #f4f4f4;">Created On</th>
+                      <th style="border: 1px solid #ccc; padding: 8px; text-align: left; background-color: #f4f4f4;">Created By</th>
+                      <th style="border: 1px solid #ccc; padding: 8px; text-align: left; background-color: #f4f4f4;">Not Reconciled</th>
+                      <th style="border: 1px solid #ccc; padding: 8px; text-align: left; background-color: #f4f4f4;">Amount</th>
+                           <th style="border: 1px solid #ccc; padding: 8px; text-align: left; background-color: #f4f4f4;">Action</th>
+                     
+                  </tr>
+              </thead>
+              <tbody>
+               
+                ${innerHTML}
+              </tbody>
+          </table>
+      </div>
+
+   `;
+      return htmlStr;
+    } catch (e) {
+      log.error("createCMTABLE", e.message);
+    }
+  }
+
+  function initiateAction(options) {
+    log.audit("initiateAction", options);
+    const { action, params } = options;
+    log.audit("initiateAction", params);
+    switch (action) {
+      case "deleteCreditMemo":
+        const deleteResult = rxrs_custom_rec.deleteCreditMemo(
+          JSON.stringify(params),
+        );
+        log.audit("deleteResult", deleteResult);
+    }
+  }
 
   function isEmpty(stValue) {
     return (

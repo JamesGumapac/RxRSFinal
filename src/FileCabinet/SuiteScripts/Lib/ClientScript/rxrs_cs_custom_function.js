@@ -11,6 +11,11 @@ define(["N/currentRecord", "N/search", "N/url", "N/https", "N/ui/message"], /**
  * @param message
  */ function (currentRecord, search, url, https, message) {
   let generatedForm;
+  const RRCATEGORY = Object.freeze({
+    C2: 3,
+    RXOTC: 1,
+    C3TO5: 4,
+  });
 
   /**
    * Function to be executed after page is initialized.

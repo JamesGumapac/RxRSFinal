@@ -144,10 +144,16 @@ define([
             name: "created",
             label: "Created on",
           }),
+          search.createColumn({
+            name: "custrecord_not_reconciled",
+            label: "Not Reconciled",
+          }),
         ],
       });
       customrecord_creditmemoSearchObj.run().each(function (result) {
         cmInfo.push({
+          notReconciled:
+            result.getValue("custrecord_not_reconciled") == true ? "T" : "F",
           id: result.getValue("internalid"),
           cmNumber: result.getValue("custrecord_creditmemonum"),
           issuedOn: result.getValue("custrecord_issuedon"),
@@ -434,6 +440,7 @@ define([
       cmId = cmRec.save({
         ignoreMandatoryFields: true,
       });
+      log.audit("CM Id Created", cmId);
       if (cmId) {
         record.submitFields({
           type: record.Type.INVOICE,
@@ -702,7 +709,7 @@ define([
         } = cm;
         isRejected = amountApplied <= 0 ? true : false;
         log.audit("isRejected", isRejected);
-        if (!isEmpty(+cmLineId) || cmLineId != " ") {
+        if (!isEmpty(+cmLineId) || cmLineId == "") {
           log.error("Cm ID EXIST IF");
           // let values = {
           //   custrecord_cm_amount_applied: amountApplied,
@@ -1805,16 +1812,24 @@ define([
   }
 
   /**
-   * Creates credit memo upload based on provided options.
+   * Creates credit memo upload based on the provided options.
    *
-   * @param {Object} options - The options for creating the credit memo upload.
-   *@param options.requestBody - The content file
-   * @return {void}
+   * @param {Object} options - The options object containing the requestBody and fileId.
+   * @param {Array} options.requestBody - The array of credit memo details to be processed.
+   * @param {string} options.fileId - The file identifier associated with the upload.
+   *
+   * @return {Object} returnObj - The object containing information about the credit memo creation process.
+   * - {boolean} returnObj.isFullAmount - Indicates if the full amount was processed successfully.
+   * - {string} returnObj.response - The response message indicating the success of creating credit memo.
+   * - {string} returnObj.cmId - The identifier of the created credit memo.
+   * - {string} returnObj.invId - The invoice identifier associated with the credit memo.
+   * - {string} returnObj.error - The error message if any error occurred during the process.
+   *
    */
   function createCreditMemoUpload(options) {
     log.audit("createCreditMemoUpload", options);
     let returnObj = {};
-    let { requestBody } = options;
+    let { requestBody, fileId } = options;
     let discountObj;
     try {
       if (requestBody.length > 0) {
@@ -1860,6 +1875,7 @@ define([
             serviceFee: ServiceFee,
             isGovernment: isGovernment,
             isTopCo: isTopCo,
+            fileId: fileId,
           };
           if (invId) {
             let cmId = lookForExistingCreditMemoRec(CreditMemoNumber);
@@ -2174,6 +2190,38 @@ define([
     }
   }
 
+  /**
+   * Function to get the final payment schedule for a given IRS master return request ID.
+   *
+   * @param {Object} options - The options object containing the mrrId parameter.
+   * @param {string} options.mrrId - The ID of the IRS master return request to retrieve the payment schedule for.
+   */
+  const getIRSPaymentSchedCount = (options) => {
+    const { mrrId } = options;
+    try {
+      const customrecord_cs_item_ret_scanSearchObj = search.create({
+        type: "customrecord_cs_item_ret_scan",
+        filters: [["custrecord_irs_master_return_request", "anyof", mrrId]],
+        columns: [
+          search.createColumn({
+            name: "custrecord_final_payment_schedule",
+            summary: "GROUP",
+            label: "Final Payment Schedule",
+          }),
+        ],
+      });
+      const searchResultCount =
+        customrecord_cs_item_ret_scanSearchObj.runPaged().count;
+      log.debug(
+        "customrecord_cs_item_ret_scanSearchObj result count",
+        searchResultCount,
+      );
+      return searchResultCount;
+    } catch (e) {
+      log.error("getIRSPaymentSched", e.message);
+    }
+  };
+
   return {
     assignReturnItemRequested,
     checkIfFor222Regeneration,
@@ -2189,6 +2237,7 @@ define([
     deleteCreditMemo,
     deletePriceHistory,
     get222Forms,
+    getIRSPaymentSchedCount,
     getAllCM,
     getAllCMLineTotal,
     getALlCMTotalAmount,

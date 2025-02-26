@@ -75,7 +75,10 @@ define([
     ];
 
     const columns = [
-      search.createColumn({ name: "internalid", label: "Internal ID" }),
+      search.createColumn({
+        name: "internalid",
+        label: "Internal ID",
+      }),
       search.createColumn({ name: "statusref", label: "Status" }),
     ];
 
@@ -643,9 +646,10 @@ define([
         rrId.push({
           value: result.id,
           text:
-            result.getValue({ name: "tranid" }) +
+            "Category: " +
+            result.getText({ name: "custbody_kd_rr_category" }) +
             " | " +
-            result.getText({ name: "custbody_kd_rr_category" }),
+            result.getValue({ name: "tranid" }),
         });
         return true;
       });
@@ -1595,8 +1599,6 @@ define([
         sublistId: "item",
       });
       for (let i = 0; i < lineCount; i++) {
-        let LOTNUMBER = "";
-        let EXPDATE = "";
         log.debug({ title: "line", details: lineCount });
         let creditMemoReference = currentRecord.getSublistValue({
           sublistId: "item",
@@ -1662,9 +1664,36 @@ define([
           line: i,
         });
 
+        let itemScanId = currentRecord.getSublistValue({
+          sublistId: "item",
+          fieldId: "custcol_item_scan",
+          line: i,
+        });
         let amount = currentRecord.getSublistValue({
           sublistId: "item",
           fieldId: "amount",
+          line: i,
+        });
+        const irsLookup = search.lookupFields({
+          type: "customrecord_cs_item_ret_scan",
+          id: itemScanId,
+          columns: ["custrecord_irs_master_return_request"],
+        });
+        const mrrValue =
+          irsLookup.custrecord_irs_master_return_request[0].value;
+        const mrrText = irsLookup.custrecord_irs_master_return_request[0].text;
+        const mrrLink = rxrs_util.generateRedirectLink({
+          type: "customrecord_kod_masterreturn",
+          id: mrrValue,
+        });
+        const pharmaProcessing = currentRecord.getSublistValue({
+          sublistId: "item",
+          fieldId: "custcol_item_scan_pharma_processing",
+          line: i,
+        });
+        const pharmacy = currentRecord.getSublistText({
+          sublistId: "item",
+          fieldId: "custcol_item_scan_entity",
           line: i,
         });
         let partialQuantity = 0;
@@ -1676,55 +1705,46 @@ define([
             line: i,
           });
         }
+        const returnRequest = currentRecord.getSublistText({
+          sublistId: "item",
+          fieldId: "custcol_rr_ref",
+          line: i,
+        });
 
-        let creditMemoParent = currentRecord.getSublistValue({
+        const creditMemoParent = currentRecord.getSublistValue({
+          sublistId: "item",
+          fieldId: "custcol_cm_parent_id",
+          line: i,
+        });
+        const creditMemoParentText = currentRecord.getSublistText({
           sublistId: "item",
           fieldId: "custcol_cm_parent_id",
           line: i,
         });
 
-        const fieldLookUp = search.lookupFields({
-          type: search.Type.ITEM,
-          id: item, //pass the id of the item here
-          columns: "islotitem",
+        let LOTNUMBER = currentRecord.getSublistValue({
+          sublistId: "item",
+          fieldId: "custcol_irs_lot_number",
+          line: i,
         });
-
-        const islotitem = fieldLookUp.islotitem;
-        log.debug({ title: "islotitem", details: islotitem });
-        if (islotitem == true) {
-          let inventoryDetailSubrecord = currentRecord.getSublistSubrecord({
-            sublistId: "item",
-            fieldId: "inventorydetail",
-            line: i,
-          });
-          log.debug({ title: "subrec", details: inventoryDetailSubrecord });
-          const invcount = inventoryDetailSubrecord.getLineCount({
-            sublistId: "inventoryassignment",
-          });
-          log.debug({ title: "inventory details count", details: invcount });
-
-          if (invcount) {
-            for (let j = 0; j < invcount; j++) {
-              LOTNUMBER = inventoryDetailSubrecord.getSublistText({
-                sublistId: "inventoryassignment",
-                fieldId: "issueinventorynumber",
-                line: j,
-              });
-              EXPDATE = inventoryDetailSubrecord.getSublistText({
-                sublistId: "inventoryassignment",
-                fieldId: "expirationdate",
-                line: j,
-              });
-            }
-          }
-        }
+        let EXPDATE = currentRecord.getSublistText({
+          sublistId: "item",
+          fieldId: "custcol_itrs_expiration_date",
+          line: i,
+        });
         log.audit("isgovernemt", isGoverment);
-
         if (isGoverment == true) {
           // unitPrice /= 0.15;
           // amountPaid /= 0.15;
           // rate /= 0.15;
           // amount /= 0.15;
+        }
+        let creditMemoLink = "";
+        if (creditMemoParent) {
+          creditMemoLink = `<a href="${rxrs_util.generateRedirectLink({
+            type: "customrecord_creditmemo",
+            id: creditMemoParent,
+          })}" style="color: blue;"> ${creditMemoParentText} </b>`;
         }
         log.emergency("creditMemoReference", isEmpty(creditMemoReference));
         log.emergency("condition: " + isEdit, JSON.parse(isEdit) == true);
@@ -1747,10 +1767,14 @@ define([
             partialQuantity: partialQuantity,
             rate: rate.toFixed(2),
             amount: amount.toFixed(2),
-            unitPrice: unitPrice.toFixed(2),
-            amountPaid: amountPaid.toFixed(2),
+            unitPrice: unitPrice.toFixed(2) || 0,
+            amountPaid: amountPaid.toFixed(2) || 0,
             creditMemoReference: creditMemoReference,
             creditMemoParent: creditMemoParent,
+            creditMemoParentText: creditMemoLink,
+            paidCustomer: pharmaProcessing == RETURNABLE ? "YES" : "NO",
+            pharmacy: `<H1>${pharmacy}</H1>`,
+            returnRequest: `<b>- <a href="${mrrLink}" style="color: blue; " >(RO# - ${mrrText}) </a></b>`,
           });
         }
         if (
@@ -1775,11 +1799,14 @@ define([
             amountPaid: amountPaid,
             creditMemoReference: creditMemoReference,
             creditMemoParent: creditMemoParent,
+            creditMemoParentText: creditMemoLink,
+            paidCustomer: pharmaProcessing == RETURNABLE ? "YES" : "NO",
+            pharmacy: `<H1>${pharmacy}</H1>`,
+            returnRequest: `<b>- <a href="${mrrLink}" style="color: blue;">(RO# - ${mrrText}) </a></b>`,
           });
         }
-
-        log.debug("getSalesTransactionLine itemInfo", itemInfo);
       }
+      log.debug("getSalesTransactionLine itemInfo", itemInfo);
       return itemInfo;
     } catch (e) {
       log.error("getSalesTransactionLine", e.message);
@@ -1835,13 +1862,32 @@ define([
           value: "",
         });
       }
-
       for (let i = 0; i < objRecord.getLineCount("item"); i++) {
+        log.audit("removing line", i);
+        objRecord.selectLine({ sublistId: "item", line: i });
+        objRecord.removeLine({ sublistId: "item", line: i });
+        objRecord.commitLine("item");
         objRecord.removeLine({
           sublistId: "item",
           line: 0,
         });
       }
+
+      log.audit("getLineCount", objRecord.getLineCount("item"));
+      if (objRecord.getLineCount("item") > 0) {
+        log.error("removing again lines");
+        for (let i = 0; i < objRecord.getLineCount("item"); i++) {
+          log.audit("removing line", i);
+          objRecord.selectLine({ sublistId: "item", line: i });
+          objRecord.removeLine({ sublistId: "item", line: i });
+          objRecord.commitLine("item");
+          objRecord.removeLine({
+            sublistId: "item",
+            line: 0,
+          });
+        }
+      }
+      log.audit("getLineCount", objRecord.getLineCount("item"));
       objRecord.selectLine({
         sublistId: "item",
         line: 0,
@@ -2499,9 +2545,11 @@ define([
         //   id: vbId,
         //   values: { postingperiod: postingPeriod },
         // });
+        const refNumber = mrrId + "_" + options.finalPaymentSchedule;
+        log.audit("refNumbxer", refNumber);
         vbRec.setValue({
           fieldId: "tranid",
-          value: mrrId + "_" + options.finalPaymentSchedule,
+          value: refNumber,
         });
         vbRec.setValue({
           fieldId: "custbody_kodpaymentsched",
@@ -2519,6 +2567,27 @@ define([
           });
           return vbId;
         } else {
+          if (isEmpty(vbRec.getValue("custbody_kodpaymentsched")) == true) {
+            const paymentSched = vbRec2.getSublistValue({
+              sublistId: "item",
+              fieldId: "custcol_kd_pymt_sched",
+              line: 0,
+            });
+            if (paymentSched == 12) return;
+            log.audit("paymentSched empty", paymentSched);
+            if (paymentSched) {
+              const mrrId = vbRec.getValue("custbody_kd_master_return_id");
+              const refNumber = mrrId + "_" + paymentSched;
+              record.submitFields({
+                type: vbRec.type,
+                id: vbRec.id,
+                values: {
+                  tranid: refNumber,
+                  custbody_kodpaymentsched: paymentSched,
+                },
+              });
+            }
+          }
           return vbRec2.save({ ignoreMandatoryFields: true });
         }
       }
@@ -4862,7 +4931,10 @@ define([
             label: "Line Unique Key",
           }),
           search.createColumn({ name: "amount", label: "Amount" }),
-          search.createColumn({ name: "custcol_kd_ndc", label: "NDC" }),
+          search.createColumn({
+            name: "custcol_kd_ndc",
+            label: "NDC",
+          }),
         ],
       });
 
@@ -4894,7 +4966,10 @@ define([
         ],
         columns: [
           search.createColumn({ name: "name", label: "Name" }),
-          search.createColumn({ name: "created", label: "Date Created" }),
+          search.createColumn({
+            name: "created",
+            label: "Date Created",
+          }),
           search.createColumn({
             name: "custrecord_mrrentity",
             label: "Customer Name",

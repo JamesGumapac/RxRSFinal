@@ -73,5 +73,39 @@ define(["N/record", "N/search"], /**
     }
   }
 
-  return { checkEntityExpiration };
+  /**
+   * Retrieves the Cardinal Code for a given entity ID.
+   *
+   * @param {Object} options - The options object containing the entity ID.
+   * @param {number} options.entityId - The entity ID to retrieve the Cardinal Code for.
+   * @returns {string|null} The Cardinal Code for the specified entity ID or null if not found.
+   */
+  const getManufInfo = (options) => {
+    try {
+      let cardinalCode = null;
+      const { entityId } = options;
+      const entitySearchObj = search.create({
+        type: "entity",
+        filters: [["internalidnumber", "equalto", entityId]],
+        columns: [
+          search.createColumn({
+            name: "custrecord_cardinal_code",
+            join: "csegmanufacturer",
+            label: "Cardinal Code",
+          }),
+        ],
+      });
+      entitySearchObj.run().each(function (result) {
+        cardinalCode = result.getValue({
+          name: "custrecord_cardinal_code",
+          join: "csegmanufacturer",
+        });
+        return true;
+      });
+      return cardinalCode;
+    } catch (e) {
+      log.error("getManufInfo", e.message);
+    }
+  };
+  return { checkEntityExpiration, getManufInfo };
 });

@@ -310,18 +310,21 @@ define([
               });
               if (cmId) itemWithCM++;
             }
-
+            const cmParams = {
+              type: invRec.type,
+              invId: invRec.id,
+              tranId: invRec.getValue("tranid"),
+              total: invRec.getValue("total"),
+              isGovernment: invRec.getValue("custbody_plan_type") == 11,
+              isTopCo: invRec.getValue("custbody_plan_type") == 10,
+              isEdit: true,
+              dateCreated: invRec.getValue("trandate"),
+              manufacturer: invRec.getValue("entity"),
+              remitTo: invRec.getValue("custbody_so_remitto"),
+            };
             log.debug("line count", { itemWithCM, lineCount });
             if (itemWithCM == lineCount || itemWithCM != 0) {
-              const cmParams = {
-                type: invRec.type,
-                invId: invRec.id,
-                tranId: invRec.getValue("tranid"),
-                total: invRec.getValue("total"),
-                isGovernment: invRec.getValue("custbody_plan_type") == 11,
-                isTopCo: invRec.getValue("custbody_plan_type") == 10,
-                isEdit: true,
-              };
+              cmParams.isEdit = true;
               let addCreditMemoUrl = url.resolveScript({
                 scriptId: "customscript_sl_add_credit_memo",
                 deploymentId: "customdeploy_sl_add_credit_memo",
@@ -353,16 +356,8 @@ define([
                 functionName: `openSuitelet(${JSON.stringify(invParamsViewCM)})`,
               });
             }
-            if (itemWithCM < lineCount) {
-              const cmParams = {
-                type: invRec.type,
-                invId: invRec.id,
-                tranId: invRec.getValue("tranid"),
-                total: invRec.getValue("total"),
-                isGovernment: invRec.getValue("custbody_plan_type") == 11,
-                isTopCo: invRec.getValue("custbody_plan_type") == 10,
-                isEdit: false,
-              };
+            if (itemWithCM <= lineCount) {
+              cmParams.isEdit = false;
               let addCreditMemoUrl = url.resolveScript({
                 scriptId: "customscript_sl_add_credit_memo",
                 deploymentId: "customdeploy_sl_add_credit_memo",
