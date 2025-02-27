@@ -372,51 +372,35 @@ define([
     }
   }
 
-  /**
-   * Open suitelet URL
-   * @param options.url URL
-   * @param options.action
-   */
+  // Represent common settings with constants.
+  const DEFAULT_DIMENSIONS = "width=1500,height=1200,left=100,top=1000";
+  const LARGE_DIMENSIONS = "width=2000,height=1200,left=100,top=1000";
+
+  // Suitelet actions with respective options.
+  const ACTION_CONFIG = {
+    fullWindow: { windowName: "fullWindow", dimensions: DEFAULT_DIMENSIONS },
+    verifyItems: { windowName: "verifyItems", dimensions: DEFAULT_DIMENSIONS },
+    add222FormReference: {
+      windowName: "add222FormReference",
+      dimensions: LARGE_DIMENSIONS,
+    },
+    splitPayment: {
+      windowName: "splitPayment",
+      dimensions: DEFAULT_DIMENSIONS,
+    },
+    default: { windowName: "default", dimensions: DEFAULT_DIMENSIONS },
+  };
+
   function openSuitelet(options) {
-    let { url, action } = options;
+    let { url, action = "default" } = options;
     console.log(url);
     console.log(action);
-    action = action ? action : "default";
-    switch (action) {
-      case "fullWindow":
-        window.open(url);
-        break;
-      case "verifyItems":
-        window.open(
-          url,
-          "verifyItems",
-          "width=1500,height=1200,left=100,top=1000",
-        );
-        break;
-      case "add222FormReference":
-        window.open(
-          url,
-          "add222FormReference",
-          "width=2000,height=1200,left=100,top=1000",
-        );
-        break;
-      case "splitPayment":
-        window.open(
-          url,
-          "splitPayment",
-          "width=1500,height=1200,left=100,top=1000",
-        );
-        break;
-      case "default":
-        window.open(url, "default", "width=1500,height=1200,left=100,top=1000");
-        break;
-      default:
-        window.open(
-          url,
-          "splitPayment",
-          "width=1500,height=1200,left=100,top=1000",
-        );
-    }
+
+    // Retrieve the configuration for this action.
+    const config = ACTION_CONFIG[action] || ACTION_CONFIG["default"];
+
+    // Opens the window with the configuration for this action.
+    window.open(url, config.windowName, config.dimensions);
   }
 
   /**
