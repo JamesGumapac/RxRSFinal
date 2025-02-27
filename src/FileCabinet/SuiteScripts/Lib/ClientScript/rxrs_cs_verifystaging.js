@@ -341,6 +341,7 @@ define([
    * @return nothing
    */
   function verify() {
+    let warning;
     try {
       let arrTemp = window.location.href.split("?");
       urlParams = new URLSearchParams(arrTemp[1]);
@@ -542,6 +543,18 @@ define([
 
       switch (returnType) {
         case "Returnable":
+          if (isEmpty(binNumber) == true) {
+            warning = message.create({
+              type: message.Type.WARNING,
+              title: "WARNING",
+              message:
+                "Bin is Required. Bin location needs to be assigned assigned to manufacturer",
+            });
+            warning.show({
+              duration: 2000,
+            });
+            return;
+          }
           console.table(tempHolder);
           console.log("all bags the same", allSame(existingBags));
           const allBagTheSame = allSame(existingBags);
@@ -597,6 +610,18 @@ define([
                 type: message.Type.WARNING,
                 title: "WARNING",
                 message: "Bin is Required",
+              });
+              warning.show({
+                duration: 2000,
+              });
+              return;
+            }
+          } else {
+            if (isEmpty(binNumber) == true) {
+              warning = message.create({
+                type: message.Type.WARNING,
+                title: "WARNING",
+                message: "Bin is required. The bin location needs to be set-up",
               });
               warning.show({
                 duration: 2000,
@@ -730,6 +755,20 @@ define([
     } catch (e) {
       console.error("handleButtonClick", e.message);
     }
+  }
+
+  function isEmpty(stValue) {
+    return (
+      stValue === "" ||
+      stValue == null ||
+      false ||
+      (stValue.constructor === Array && stValue.length == 0) ||
+      (stValue.constructor === Object &&
+        (function (v) {
+          for (var k in v) return false;
+          return true;
+        })(stValue))
+    );
   }
 
   function getPreviousBag(prevBag) {
