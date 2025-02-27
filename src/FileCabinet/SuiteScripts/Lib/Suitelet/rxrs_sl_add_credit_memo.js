@@ -381,12 +381,12 @@ define([
 
       // Add a file field (outside of the field group)
 
-      const issuedOnField = (form.addField({
+      const issuedOnField = form.addField({
         id: "custpage_issued_on",
         label: "Issued On",
         type: serverWidget.FieldType.DATE,
         container: "custpage_creditmemos",
-      }).isMandatory = true);
+      });
 
       const amountField = form
         .addField({
@@ -420,24 +420,31 @@ define([
           displayType: serverWidget.FieldDisplayType.HIDDEN,
         }).defaultValue = invId);
       if (creditMemoId) {
-        cmParentInfo = rxrs_custom_rec.getCMParentInfo(creditMemoId);
-        if (cmParentInfo.dateIssued) {
-          issuedOnField.defaultValue = cmParentInfo.dateIssued;
+        try {
+          cmParentInfo = rxrs_custom_rec.getCMParentInfo(creditMemoId);
+
+          if (cmParentInfo.dateIssued) {
+            issuedOnField.defaultValue = new Date(cmParentInfo.dateIssued);
+          }
+          if (cmParentInfo.serviceFee) {
+            serviceFeeField.defaultValue = cmParentInfo.serviceFee;
+          }
+          const deleteParams = {
+            invId: invId,
+            creditMemoId: creditMemoId,
+          };
+          if (rxrs_tran_lib.checkExistingPaymentInfo(creditMemoId) == false) {
+            form.addButton({
+              id: "custpage_delete",
+              label: "Delete",
+              functionName: `deleteCreditMemo(${JSON.stringify(deleteParams)})`,
+            });
+          }
+        } catch (e) {
+          log.error("Setting Parent CM Values", e.message);
         }
-        if (cmParentInfo.serviceFee) {
-          serviceFeeField.defaultValue = cmParentInfo.serviceFee;
-        }
-        const deleteParams = {
-          invId: invId,
-          creditMemoId: creditMemoId,
-        };
-        if (rxrs_tran_lib.checkExistingPaymentInfo(creditMemoId) == false) {
-          form.addButton({
-            id: "custpage_delete",
-            label: "Delete",
-            functionName: `deleteCreditMemo(${JSON.stringify(deleteParams)})`,
-          });
-        }
+      } else {
+        issuedOnField.isMandatory = true;
       }
       let numOfRes = " ";
       let values;
@@ -447,6 +454,7 @@ define([
         isEdit: isEdit,
         creditMemoId: creditMemoId,
       });
+
       if (showAccount == "true") {
         values = groupByReturnRequest(soLine);
       } else {
@@ -457,15 +465,14 @@ define([
         numOfRes = values.length ? values.length : 0;
       }
 
-      let sublistFields = rxrs_sl_module.ADDCREDITMEMOSUBLIST;
       rxrs_sl_module.createSublist({
         form: form,
-        sublistFields: sublistFields,
+        sublistFields: rxrs_sl_module.ADDCREDITMEMOSUBLIST,
         value: values,
         clientScriptAdded: true,
         title: `PRODUCTS: ${numOfRes}`,
       });
-      let createCMParam = {
+      const createCMParam = {
         invId: invId,
         isEdit: isEdit,
         previousParam: options.params,
