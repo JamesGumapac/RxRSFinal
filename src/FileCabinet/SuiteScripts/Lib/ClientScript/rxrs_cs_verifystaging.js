@@ -620,13 +620,12 @@ define([
             if (isEmpty(binNumber) == true) {
               warning = message.create({
                 type: message.Type.WARNING,
-                title: "WARNING",
-                message: "Bin is required. The bin location needs to be set-up",
+                title: "INFORMATION",
+                message: "Make sure the bin location is be set-up",
               });
               warning.show({
                 duration: 2000,
               });
-              return;
             }
           }
           break;
