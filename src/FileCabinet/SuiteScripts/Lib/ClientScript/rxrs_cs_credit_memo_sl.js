@@ -72,6 +72,7 @@ define([
       console.log("pageInit");
       attachCheckboxListener();
       attachButtonListener();
+      attachConfirmLinks();
       let arrTemp = window.location.href.split("?");
       urlParams = new URLSearchParams(arrTemp[1]);
       isEdit = urlParams.get("isEdit");
@@ -89,7 +90,6 @@ define([
               window.location = window.location + "#loaded";
               //using reload() method to reload web page
               window.location.reload();
-              window.close();
             }
           }, 100);
         }
@@ -754,14 +754,20 @@ define([
 
   function handleButtonClick() {
     try {
-      jQuery("body").loadingModal({
-        position: "auto",
-        text: "Processing. Please wait...",
-        color: "#fff",
-        opacity: "0.7",
-        backgroundColor: "rgb(220,220,220)",
-        animation: "doubleBounce",
-      });
+      // Allow UI to update before heavy execution
+      setTimeout(() => {
+        jQuery("body").loadingModal({
+          position: "auto",
+          text: "Processing. Please wait...",
+          color: "#fff",
+          opacity: "0.7",
+          backgroundColor: "rgb(220,220,220)",
+          animation: "doubleBounce",
+        });
+
+        // Ensure the browser updates UI first
+        requestAnimationFrame(() => console.log("Loading animation started"));
+      }, 10); // Small delay to allow the UI to refresh
     } catch (e) {
       console.error("handleButtonClick", e.message);
     }
@@ -974,11 +980,11 @@ define([
           // });
           // window.ischanged = false;
           opener.location.reload();
-          setTimeout(function () {
-            window.close();
-          }, 2000);
+          // setTimeout(function () {
+          //   window.close();
+          // }, 2000);
           //   window.open(`${rclSuiteletURL}`, "_self");
-        }, 5000);
+        }, 2000);
       } catch (e) {
         console.error("createCreditMemo", e.message);
       }
@@ -1166,6 +1172,11 @@ define([
     }
   }
 
+  /**
+   * Attach event listener to detect checkbox changes in the "notReconciled" column
+   *
+   * @return {void}
+   */
   function attachCheckboxListener() {
     // Attach event listener to detect checkbox changes
     document.addEventListener("change", function (event) {
@@ -1178,6 +1189,12 @@ define([
     });
   }
 
+  /**
+   * Handles the change event for a checkbox and updates the corresponding cmId in the cmWithChanges array.
+   *
+   * @param {HTMLInputElement} checkbox - The checkbox element that triggered the change event.
+   * @returns {void}
+   */
   function handleCheckboxChange(checkbox) {
     let isChecked = checkbox.checked; // Check if checkbox is checked
 
@@ -1187,16 +1204,106 @@ define([
     let existingIndex = cmWithChanges.findIndex((item) => item.cmId === cmId);
 
     if (existingIndex !== -1) {
-      // Update the existing object's isChecked value
+      // Update the existing object's isChecked value (even if unchecked)
       cmWithChanges[existingIndex].isChecked = isChecked;
     } else {
-      // Add new entry if cmId is not in the array
+      // Always add new entry if not found
       cmWithChanges.push({ cmId: cmId, isChecked: isChecked });
     }
 
-    // You can add logic here to send data to NetSuite via Suitelet or AJAX
+    // Log the results
+    console.table(cmWithChanges);
+
+    // Toggle button visibility based on cmWithChanges length
+    toggleButtonVisibility();
   }
 
+  /**
+   * Attaches a button listener to the element with id "updateCMIds".
+   * The listener prevents form submission and stops other events from triggering,
+   * then calls the function getAllCmIdsAndReconciledStatus().
+   *
+   * @return {void}
+   */
+  function attachButtonListener() {
+    let updateCM = document.getElementById("updateCMIds");
+    if (updateCM) {
+      updateCM.addEventListener("click", function (event) {
+        event.preventDefault(); // Prevent unintended form submission
+        event.stopPropagation(); // Stop other events from triggering
+        getAllCmIdsAndReconciledStatus();
+      });
+    }
+  }
+
+  /**
+   * Toggles the visibility of the upload button based on the number of checkboxes checked
+   *
+   * @return {undefined}
+   */
+  function toggleButtonVisibility() {
+    let uploadButton = document.getElementById("updateCMIds");
+
+    // Check if at least one checkbox is checked
+    if (cmWithChanges.length > 0) {
+      uploadButton.style.display = "block"; // Show button
+    } else {
+      uploadButton.style.display = "none"; // Hide button
+    }
+  }
+
+  /**
+   * Retrieves all credit memo IDs and their reconciliation status.
+   *
+   * @return {void}
+   */
+  function getAllCmIdsAndReconciledStatus() {
+    // Log and alert the collected data
+    log.debug("Collected CM Data:", cmWithChanges);
+    if (cmWithChanges.length == 0) {
+      showMessage();
+    } else {
+      cmWithChanges.forEach((val) => {
+        const { cmId, isChecked } = val;
+        record.submitFields({
+          type: "customrecord_creditmemo",
+          id: cmId,
+          values: {
+            custrecord_not_reconciled: isChecked,
+          },
+        });
+      });
+      window.location.reload();
+    }
+
+    // Here you can send the cmData to a NetSuite Suitelet or RESTlet via AJAX if needed.
+  }
+
+  /**
+   * Attach event listeners to all links with the "confirm-link" class that displays a confirmation message before the action.
+   *
+   * @return {void}
+   */
+  function attachConfirmLinks() {
+    // Get all links with the "confirm-link" class
+    const links = document.getElementsByClassName("confirm-link");
+    for (var i = 0; i < links.length; i++) {
+      // Attach event listener using traditional function syntax
+      links[i].addEventListener("click", function (e) {
+        // Display confirmation message
+        if (!confirm("Are you sure you want to delete this?")) {
+          e.preventDefault(); // Prevent the link's default action if canceled
+        }
+      });
+    }
+  }
+
+  /**
+   * moveFileField moves the file field container to the target group container using jQuery.
+   * If both containers are found, the file field is moved visually.
+   *
+   * @return {void}
+   */
   function moveFileField() {
     // Ensure jQuery is loaded
     if (typeof jQuery !== "undefined") {
@@ -1219,40 +1326,6 @@ define([
     }
   }
 
-  function attachButtonListener() {
-    let updateCM = document.getElementById("updateCMIds");
-    if (updateCM) {
-      updateCM.addEventListener("click", function (event) {
-        event.preventDefault(); // Prevent unintended form submission
-        event.stopPropagation(); // Stop other events from triggering
-        getAllCmIdsAndReconciledStatus();
-      });
-    }
-  }
-
-  function getAllCmIdsAndReconciledStatus() {
-    // Log and alert the collected data
-    log.debug("Collected CM Data:", cmWithChanges);
-    if (cmWithChanges.length == 0) {
-      showMessage();
-
-    } else {
-      cmWithChanges.forEach((val) => {
-        const { cmId, isChecked } = val;
-        record.submitFields({
-          type: "customrecord_creditmemo",
-          id: cmId,
-          values: {
-            custrecord_not_reconciled: isChecked,
-          },
-        });
-      });
-      window.location.reload();
-    }
-
-    // Here you can send the cmData to a NetSuite Suitelet or RESTlet via AJAX if needed.
-  }
-
   return {
     pageInit: pageInit,
     refresh: refresh,
@@ -1264,6 +1337,7 @@ define([
     markAll: markAll,
     edit: edit,
     deleteCreditMemo: deleteCreditMemo,
+
     saveRecord: saveRecord,
   };
 });
