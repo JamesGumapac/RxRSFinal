@@ -289,9 +289,18 @@ define([
   }
 
   /**
-   * CM Parent Info
-   * @param options.forUpdate
-   * @param options.forCreation
+   * Function to create or update credit memos based on the provided options.
+   * @param {Object} options - Object containing data required for creating or updating credit memos.
+   * @param {Array} options.forUpdate - Array of items for updating existing credit memos.
+   * @param {Object} options.forCreation - Object containing data for creating new credit memos.
+   * @param {Array} options.forCreation.cmLines - Array of credit memo lines for new credit memo creation.
+   * @param {boolean} options.forCreation.isGovernment - Flag indicating if credit memo is for the government.
+   * @param {boolean} options.forCreation.isTopCo - Flag indicating if credit memo is for a top company.
+   * @param {string} options.forCreation.invoiceId - ID of the invoice associated with the credit memo.
+   *
+   * @return {Object} response - Object containing the result of the credit memo creation or update.
+   * @return {string} response.successMessage - Success message indicating the credit memo ID that was created or updated successfully.
+   * @return {string} response.error - Error message in case an exception occurs during the process.
    */
   function createUpdateCM(options) {
     let response = {};
