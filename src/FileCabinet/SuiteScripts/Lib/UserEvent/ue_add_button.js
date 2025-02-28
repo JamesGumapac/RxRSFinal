@@ -354,16 +354,16 @@ define([
                 action: "add222FormReference",
                 url: viewCreditMemoUrl,
               };
-              context.form.addButton({
-                id: "custpage_edit_credit_memo",
-                label: "Edit Credit Memo",
-                functionName: `openSuitelet(${JSON.stringify(invParamsAddCM)})`,
-              });
-              context.form.addButton({
-                id: "custpage_view_credit_memo",
-                label: "View Credit Memo",
-                functionName: `openSuitelet(${JSON.stringify(invParamsViewCM)})`,
-              });
+              // context.form.addButton({
+              //   id: "custpage_edit_credit_memo",
+              //   label: "Edit Credit Memo",
+              //   functionName: `openSuitelet(${JSON.stringify(invParamsAddCM)})`,
+              // });
+              // context.form.addButton({
+              //   id: "custpage_view_credit_memo",
+              //   label: "View Credit Memo",
+              //   functionName: `openSuitelet(${JSON.stringify(invParamsViewCM)})`,
+              // });
             }
             if (itemWithCM <= lineCount) {
               cmParams.isEdit = false;
@@ -379,7 +379,7 @@ define([
               };
               context.form.addButton({
                 id: "custpage_add_credit_memo",
-                label: "Add Credit Memo",
+                label: "Add/Edit Credit Memo",
                 functionName: `openSuitelet(${JSON.stringify(invParamsAddCM)})`,
               });
             }
