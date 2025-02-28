@@ -571,9 +571,12 @@ define([
                     <td style='border: 1px solid #ccc; padding: 8px;'>${item.cmNumber}</td>
                     <td style='border: 1px solid #ccc; padding: 8px;'>${item.issuedOn}</td>
                     <td style='border: 1px solid #ccc; padding: 8px;'>${item.createdOn}</td>
-                    <td style='border: 1px solid #ccc; padding: 8px;'>${item.createdBy}</td>
-                    <td style='border: 1px solid #ccc; padding: 8px;'><input type='checkbox' ${item.notReconciled == "T" ? "checked" : ""} ></td>
+                    <td  style='border: 1px solid #ccc; padding: 8px;'>${item.createdBy}</td>
+                 <td id="notReconciled" style='border: 1px solid #ccc; padding: 8px;'>
+    <input type='checkbox' id="custpage_checkbox" ${item.notReconciled == "T" ? "checked" : ""}></td>
+
                     <td style='border: 1px solid #ccc; padding: 8px;'>$${item.amount}</td>
+                     <td id="cmId" style='border: 1px solid #ccc; padding: 8px;display: none;'>${item.id}</td>
                       <td style='border: 1px solid #ccc; padding: 8px;'>
                         <a href='${viewCMLink}' style='margin-right: 10px; text-decoration: none; color: blue;'>Edit</a>|   
                         <a href='${deleteCMSuiteletUrl}' style='margin-right: 10px; text-decoration: none; color: blue;'>     Delete</a> 
@@ -584,6 +587,7 @@ define([
       });
       htmlStr = `
           <table style="width: 200%; border-collapse: collapse; margin-top: 10px; float: left;">
+          
               <thead>
                   <tr>
                       <th style="border: 1px solid #ccc; padding: 8px; text-align: left; background-color: #f4f4f4;">Credit Memo Number</th>
@@ -592,6 +596,7 @@ define([
                       <th style="border: 1px solid #ccc; padding: 8px; text-align: left; background-color: #f4f4f4;">Created By</th>
                       <th style="border: 1px solid #ccc; padding: 8px; text-align: left; background-color: #f4f4f4;">Not Reconciled</th>
                       <th style="border: 1px solid #ccc; padding: 8px; text-align: left; background-color: #f4f4f4;">Amount</th>
+                       <th style="border: 1px solid #ccc; padding: 8px; text-align: left; background-color: #f4f4f4;display: none;">ID</th>
                            <th style="border: 1px solid #ccc; padding: 8px; text-align: left; background-color: #f4f4f4;">Action</th>
                      
                   </tr>
@@ -601,7 +606,29 @@ define([
                 ${innerHTML}
               </tbody>
           </table>
+             
       </div>
+      <div style="margin-top: 120px;">
+    <button id="updateCMIds" style="
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        font-size: 13px;
+        font-weight: bold;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: background-color 0.3s ease, transform 0.1s ease;
+        box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+        display: inline-block;
+        text-align: center;"
+        onmouseover="this.style.backgroundColor='#0056b3';"
+        onmouseout="this.style.backgroundColor='#007bff';"
+        onmousedown="this.style.transform='scale(0.98)';"
+        onmouseup="this.style.transform='scale(1)';">
+        Save Changes
+    </button>
+</div>
 
    `;
       return htmlStr;
