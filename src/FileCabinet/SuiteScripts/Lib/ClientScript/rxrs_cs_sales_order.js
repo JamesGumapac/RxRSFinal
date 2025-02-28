@@ -338,7 +338,7 @@ define(["N/record", "N/search"], /**
         });
         return true;
       });
-      console.log(returnProduceObj[0]);
+
       return returnProduceObj[0];
     } catch (e) {
       log.error("getManufReturnProcedure", e.message);
