@@ -37,15 +37,8 @@ define([
   let isGovernment = false;
   let isTopCo = false;
   const columnToDisable = [
-    // "custpage_full_partial",
-    // "custpage_package_size",
-    // "custpage_full",
-    // "custpage_partial",
-    // "custpage_unit_price",
-    // "custpage_amount_paid",
     "custpage_packing_slip_value",
-    "custpage_packing_slip_price", // "custpage_erv_discounted_unit_price",
-    // "custpage_erv_discounted_amount",
+    "custpage_packing_slip_price",
   ];
   const columnToDisableEnabled = [
     "custpage_unit_price",
@@ -71,12 +64,14 @@ define([
    *
    * @since 2015.2
    */
-  let columnsHidden = [1, 2, 15];
+  let columnsHidden = [1, 2, 15, 16];
+  const cmWithChanges = [];
 
   function pageInit(scriptContext) {
     try {
       console.log("pageInit");
-
+      attachCheckboxListener();
+      attachButtonListener();
       let arrTemp = window.location.href.split("?");
       urlParams = new URLSearchParams(arrTemp[1]);
       isEdit = urlParams.get("isEdit");
@@ -321,6 +316,20 @@ define([
       console.log(scriptContext.fieldId);
       if (scriptContext.fieldId == "custpage_file_upload") {
         let file = currentRecord.getValue("custpage_file_upload");
+      }
+      if (scriptContext.fieldId === "custpage_checkbox") {
+        // Make sure this ID matches the checkbox ID in your Suitelet-generated table
+        const checkboxElement = document.getElementById(scriptContext.fieldId);
+        const isChecked = checkboxElement.checked;
+
+        // Find the closest row and get the CM ID
+        const row = checkboxElement.closest("tr");
+        const cmId = row.querySelector("#cmId").textContent.trim();
+
+        console.log("Checkbox Checked:", isChecked);
+        console.log("CM ID:", cmId);
+
+        // Perform any action needed, such as saving this data using a Suitelet or AJAX call
       }
 
       if (scriptContext.fieldId == "custpage_show_account") {
@@ -1157,13 +1166,44 @@ define([
     }
   }
 
+  function attachCheckboxListener() {
+    // Attach event listener to detect checkbox changes
+    document.addEventListener("change", function (event) {
+      let target = event.target;
+
+      // Check if the changed element is a checkbox inside the "notReconciled" column
+      if (target.matches("#notReconciled input[type='checkbox']")) {
+        handleCheckboxChange(target);
+      }
+    });
+  }
+
+  function handleCheckboxChange(checkbox) {
+    let isChecked = checkbox.checked; // Check if checkbox is checked
+
+    // Get the corresponding cmId from the same row
+    let row = checkbox.closest("tr"); // Find the closest table row
+    let cmId = row.querySelector("#cmId").textContent.trim(); // Get cmId from that row
+    let existingIndex = cmWithChanges.findIndex((item) => item.cmId === cmId);
+
+    if (existingIndex !== -1) {
+      // Update the existing object's isChecked value
+      cmWithChanges[existingIndex].isChecked = isChecked;
+    } else {
+      // Add new entry if cmId is not in the array
+      cmWithChanges.push({ cmId: cmId, isChecked: isChecked });
+    }
+
+    // You can add logic here to send data to NetSuite via Suitelet or AJAX
+  }
+
   function moveFileField() {
     // Ensure jQuery is loaded
     if (typeof jQuery !== "undefined") {
       console.log("jQuery is loaded");
 
-      var fileFieldContainer = jQuery("#custpage_file_upload_fs"); // File field container
-      var targetGroup = jQuery("#tr_fg_custpage_creditmemos"); // Field group container
+      const fileFieldContainer = jQuery("#custpage_file_upload_fs"); // File field container
+      const targetGroup = jQuery("#tr_fg_custpage_creditmemos"); // Field group container
 
       console.log("File Field:", fileFieldContainer.length);
       console.log("Target Group:", targetGroup.length);
@@ -1177,6 +1217,40 @@ define([
     } else {
       console.log("jQuery is not loaded");
     }
+  }
+
+  function attachButtonListener() {
+    let updateCM = document.getElementById("updateCMIds");
+    if (updateCM) {
+      updateCM.addEventListener("click", function (event) {
+        event.preventDefault(); // Prevent unintended form submission
+        event.stopPropagation(); // Stop other events from triggering
+        getAllCmIdsAndReconciledStatus();
+      });
+    }
+  }
+
+  function getAllCmIdsAndReconciledStatus() {
+    // Log and alert the collected data
+    log.debug("Collected CM Data:", cmWithChanges);
+    if (cmWithChanges.length == 0) {
+      showMessage();
+
+    } else {
+      cmWithChanges.forEach((val) => {
+        const { cmId, isChecked } = val;
+        record.submitFields({
+          type: "customrecord_creditmemo",
+          id: cmId,
+          values: {
+            custrecord_not_reconciled: isChecked,
+          },
+        });
+      });
+      window.location.reload();
+    }
+
+    // Here you can send the cmData to a NetSuite Suitelet or RESTlet via AJAX if needed.
   }
 
   return {
