@@ -538,15 +538,24 @@ define([
       const data = rxrs_custom_rec.getCMInfos(invId);
       let editParams = initialParams;
       log.audit("createCMTABLE data", data);
+      const paymentInfo = [];
+
       if (data.length == 0) {
         return "";
       }
+      let paymentDataHtml = "";
       let htmlStr = "",
         innerHTML = "";
 
       data.forEach((item) => {
         let deleteCMSuiteletUrl = "",
           viewCMLink = "";
+        let existingPaymentInfo = rxrs_tran_lib.checkExistingPayment({
+          invId: invId,
+          cmId: item.id,
+        });
+        paymentInfo.push(existingPaymentInfo);
+        log.error("ExistingPayment Info", existingPaymentInfo);
         editParams.creditMemoId = item.id;
         editParams.isReload = false;
         editParams.isEdit = true;
@@ -566,6 +575,7 @@ define([
             params: initialParams,
           });
         }
+
         innerHTML += `<tr>`;
         innerHTML += `
                     <td style='border: 1px solid #ccc; padding: 8px;'>${item.cmNumber}</td>
@@ -584,8 +594,26 @@ define([
                 `;
         innerHTML += `</tr>`;
       });
+      if (paymentInfo.length > 0) {
+        paymentInfo.forEach((data) => {
+          paymentDataHtml += `<tr>`;
+          paymentDataHtml += `
+            <td style="border: 1px solid #ddd; padding: 8px;">$${data.amount}</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${data.date}</td>
+          <td style="border: 1px solid #ddd; padding: 8px;">
+    <a href="/app/accounting/transactions/custom.nl?id=${data.id}&e=T&customtype=107&whence=" style="color: orange; text-decoration: none; cursor: pointer;">
+        ✏️ Edit
+    </a>
+</td>`;
+          paymentDataHtml += ` </tr>`;
+        });
+      }
       htmlStr = `
-          <table style="width: 200%; border-collapse: collapse; margin-top: 10px; float: left;">
+<div style="display: flex; gap: 300px;">
+ <!-- Credit Memos Section -->
+    <div style="padding: 15px; border-radius: 5px; margin-right: 3000px%; background: #fff; flex: 2;">
+      <h2 style="color: darkred; margin-bottom: 10px;">CREDIT MEMOS</h2>
+          <table style="width: 150%; border-collapse: collapse; float: left;">
           
               <thead>
                   <tr>
@@ -605,9 +633,7 @@ define([
                 ${innerHTML}
               </tbody>
           </table>
-             
-      </div>
-      <div style="margin-top: 50px;">
+            <div style="margin-top: 50px;">
     <button id="updateCMIds" style="
          display: none; /* Initially hidden */
         background-color: #007bff;
@@ -629,6 +655,27 @@ define([
         Save Changes
     </button>
 </div>
+       
+      </div>  
+     
+      <div style="padding: 15px; border-radius: 5px; background: #fff; flex: 1;">
+        <h2 style="color: darkred; margin-bottom: 10px;">PAYMENT INFO</h2>
+        <table style="width: 200%; border-collapse: collapse; margin-top: 10px;right:1000px">
+            <thead>
+                <tr>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #eee;">Payment Amount</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #eee;">Date Payment Received</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #eee;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+           
+               ${paymentDataHtml}
+            </tbody>
+        </table>
+    </div>
+  </div>  
+    
 
    `;
       return htmlStr;
