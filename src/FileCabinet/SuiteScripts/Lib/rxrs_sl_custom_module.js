@@ -199,7 +199,7 @@ define([
       id: "custpage_credit_memo_parent",
       type: "TEXT",
       label: "ID",
-      updateDisplayType: "NORMAL",
+      updateDisplayType: "HIDDEN",
     },
     {
       id: "custpage_credit_memo_parent2",
