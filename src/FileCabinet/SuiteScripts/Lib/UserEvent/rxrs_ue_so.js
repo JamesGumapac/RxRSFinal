@@ -14,7 +14,16 @@ define([
   "../rxrs_util",
   "../rxrs_transaction_lib",
   "../rxrs_entity_lib",
-], (serverWidget, record, search, util, rxrs_tran_lib, entitylib) => {
+  "../rxrs_custom_rec_lib",
+], (
+  serverWidget,
+  record,
+  search,
+  util,
+  rxrs_tran_lib,
+  entitylib,
+  customRec,
+) => {
   const ORDER_STATUS = {
     WAITING_222_FORM: 3,
     NEW: 1,
@@ -27,10 +36,14 @@ define([
     C1: 7,
   };
   const RMATYPE = {
-    Manual: 1,
-    Automatic: 2,
-    Shipped: 3,
-    Destruction: 4,
+    Destruction: 1,
+    Manual: 2,
+    NoAuthorization: 3,
+    Automatic: 4,
+  };
+  const fulfillmentType = {
+    ship: 1,
+    destory: 2,
   };
   /**
    * Defines the function definition that is executed before record is loaded.
@@ -76,6 +89,16 @@ define([
     let idleDate;
 
     try {
+      if (type == "create") {
+        newRecord.setValue({
+          fieldId: "orderstatus",
+          value: "B", // 'B' = Pending Fulfillment
+        });
+        newRecord.setValue({
+          fieldId: "custbody_orderstatus",
+          value: 1, // NEW
+        });
+      }
       let tranid = "";
       const remitToPrefix = newRecord.getValue("custbody_remit_to_prefix");
 
@@ -108,11 +131,17 @@ define([
         fieldId: "csegmanufacturer",
         value: manufId,
       });
-      let returnProcedureInfo = getManufReturnProcedure(manufId);
-      log.debug("returnProcedureInfo: ", returnProcedureInfo);
+      const returnProcedureInfo = customRec.MANUF.getReturnProcedure(manufId);
+      const researchProduceInfo = customRec.MANUF.getResearchProcedure(manufId);
+
+      log.debug("manufInfo: ", { returnProcedureInfo, researchProduceInfo });
       newRecord.setValue({
         fieldId: "custbody_rxrs_manuf_return_procedure",
         value: returnProcedureInfo.id,
+      });
+      newRecord.setValue({
+        fieldId: "custbody_inv_research_procedure",
+        value: researchProduceInfo.id,
       });
       let rma_type = newRecord.getValue("custbody_kd_rma_type");
       // let category = newRecord.getValue("custbody_kd_rr_category");
@@ -148,38 +177,49 @@ define([
         case RMATYPE.Automatic:
           newRecord.setValue({
             fieldId: "custbody_kd_rma_required",
-            value: false,
+            value: true,
+          });
+          newRecord.setValue({
+            fieldId: "custbody_fulfillmenttype",
+            value: fulfillmentType.ship,
           });
           break;
         case RMATYPE.Manual:
           idleDate = 15;
-          // newRecord.setValue({
-          //   fieldId: "custbody_kd_rma_type",
-          //   value: 1,
-          // });
           newRecord.setValue({
             fieldId: "custbody_kd_rma_required",
             value: true,
           });
-          break;
-        case RMATYPE.Shipped:
-          //Automatic
-          // newRecord.setValue({
-          //   fieldId: "custbody_kd_rma_type",
-          //   value: 2,
-          // });
           newRecord.setValue({
-            fieldId: "custbody_kd_rma_required",
-            value: true,
+            fieldId: "custbody_fulfillmenttype",
+            value: fulfillmentType.ship,
           });
-          idleDate = 19;
           break;
         case RMATYPE.Destruction:
           newRecord.setValue({
             fieldId: "custbody_kd_rma_required",
-            value: false,
+            value: returnProcedureInfo.custrecord_psauthrequiredrordestruction,
+          });
+          newRecord.setValue({
+            fieldId: "custbody_fulfillmenttype",
+            value: fulfillmentType.destory,
           });
           break;
+        case RMATYPE.NoAuthorization:
+          newRecord.setValue({
+            fieldId: "custbody_kd_rma_required",
+            value: false,
+          });
+          newRecord.setValue({
+            fieldId: "custbody_fulfillmenttype",
+            value: fulfillmentType.ship,
+          });
+          break;
+        default:
+          newRecord.setValue({
+            fieldId: "custbody_kd_rma_required",
+            value: false,
+          });
       }
       log.debug("status", { orderStatus, idleDate });
       if (orderStatus == ORDER_STATUS.NEW && +rma_type == RMATYPE.Manual) {
@@ -258,141 +298,6 @@ define([
     //   log.error("afterSubmit", e.message);
     // }
   };
-
-  /**
-   * Get the return produce information
-   * @param manufId
-   * @return {*}
-   */
-  function getManufReturnProcedure(manufId) {
-    try {
-      let returnProduceObj = [];
-      const customrecord_returnprocedureSearchObj = search.create({
-        type: "customrecord_returnprocedure",
-        filters: [["custrecord_returnprocmanufacturer", "anyof", manufId]],
-        columns: [
-          search.createColumn({
-            name: "custrecord_psauthtypec2",
-            label: "Authorization Type C2",
-          }),
-          search.createColumn({
-            name: "custrecord_psauthtypec35",
-            label: "Authorization Type C35",
-          }),
-          search.createColumn({
-            name: "custrecord_psauthrequiredrordestruction",
-            label: "Authorization Required For Destruction",
-          }),
-          search.createColumn({
-            name: "custrecord_psauthtyperx",
-            label: "Authorization Type Rx",
-          }),
-          search.createColumn({
-            name: "custrecord_psisbatchallowed",
-            label: "Batch Allowed",
-          }),
-          search.createColumn({
-            name: "custrecord_psminmaxrequired",
-            label: "Is Min/Max Value Required?",
-          }),
-          search.createColumn({
-            name: "custrecord_psincludebrandproducts",
-            label: "Include Brand Products",
-          }),
-          search.createColumn({
-            name: "custrecord_psmaxvalue",
-            label: "Maximum Value",
-          }),
-          search.createColumn({
-            name: "custrecord_psminprice",
-            label: "Min Price",
-          }),
-          search.createColumn({
-            name: "custrecord_psminvalue",
-            label: "Minimum Value",
-          }),
-          search.createColumn({
-            name: "custrecord_psnrproc",
-            label: "Non-returnable Procedure",
-          }),
-          search.createColumn({
-            name: "custrecord_psauthsendproofofdestruction",
-            label: "Send Proof of Destruction",
-          }),
-          search.createColumn({
-            name: "custrecord_showpharmacynameonps",
-            label: "Show Pharmacy Name On Packing Slip",
-          }),
-          search.createColumn({
-            name: "custrecord_psauthemail",
-            label: "Authorization Email",
-          }),
-          search.createColumn({
-            name: "custrecord_psaltpodemail",
-            label: "Alternate POD Email",
-          }),
-          search.createColumn({
-            name: "custrecord_fulfillmenttype",
-            label: "Fulfillment Type",
-          }),
-          search.createColumn({
-            name: "custrecord_returnprocmanufacturer",
-            label: "Manufacturer",
-          }),
-          search.createColumn({ name: "custrecord_rpnote", label: "Note" }),
-          search.createColumn({
-            name: "name",
-            sort: search.Sort.ASC,
-            label: "Name",
-          }),
-        ],
-      });
-
-      customrecord_returnprocedureSearchObj.run().each(function (result) {
-        returnProduceObj.push({
-          id: result.id,
-          custrecord_psauthtypec2: result.getValue("custrecord_psauthtypec2"),
-          custrecord_psauthtypec35: result.getValue("custrecord_psauthtypec35"),
-          custrecord_psauthrequiredrordestruction: result.getValue(
-            "custrecord_psauthrequiredrordestruction",
-          ),
-          custrecord_psauthtyperx: result.getValue("custrecord_psauthtyperx"),
-          custrecord_psisbatchallowed: result.getValue(
-            "custrecord_psisbatchallowed",
-          ),
-          custrecord_psminmaxrequired: result.getValue(
-            "custrecord_psminmaxrequired",
-          ),
-          custrecord_psincludebrandproducts: result.getValue(
-            "custrecord_psincludebrandproducts",
-          ),
-          custrecord_psmaxvalue: result.getValue("custrecord_psmaxvalue"),
-          custrecord_psminprice: result.getValue("custrecord_psminprice"),
-          custrecord_psminvalue: result.getValue("custrecord_psminvalue"),
-          custrecord_psnrproc: result.getValue("custrecord_psnrproc"),
-          custrecord_psauthsendproofofdestruction: result.getValue(
-            "custrecord_psauthsendproofofdestruction",
-          ),
-          custrecord_showpharmacynameonps: result.getValue(
-            "custrecord_showpharmacynameonps",
-          ),
-          custrecord_psauthemail: result.getValue("custrecord_psauthemail"),
-          custrecord_psaltpodemail: result.getValue("custrecord_psaltpodemail"),
-          custrecord_fulfillmenttype: result.getValue(
-            "custrecord_fulfillmenttype",
-          ),
-          custrecord_returnprocmanufacturer: result.getValue(
-            "custrecord_returnprocmanufacturer",
-          ),
-        });
-        return true;
-      });
-
-      return returnProduceObj[0];
-    } catch (e) {
-      log.error("getManufReturnProcedure", e.message);
-    }
-  }
 
   return { beforeLoad, beforeSubmit, afterSubmit };
 });
