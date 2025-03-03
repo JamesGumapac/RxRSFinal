@@ -29,12 +29,6 @@ define([
     NEW: 1,
   };
 
-  const CATEGORY = {
-    RX: 1,
-    C2: 3,
-    C3_5: 4,
-    C1: 7,
-  };
   const RMATYPE = {
     Destruction: 1,
     Manual: 2,
@@ -54,9 +48,9 @@ define([
    * @param {ServletRequest} scriptContext.request - HTTP request information sent from the browser for a client action only.
    * @since 2015.2
    */
-  const beforeLoad = (context) => {
+  const beforeLoad = (scriptContext) => {
     try {
-      const { type, newRecord, form } = context;
+      const { type, newRecord, form } = scriptContext;
       if (type === "view" || type === "edit") {
         const status = newRecord.getText("custbody_orderstatus");
         const recordName = newRecord.getText("custbody_so_trantype");
