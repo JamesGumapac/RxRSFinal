@@ -59,20 +59,20 @@ define(["N/url", "N/search", "N/currentRecord", "N/runtime"], function (
       });
       location.href = suiteletURL;
       /*if(!isAllRirHaveForm222(currentRecord.get().id)){
-                                  //alert('All Form 222 No. must at least have 1 item on it.');
-                                  alert('All Return Item Requested must have Form 222 Reference No.');
-                              }else{
-                                  var suiteletURL = url.resolveScript({
-                                      scriptId: 'customscript_kd_sl_generate_form222',
-                                      deploymentId: 'customdeploy_kd_sl_generate_form222',
-                                      returnExternalUrl: false,
-                                      params: {
-                                          'custscript_kd_rr_id': currentRecord.get().id,
-                                          'custscript_kd_rr_authorized_by': runtime.getCurrentUser().id
-                                      }
-                                  });
-                                  location.href = suiteletURL;
-                              }*/
+                                                                                              //alert('All Form 222 No. must at least have 1 item on it.');
+                                                                                              alert('All Return Item Requested must have Form 222 Reference No.');
+                                                                                          }else{
+                                                                                              var suiteletURL = url.resolveScript({
+                                                                                                  scriptId: 'customscript_kd_sl_generate_form222',
+                                                                                                  deploymentId: 'customdeploy_kd_sl_generate_form222',
+                                                                                                  returnExternalUrl: false,
+                                                                                                  params: {
+                                                                                                      'custscript_kd_rr_id': currentRecord.get().id,
+                                                                                                      'custscript_kd_rr_authorized_by': runtime.getCurrentUser().id
+                                                                                                  }
+                                                                                              });
+                                                                                              location.href = suiteletURL;
+                                                                                          }*/
     }
   }
 
@@ -171,41 +171,46 @@ define(["N/url", "N/search", "N/currentRecord", "N/runtime"], function (
   }
 
   function saveRecord(context) {
-    var currentRecord = context.currentRecord;
-    log.debug("saveRecord", "START: " + currentRecord.id);
-    var message = "";
+    try {
+      let currentRecord = context.currentRecord;
+      log.debug("saveRecord", "START: " + currentRecord.id);
+      let message = "";
 
-    if (isNaN(context.currentRecord.getValue("name"))) {
-      message = "should only contain number";
-    }
-    if (context.currentRecord.getValue("name").length > 9) {
-      if (message == "") {
-        message = "cannot be more than 9 digits";
-      } else {
-        message = message + " and cannot be more than 9 digits";
+      if (isNaN(context.currentRecord.getValue("name"))) {
+        message = "should only contain number";
       }
-    }
-    if (message != "") {
-      alert("Name " + message + ".");
-      return false;
-    }
+      log.audit("length", context.currentRecord.getValue("name").length);
+      if (context.currentRecord.getValue("name").length !== 9) {
+        if (message == "") {
+          message = "must be 9 digits";
+        } else {
+          message = message + " and must be 9 digits";
+        }
+      }
+      if (message != "") {
+        alert("Reference Number " + message + ".");
+        return false;
+      }
 
-    if (isPageExisting(currentRecord)) {
-      message = "- Page\n";
-    }
+      if (isPageExisting(currentRecord)) {
+        message = "- Page\n";
+      }
 
-    if (isRefNumExisting(currentRecord)) {
-      message += "- Name";
-    }
+      if (isRefNumExisting(currentRecord)) {
+        message += "- Reference Number";
+      }
 
-    if (message != "") {
-      alert(
-        "The following is already used on other Form 222 Reference for the same Return Request and needs to be adjusted:\n" +
-          message,
-      );
-      return false;
+      if (message != "") {
+        alert(
+          "The following is already used on other Form 222 Reference for the same Return Request and needs to be adjusted:\n" +
+            message,
+        );
+        return false;
+      }
+      return true;
+    } catch (e) {
+      log.error("saveRecord", e.message);
     }
-    return true;
   }
 
   return {
