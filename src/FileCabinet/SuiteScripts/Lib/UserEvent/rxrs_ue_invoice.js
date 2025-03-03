@@ -8,7 +8,8 @@ define([
   "N/search",
   "../rxrs_item_lib",
   "../rxrs_sl_custom_module",
-], (rxrs_tran_lib, serverWidget, search, itemlib, sllib) => {
+  "../rxrs_util",
+], (rxrs_tran_lib, serverWidget, search, itemlib, sllib, util) => {
   /**
    * Defines the function definition that is executed before record is loaded.
    * @param {Object} scriptContext
@@ -126,6 +127,27 @@ define([
             value: returnRequest,
           });
         }
+      }
+      const researchProcedureId = newRecord.getValue(
+        "custbody_inv_research_procedure",
+      );
+      if (researchProcedureId) {
+        const waitInternal = search.lookupFields({
+          type: "customrecord_researchprocedure",
+          id: researchProcedureId,
+          columns: ["custrecord_rpwaitinterval"],
+        }).custrecord_rpwaitinterval;
+        const tranDate = newRecord.getValue("trandate");
+        const activeOn = util.addDaysToDate({
+          date: tranDate,
+          days: Number(waitInternal) || 0,
+        });
+        log.audit("AAAA", { activeOn, tranDate, waitInternal });
+        activeOn &&
+          newRecord.setValue({
+            fieldId: "custbody_inv_activeon",
+            value: new Date(activeOn),
+          });
       }
     }
     if (type == "edit") {
