@@ -379,8 +379,6 @@ define([
         type: serverWidget.FieldType.FILE,
       });
 
-      // Add a file field (outside of the field group)
-
       const issuedOnField = form.addField({
         id: "custpage_issued_on",
         label: "Issued On",
@@ -493,6 +491,12 @@ define([
     }
   };
 
+  /**
+   * Groups the given data by return request, keeping HTML tags.
+   *
+   * @param {Array} data - Array of data items to be grouped.
+   * @return {Array} - Grouped data in an array format.
+   */
   function groupByReturnRequest(data) {
     const grouped = {};
 
@@ -532,6 +536,14 @@ define([
     ]);
   }
 
+  /**
+   * Creates a table displaying credit memos and payment information based on the provided options.
+   *
+   * @param {Object} options - The options object containing invId and initialParams.
+   * @param {string} options.invId - The invoice ID to retrieve credit memo information.
+   * @param {Object} options.initialParams - The initial parameters for rendering the table.
+   * @return {string} The HTML string representing the credit memos and payment information table.
+   */
   function createCMTABLE(options) {
     try {
       const { invId, initialParams } = options;
@@ -539,6 +551,7 @@ define([
       let editParams = initialParams;
       log.audit("createCMTABLE data", data);
       const paymentInfo = [];
+      let paymentTableHTML = "";
 
       if (data.length == 0) {
         return "";
@@ -555,7 +568,7 @@ define([
           cmId: item.id,
         });
         paymentInfo.push(existingPaymentInfo);
-        log.error("ExistingPayment Info", existingPaymentInfo);
+        log.audit("ExistingPayment Info", existingPaymentInfo);
         editParams.creditMemoId = item.id;
         editParams.isReload = false;
         editParams.isEdit = true;
@@ -604,9 +617,28 @@ define([
     <a href="/app/accounting/transactions/custom.nl?id=${data.id}&e=T&customtype=107&whence=" style="color: orange; text-decoration: none; cursor: pointer;">
         ✏️ Edit
     </a>
+    
 </td>`;
           paymentDataHtml += ` </tr>`;
         });
+        paymentTableHTML = `</div>
+
+        <div style="padding: 15px; border-radius: 5px; background: #fff; flex: 1;">
+          <h2 style="color: darkred; margin-bottom: 10px;">PAYMENT INFO</h2>
+          <table style="width: 200%; border-collapse: collapse; margin-top: 10px;right:1000px">
+            <thead>
+            <tr>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #eee;">Payment Amount</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #eee;">Date Payment Received</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #eee;">Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+
+            ${paymentDataHtml}
+            </tbody>
+          </table>
+        </div>`;
       }
       htmlStr = `
 <div style="display: flex; gap: 300px;">
@@ -655,29 +687,9 @@ define([
         Save Changes
     </button>
 </div>
-       
-      </div>  
-     
-      <div style="padding: 15px; border-radius: 5px; background: #fff; flex: 1;">
-        <h2 style="color: darkred; margin-bottom: 10px;">PAYMENT INFO</h2>
-        <table style="width: 200%; border-collapse: collapse; margin-top: 10px;right:1000px">
-            <thead>
-                <tr>
-                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #eee;">Payment Amount</th>
-                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #eee;">Date Payment Received</th>
-                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left; background-color: #eee;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-           
-               ${paymentDataHtml}
-            </tbody>
-        </table>
-    </div>
-  </div>  
-    
-
-   `;
+      
+${paymentTableHTML}
+`;
       return htmlStr;
     } catch (e) {
       log.error("createCMTABLE", e.message);
