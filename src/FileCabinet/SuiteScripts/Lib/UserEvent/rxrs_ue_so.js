@@ -56,18 +56,19 @@ define([
    */
   const beforeLoad = (context) => {
     try {
-      if (context.type === "view" || context.type === "edit") {
-        const curRec = context.newRecord;
-        const status = curRec.getText("custbody_orderstatus");
-        const recordName = curRec.getText("custbody_so_trantype");
+      const { type, newRecord, form } = context;
+      if (type === "view" || type === "edit") {
+        const status = newRecord.getText("custbody_orderstatus");
+        const recordName = newRecord.getText("custbody_so_trantype");
+        form.clientScriptFileId = util.getFileId("rxrs_cs_sales_order.js");
         log.debug("status", { status, recordName });
         if (status) {
-          var hideFld = context.form.addField({
+          let hideFld = form.addField({
             id: "custpage_hide_buttons",
             label: "not shown - hidden",
             type: serverWidget.FieldType.INLINEHTML,
           });
-          var scr = ""; //ext-element-22
+          let scr = ""; //ext-element-22
 
           scr += `jQuery('div.uir-record-status').text('${status}');`;
           if (recordName) {
@@ -79,6 +80,11 @@ define([
             scr +
             "})})</script>";
         }
+        form.addButton({
+          id: "custpage_enter_rma",
+          label: "Enter RMA#",
+          functionName: `enterRMA()`,
+        });
       }
     } catch (e) {
       log.error("beforeLoad", e.message);
