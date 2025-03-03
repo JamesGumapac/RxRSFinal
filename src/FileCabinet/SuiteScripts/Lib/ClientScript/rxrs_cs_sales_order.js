@@ -3,10 +3,10 @@
  * @NScriptType ClientScript
  * @NModuleScope SameAccount
  */
-define(["N/record", "N/search"], /**
+define(["N/record", "N/search", "N/currentRecord", "N/ui/dialog"], /**
  * @param{record} record
  * @param{search} search
- */ function (record, search) {
+ */ function (record, search, currentRecord, dialog) {
   /**
    * Function to be executed after page is initialized.
    *
@@ -345,9 +345,83 @@ define(["N/record", "N/search"], /**
     }
   }
 
+  /**
+   * Function to prompt the user to enter an RMA number.
+   * Creates an input field in a dialog and waits for user confirmation.
+   * If a valid RMA number is entered, it is logged and an update function is called.
+   */
+  const enterRMA = () => {
+    try {
+      // Create an input element
+      let rma = document.createElement("input");
+      rma.id = "rmaNumber";
+      rma.style.width = "100%";
+      rma.style.padding = "5px";
+      rma.style.marginTop = "10px";
+
+      // Create a container div
+      let container = document.createElement("div");
+
+      // Append the input field to the container
+      container.appendChild(rma);
+
+      // Show the dialog
+      const result = dialog.create({
+        title: "Enter RMA #",
+        message: container, // Now the container has the input field
+        buttons: [
+          { label: "Assign RMA", value: true },
+          { label: "Cancel", value: false },
+        ],
+      });
+
+      // Wait for user action before proceeding
+      result.then((value) => {
+        if (value) {
+          let rmaNumber = rma.value.trim(); // Get the input value
+
+          if (!rmaNumber) {
+            throw new Error("Please enter RMA #.");
+          }
+
+          console.log("RMA NUMBER:", rmaNumber);
+          updateRMA(rmaNumber);
+        }
+      });
+    } catch (error) {
+      console.error("Error in popup:", error);
+    }
+  };
+
+  /**
+   * Assigns a new employee to the current record by updating the 'custbody_assignee' field.
+   * This function takes the employeeId as a parameter and uses it to update the record.
+   * After updating the record, it reloads the page to reflect the changes made.
+   *
+   * @param {String} employeeId - The employee Id to be assigned to the record
+   * @returns {Promise} - A promise that resolves after updating the record and reloading the page
+   */
+  const updateRMA = async (rmaNumber) => {
+    try {
+      const rec = currentRecord.get();
+      record.submitFields({
+        type: rec.type,
+        id: rec.id,
+        values: {
+          custbody_kd_rma_number: rmaNumber,
+        },
+      });
+      location.reload(); // Refresh page after updating the record
+    } catch (error) {
+      console.error("Error updating record:", error);
+    }
+  };
+
   function saveRecord(scriptContext) {}
 
   return {
+    pageInit: pageInit,
     fieldChanged: fieldChanged,
+    enterRMA: enterRMA,
   };
 });
